@@ -14,6 +14,9 @@ import type {
  * consistently available or unavailable for the process lifetime.
  */
 type ExpoProximityModule = {
+  configureProtocolAsync?(protocol: string): Promise<void>;
+  maximumFrameSizeAsync?(endpointId: string): Promise<number>;
+  inflateRawAsync?(bytes: string, size: number): Promise<string>;
   startAdvertisingAsync(profile: string): Promise<void>;
   updateProfileAsync(profile: string): Promise<void>;
   preferPeripheralAsync(endpointId: string): Promise<void>;
@@ -41,6 +44,21 @@ const NO_OP_SUBSCRIPTION: ProximityTransportSubscription = { remove() {} };
 /** BLE duplex transport backed by the ExpoProximity native module. */
 export const proximityTransportAdapter: ProximityTransportPort = {
   isAvailable: () => load() !== null,
+  async configureProtocolAsync(protocol) {
+    const module = load();
+    if (!module?.configureProtocolAsync) throw new Error('This build does not support Bitchat Bluetooth');
+    await module.configureProtocolAsync(protocol);
+  },
+  async maximumFrameSizeAsync(endpointId) {
+    const method = load()?.maximumFrameSizeAsync;
+    if (!method) throw new Error('This build does not support Bitchat Bluetooth');
+    return method(endpointId);
+  },
+  async inflateRawAsync(bytes, size) {
+    const method = load()?.inflateRawAsync;
+    if (!method) throw new Error('This build does not support Bitchat compression');
+    return base64.decode(await method(base64.encode(bytes), size));
+  },
 
   async requestPermissions() {
     if (Platform.OS !== 'android') return true;

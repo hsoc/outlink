@@ -446,6 +446,9 @@ export default function NearbyPage() {
                   )}
                 </Pressable>
                 <ListGroup>
+                  <ListRow title={t('bitchat.title')} subtitle={t('bitchat.description')}
+                    trailing={<ChevronRight size={18} color={c.textMuted} />}
+                    onPress={() => router.push('/bitchat')} />
                   <ListRow
                     title={t('nearby.visibility_title')}
                     subtitle={t('nearby.visibility_description')}

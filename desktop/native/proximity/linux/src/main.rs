@@ -29,7 +29,7 @@ mod linux {
         io::{self, Write},
         sync::{
             Arc, Mutex as StdMutex,
-            atomic::{AtomicU64, Ordering},
+            atomic::{AtomicBool, AtomicU64, Ordering},
         },
         time::{Duration, Instant},
     };
@@ -49,9 +49,28 @@ mod linux {
     const MAXIMUM_INBOUND_BYTES_PER_ENDPOINT: usize = 256 * 1024;
     const INBOUND_LIFETIME: Duration = Duration::from_secs(60);
     const COMMAND_TIMEOUT: Duration = Duration::from_secs(20);
-    const SERVICE_UUID: Uuid = Uuid::from_u128(0x45D8B02F_6D80_4FC6_914E_B85FCD0440D3);
+    const NEARBY_SERVICE_UUID: Uuid = Uuid::from_u128(0x45D8B02F_6D80_4FC6_914E_B85FCD0440D3);
     const PROFILE_UUID: Uuid = Uuid::from_u128(0x55980CEE_27E5_48A9_BF1C_AB5DA34B4402);
-    const MAILBOX_UUID: Uuid = Uuid::from_u128(0x86A4C105_9A0E_4144_BCA1_40E7C78A1D93);
+    const NEARBY_MAILBOX_UUID: Uuid = Uuid::from_u128(0x86A4C105_9A0E_4144_BCA1_40E7C78A1D93);
+
+    static BITCHAT_MODE: AtomicBool = AtomicBool::new(false);
+    fn bitchat_mode() -> bool {
+        BITCHAT_MODE.load(Ordering::Acquire)
+    }
+    fn service_uuid() -> Uuid {
+        if bitchat_mode() {
+            Uuid::from_u128(0xF47B5E2D_4A9E_4C5A_9B3F_8E1D2C3A4B5C)
+        } else {
+            NEARBY_SERVICE_UUID
+        }
+    }
+    fn mailbox_uuid() -> Uuid {
+        if bitchat_mode() {
+            Uuid::from_u128(0xA1B2C3D4_E5F6_4A5B_8C9D_0E1F2A3B4C5D)
+        } else {
+            NEARBY_MAILBOX_UUID
+        }
+    }
 
     #[derive(Clone)]
     struct Emitter {
@@ -208,6 +227,12 @@ mod linux {
         if payload.len() > MAXIMUM_WIRE_BYTES {
             bail!("The nearby message is too large");
         }
+        if bitchat_mode() {
+            if payload.len() > maximum_frame_size {
+                bail!("Bitchat frame exceeds link MTU");
+            }
+            return Ok(vec![payload.to_vec()]);
+        }
         let chunk_size = maximum_frame_size.saturating_sub(12).max(1);
         let total = payload.len().div_ceil(chunk_size).max(1);
         if total > MAXIMUM_CHUNK_COUNT {
@@ -287,6 +312,12 @@ mod linux {
                 let Some(generation) = generation else { return };
                 generation
             };
+            if bitchat_mode() {
+                if frame.len() >= 22 && frame.len() <= MAXIMUM_WIRE_BYTES {
+                    self.emitter.event("onMessage", json!({ "endpointId": endpoint_id, "generation": generation, "payload": BASE64.encode(frame) }));
+                }
+                return;
+            }
             let assembly_endpoint = format!("{endpoint_id}:{generation}");
             if let Some(payload) = self.inbound.lock().await.accept(&assembly_endpoint, frame) {
                 self.emitter.event(
@@ -459,7 +490,7 @@ mod linux {
             let (mut notify_control, notify_handle) = characteristic_control();
             let application = Application {
                 services: vec![Service {
-                    uuid: SERVICE_UUID,
+                    uuid: service_uuid(),
                     primary: true,
                     characteristics: vec![
                         Characteristic {
@@ -489,7 +520,7 @@ mod linux {
                             ..Default::default()
                         },
                         Characteristic {
-                            uuid: MAILBOX_UUID,
+                            uuid: mailbox_uuid(),
                             write: Some(CharacteristicWrite {
                                 write: true,
                                 method: CharacteristicWriteMethod::Fun(Box::new(
@@ -513,7 +544,8 @@ mod linux {
                                 ..Default::default()
                             }),
                             notify: Some(CharacteristicNotify {
-                                indicate: true,
+                                indicate: !bitchat_mode(),
+                                notify: bitchat_mode(),
                                 method: CharacteristicNotifyMethod::Io,
                                 ..Default::default()
                             }),
@@ -531,7 +563,7 @@ mod linux {
                 .context("Unable to register the local GATT service")?;
             let advertisement_handle = match adapter
                 .advertise(Advertisement {
-                    service_uuids: [SERVICE_UUID].into_iter().collect(),
+                    service_uuids: [service_uuid()].into_iter().collect(),
                     discoverable: Some(true),
                     ..Default::default()
                 })
@@ -605,6 +637,9 @@ mod linux {
                         "onConnection",
                         json!({ "endpointId": endpoint_id.clone(), "state": "connected", "generation": connection_generation }),
                     );
+                    if bitchat_mode() {
+                        shared.emitter.event("onPeer", json!({ "endpointId": endpoint_id.clone(), "generation": connection_generation, "profile": "" }));
+                    }
                     let shared = shared.clone();
                     tokio::spawn(async move {
                         loop {
@@ -687,7 +722,7 @@ mod linux {
             }
             adapter
                 .set_discovery_filter(DiscoveryFilter {
-                    uuids: [SERVICE_UUID].into_iter().collect(),
+                    uuids: [service_uuid()].into_iter().collect(),
                     transport: DiscoveryTransport::Le,
                     duplicate_data: duration_ms == 0,
                     ..Default::default()
@@ -722,7 +757,7 @@ mod linux {
                                 .await
                                 .ok()
                                 .flatten()
-                                .is_some_and(|uuids| uuids.contains(&SERVICE_UUID));
+                                .is_some_and(|uuids| uuids.contains(&service_uuid()));
                             if !has_service
                                 || shared.suppressed.lock().await.contains(&address)
                                 || shared.remotes.lock().await.contains_key(&address)
@@ -917,23 +952,37 @@ mod linux {
         let mut profile = None;
         let mut mailbox = None;
         for service in device.services().await? {
-            if service.uuid().await? != SERVICE_UUID {
+            if service.uuid().await? != service_uuid() {
                 continue;
             }
             for characteristic in service.characteristics().await? {
                 match characteristic.uuid().await? {
                     PROFILE_UUID => profile = Some(characteristic),
-                    MAILBOX_UUID => mailbox = Some(characteristic),
+                    _ if characteristic.uuid().await? == mailbox_uuid() => {
+                        mailbox = Some(characteristic)
+                    }
                     _ => {}
                 }
             }
         }
-        let profile = profile.context("Nearby profile characteristic is missing")?;
         let mailbox = mailbox.context("Nearby mailbox characteristic is missing")?;
+        let profile = if bitchat_mode() {
+            mailbox.clone()
+        } else {
+            profile.context("Nearby profile characteristic is missing")?
+        };
         let mtu = mailbox.mtu().await?.max(20);
-        let profile_value = BASE64.encode(profile.read().await?);
+        let profile_value = if bitchat_mode() {
+            String::new()
+        } else {
+            BASE64.encode(profile.read().await?)
+        };
         let rssi = device.rssi().await?.unwrap_or_default();
-        let profile_notifications = profile.notify().await.ok();
+        let profile_notifications = if bitchat_mode() {
+            None
+        } else {
+            profile.notify().await.ok()
+        };
         let notifications = mailbox.notify().await?;
         if shared.session_generation.load(Ordering::Acquire) != generation
             || shared.suppressed.lock().await.contains(&address)
@@ -1039,10 +1088,44 @@ mod linux {
                                 "central": true,
                                 "peripheral": true,
                                 "concurrentRoles": true,
+                                "bitchat": true,
                             },
                         })))
                     }
                     "requestPermissions" => Ok(Some(json!(runtime.request_permissions().await))),
+                    "configureProtocol" => {
+                        let mode = argument_string(&request.args, "protocol", 16)?;
+                        if runtime.application.is_some() || (mode != "nearby" && mode != "bitchat")
+                        {
+                            bail!("Stop Bluetooth before changing protocol");
+                        }
+                        BITCHAT_MODE.store(mode == "bitchat", Ordering::Release);
+                        Ok(None)
+                    }
+                    "maximumFrameSize" => {
+                        let endpoint = argument_string(&request.args, "endpointId", 256)?;
+                        let address = parse_endpoint(&endpoint)?;
+                        let size = if endpoint.starts_with("c:") {
+                            runtime
+                                .shared
+                                .remotes
+                                .lock()
+                                .await
+                                .get(&address)
+                                .context("Bluetooth peer is offline")?
+                                .mtu
+                        } else {
+                            runtime
+                                .shared
+                                .subscribers
+                                .lock()
+                                .await
+                                .get(&address)
+                                .context("Bluetooth peer is offline")?
+                                .maximum_frame_size
+                        };
+                        Ok(Some(json!(size)))
+                    }
                     "startAdvertising" => {
                         runtime
                             .start_advertising(argument_string(

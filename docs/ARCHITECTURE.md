@@ -657,3 +657,14 @@ account's wallet PIN immediately before the request is sent.
   `docs/protocols/`. Product, persistence, runtime, and delivery details belong
   under `docs/implementation/`, in code, or in tests.
 - Visual conventions belong in [`DESIGN.md`](./DESIGN.md), not here.
+
+## Bitchat compatibility boundary
+
+Bitchat live mesh messaging is an opt-in, foreground session owned by its own
+service/store. It uses a temporary exclusive lease on the existing BLE bearer;
+normal Nearby ownership resumes after teardown without changing preferences.
+Bitchat packet and private-session formats remain separate from Nearby/Nostr.
+Its per-account local identity seeds stay in secure storage and are deleted
+with the account; ephemeral Bitchat timelines never enter those message tables.
+See [`protocols/bitchat.md`](protocols/bitchat.md) and
+[`implementation/bitchat.md`](implementation/bitchat.md).

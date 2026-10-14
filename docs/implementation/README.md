@@ -12,3 +12,6 @@ policy, and tests. Interoperable event and wire formats belong in
 - [`nip05-registration.md`](./nip05-registration.md)
 - [`notification-recovery.md`](./notification-recovery.md)
 - [`relay-message-delivery.md`](./relay-message-delivery.md)
+
+- [`bitchat.md`](./bitchat.md): independent Bitchat mode, transport reuse,
+  lifecycle, validation, and release limitations.

@@ -1061,5 +1061,29 @@
     "not_found": "找不到專案",
     "link_failed": "無法開啟連結，請重試。",
     "runtime_notices": "Chromium 及其內建元件"
+  },
+  "bitchat": {
+    "title": "Bitchat",
+    "default_name": "Outlink",
+    "description": "透過藍牙與附近的 Bitchat 使用者聊天，無需網際網路連線。",
+    "privacy": "加入後，附近使用者可以看到你的名字和裝置身分。此房間開啟期間，Nearby 聊天會暫停。離開時訊息會清除。",
+    "name": "你的公開暱稱",
+    "join": "加入附近房間",
+    "public": "公共房間",
+    "public_notice": "附近網路中的所有人都能閱讀公開訊息。",
+    "private_notice": "私訊已加密。分享敏感資訊前，請與對方核對裝置指紋。",
+    "fingerprint": "裝置指紋：{{value}}",
+    "empty": "尚無訊息",
+    "empty_hint": "請保持藍牙開啟，並讓另一台 Bitchat 裝置位於附近。",
+    "message": "訊息",
+    "limit": "{{count}} / 255 位元組",
+    "send": "傳送",
+    "leave": "離開",
+    "sending": "傳送中",
+    "failed": "傳送失敗",
+    "sent": "已傳送",
+    "delivered": "已送達",
+    "read": "已讀",
+    "error": "無法連線或傳送。請檢查藍牙，使用更新版本後重試。"
   }
 }

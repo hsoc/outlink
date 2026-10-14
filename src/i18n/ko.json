@@ -1061,5 +1061,29 @@
     "not_found": "프로젝트를 찾을 수 없습니다",
     "link_failed": "링크를 열 수 없습니다. 다시 시도해 주세요.",
     "runtime_notices": "Chromium 및 포함된 구성 요소"
+  },
+  "bitchat": {
+    "title": "Bitchat",
+    "default_name": "Outlink",
+    "description": "인터넷 연결 없이 블루투스로 근처 Bitchat 사용자와 대화하세요.",
+    "privacy": "참여하면 이름과 기기 신원이 근처 사용자에게 공개됩니다. 이 방을 열어 두는 동안 Nearby 대화는 일시 중지됩니다. 나가면 메시지가 지워집니다.",
+    "name": "공개 이름",
+    "join": "근처 채팅방 참여",
+    "public": "공개 채팅방",
+    "public_notice": "근처 네트워크의 모든 사람이 공개 메시지를 읽을 수 있습니다.",
+    "private_notice": "비공개 메시지는 암호화됩니다. 민감한 정보를 공유하기 전에 상대방과 지문을 비교하세요.",
+    "fingerprint": "기기 지문: {{value}}",
+    "empty": "아직 메시지가 없습니다",
+    "empty_hint": "블루투스를 켜 두고 다른 Bitchat 기기를 가까이 두세요.",
+    "message": "메시지",
+    "limit": "{{count}} / 255바이트",
+    "send": "보내기",
+    "leave": "나가기",
+    "sending": "보내는 중",
+    "failed": "전송 실패",
+    "sent": "전송됨",
+    "delivered": "전달됨",
+    "read": "읽음",
+    "error": "연결하거나 보낼 수 없습니다. 블루투스를 확인하고 최신 버전으로 다시 시도하세요."
   }
 }

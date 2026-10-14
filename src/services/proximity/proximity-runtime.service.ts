@@ -312,6 +312,27 @@ class ProximityService {
   private discoveryGenerations = new Map<string, number>();
   private discoveryStaleTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private discoveryExpiryTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private externalTransportReferences = 0;
+
+  /** Temporarily lend the existing BLE adapter without changing user preferences. */
+  async suspendForExternalTransport(): Promise<() => Promise<void>> {
+    this.externalTransportReferences++;
+    const transition = this.foregroundTransition.catch(() => {}).then(async () => {
+      if (this.startWork) await this.startWork.catch(() => {});
+      await this.stop(true);
+    });
+    this.foregroundTransition = transition;
+    try { await transition; }
+    catch (error) { this.externalTransportReferences--; throw error; }
+    let released = false;
+    return async () => {
+      if (released) return;
+      released = true; this.externalTransportReferences--;
+      const resume = this.foregroundTransition.catch(() => {}).then(() => this.applyForegroundState());
+      this.foregroundTransition = resume; await resume;
+    };
+  }
+
   constructor() {
     nearbyFileUploadService.addRemoteAvailableListener((value) => {
       if (value.accountPubkey === this.accountPubkey) void this.announceRemoteAvailable(value.x);
@@ -375,6 +396,7 @@ class ProximityService {
   }
 
   private async applyForegroundState(): Promise<void> {
+    if (this.externalTransportReferences) return;
     const desired = this.foregroundAccountPubkey;
     if (!desired) {
       if (this.startWork) await this.startWork.catch(() => {});
@@ -396,10 +418,12 @@ class ProximityService {
   }
 
   private async start(accountPubkey: string, askPermission: boolean): Promise<void> {
+    if (this.externalTransportReferences) throw new Error('Bluetooth is being used by Bitchat');
     while (this.startWork) {
       await this.startWork.catch(() => {});
       if (this.accountPubkey === accountPubkey && this.identity && this.sessionStarted) return;
     }
+    if (this.externalTransportReferences) throw new Error('Bluetooth is being used by Bitchat');
     const work = this.startInternal(accountPubkey, askPermission);
     this.startWork = work;
     try {

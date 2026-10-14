@@ -2,9 +2,9 @@
 import Darwin
 import Foundation
 
-private let serviceUUID = CBUUID(string: "45D8B02F-6D80-4FC6-914E-B85FCD0440D3")
+private let nearbyServiceUUID = CBUUID(string: "45D8B02F-6D80-4FC6-914E-B85FCD0440D3")
 private let profileUUID = CBUUID(string: "55980CEE-27E5-48A9-BF1C-AB5DA34B4402")
-private let mailboxUUID = CBUUID(string: "86A4C105-9A0E-4144-BCA1-40E7C78A1D93")
+private let nearbyMailboxUUID = CBUUID(string: "86A4C105-9A0E-4144-BCA1-40E7C78A1D93")
 private let maximumWireBytes = 128 * 1024
 private let maximumChunkCount = 16_384
 private let maximumInboundMessages = 32
@@ -130,6 +130,20 @@ private final class MacOSProximityTransport: NSObject, CBCentralManagerDelegate,
     #endif
   }
 
+  private var bitchatMode = false
+  private var serviceUUID: CBUUID { bitchatMode ? CBUUID(string: "F47B5E2D-4A9E-4C5A-9B3F-8E1D2C3A4B5C") : nearbyServiceUUID }
+  private var mailboxUUID: CBUUID { bitchatMode ? CBUUID(string: "A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D") : nearbyMailboxUUID }
+  func configureProtocol(_ mode: String) throws {
+    guard ["nearby", "bitchat"].contains(mode), !advertisingRequested, activeConnectionEndpoints.isEmpty else { throw ProximityError.invalidArguments }
+    bitchatMode = mode == "bitchat"
+  }
+  func maximumFrameSize(_ endpoint: String) throws -> Int {
+    if endpoint.hasPrefix("c:"), let peer = peripherals[String(endpoint.dropFirst(2))] {
+      return peer.maximumWriteValueLength(for: .withResponse)
+    }
+    if let peer = subscribedCentrals[endpoint] { return peer.maximumUpdateValueLength }
+    throw ProximityError.offline
+  }
   init(emitter: JSONEmitter) {
     self.emitter = emitter
     super.init()
@@ -432,12 +446,12 @@ private final class MacOSProximityTransport: NSObject, CBCentralManagerDelegate,
     )
     let mailbox = CBMutableCharacteristic(
       type: mailboxUUID,
-      properties: [.write, .indicate],
+      properties: bitchatMode ? [.write, .writeWithoutResponse, .notify] : [.write, .indicate],
       value: nil,
       permissions: [.writeable]
     )
     let service = CBMutableService(type: serviceUUID, primary: true)
-    service.characteristics = [profile, mailbox]
+    service.characteristics = bitchatMode ? [mailbox] : [profile, mailbox]
     profileCharacteristic = profile
     mailboxCharacteristic = mailbox
     manager.add(service)
@@ -579,7 +593,7 @@ private final class MacOSProximityTransport: NSObject, CBCentralManagerDelegate,
       return
     }
     for service in peripheral.services ?? [] where service.uuid == serviceUUID {
-      peripheral.discoverCharacteristics([profileUUID, mailboxUUID], for: service)
+      peripheral.discoverCharacteristics(bitchatMode ? [mailboxUUID] : [profileUUID, mailboxUUID], for: service)
     }
   }
 
@@ -615,6 +629,12 @@ private final class MacOSProximityTransport: NSObject, CBCentralManagerDelegate,
     trace(
       "notification state endpoint=c:\(peripheral.identifier.uuidString) notifying=\(characteristic.isNotifying) error=\(error?.localizedDescription ?? "none")"
     )
+    if bitchatMode, error == nil, characteristic.uuid == mailboxUUID, characteristic.isNotifying {
+      let endpoint = "c:\(peripheral.identifier.uuidString)"
+      emitter.event(name: "onPeer", value: ["endpointId": endpoint,
+        "generation": connectionGenerations[endpoint] ?? 0, "profile": ""])
+      return
+    }
     guard error == nil, characteristic.uuid == mailboxUUID, characteristic.isNotifying,
       let profile = profileByEndpoint[peripheral.identifier.uuidString]
     else { return }
@@ -688,6 +708,7 @@ private final class MacOSProximityTransport: NSObject, CBCentralManagerDelegate,
     let endpoint = "p:\(central.identifier.uuidString)"
     subscribedCentrals[endpoint] = central
     let generation = activateConnectionGeneration(endpointId: endpoint)
+    if bitchatMode { emitter.event(name: "onPeer", value: ["endpointId": endpoint, "generation": generation, "profile": ""]) }
     emitter.event(
       name: "onConnection",
       value: ["endpointId": endpoint, "state": "connected", "generation": generation])
@@ -750,6 +771,12 @@ private final class MacOSProximityTransport: NSObject, CBCentralManagerDelegate,
     }
     let now = ProcessInfo.processInfo.systemUptime
     inbound = inbound.filter { now - $0.value.createdAt <= inboundLifetime }
+    if bitchatMode {
+      guard frame.count >= 22, frame.count <= maximumWireBytes else { return }
+      emitter.event(name: "onMessage", value: ["endpointId": endpointId, "generation": generation,
+        "payload": frame.base64EncodedString()])
+      return
+    }
     guard frame.count >= 12 else { return }
     let packetId = frame.prefix(8).reduce(UInt64(0)) { ($0 << 8) | UInt64($1) }
     let index = Int(frame[8]) << 8 | Int(frame[9])
@@ -902,6 +929,7 @@ private final class MacOSProximityTransport: NSObject, CBCentralManagerDelegate,
   }
 
   private func frames(payload: Data, packetId: UInt64, maximumFrameSize: Int) -> [Data]? {
+    if bitchatMode { return payload.count <= maximumFrameSize ? [payload] : nil }
     let chunkSize = max(1, maximumFrameSize - 12)
     let total = max(1, Int(ceil(Double(payload.count) / Double(chunkSize))))
     guard total <= maximumChunkCount else { return nil }
@@ -974,11 +1002,18 @@ private final class RPCHost {
               "central": true,
               "peripheral": true,
               "concurrentRoles": true,
+              "bitchat": true,
             ],
           ]
         )
       case "requestPermissions":
         transport.requestPermissions { [emitter] granted in emitter.response(id: id, value: granted) }
+      case "configureProtocol":
+        try transport.configureProtocol(string(args, "protocol", maximumBytes: 16))
+        emitter.response(id: id)
+      case "maximumFrameSize":
+        let size = try transport.maximumFrameSize(string(args, "endpointId", maximumBytes: 256))
+        emitter.response(id: id, value: size)
       case "startAdvertising":
         let profile = try string(args, "profile", maximumBytes: 16 * 1024)
         transport.startAdvertising(profile: profile)

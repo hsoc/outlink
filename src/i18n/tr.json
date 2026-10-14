@@ -1061,5 +1061,29 @@
     "not_found": "Proje bulunamadı",
     "link_failed": "Bağlantı açılamadı. Lütfen tekrar deneyin.",
     "runtime_notices": "Chromium ve birlikte gelen bileşenler"
+  },
+  "bitchat": {
+    "title": "Bitchat",
+    "default_name": "Outlink",
+    "description": "İnternet bağlantısı olmadan yakındaki Bitchat kullanıcılarıyla Bluetooth üzerinden sohbet edin.",
+    "privacy": "Katıldığınızda adınız ve cihaz kimliğiniz yakındaki kullanıcılara görünür. Bu oda açıkken Nearby sohbetleri duraklatılır. Çıktığınızda mesajlar silinir.",
+    "name": "Herkese açık adınız",
+    "join": "Yakındaki odaya katıl",
+    "public": "Herkese açık oda",
+    "public_notice": "Yakındaki ağdaki herkes herkese açık mesajları okuyabilir.",
+    "private_notice": "Özel mesajlar şifrelenir. Hassas bilgi paylaşmadan önce parmak izini karşıdaki kişiyle karşılaştırın.",
+    "fingerprint": "Cihaz parmak izi: {{value}}",
+    "empty": "Henüz mesaj yok",
+    "empty_hint": "Bluetooth’u açık tutun ve başka bir Bitchat cihazını yakında bulundurun.",
+    "message": "Mesaj",
+    "limit": "{{count}} / 255 bayt",
+    "send": "Gönder",
+    "leave": "Çık",
+    "sending": "Gönderiliyor",
+    "failed": "Gönderim başarısız",
+    "sent": "Gönderildi",
+    "delivered": "Teslim edildi",
+    "read": "Okundu",
+    "error": "Bağlanılamadı veya gönderilemedi. Bluetooth’u kontrol edin, güncel bir sürüm kullanın ve tekrar deneyin."
   }
 }

@@ -1071,5 +1071,29 @@
     "not_found": "Nie znaleziono projektu",
     "link_failed": "Nie udało się otworzyć linku. Spróbuj ponownie.",
     "runtime_notices": "Chromium i dołączone komponenty"
+  },
+  "bitchat": {
+    "title": "Bitchat",
+    "default_name": "Outlink",
+    "description": "Rozmawiaj przez Bluetooth z pobliskimi użytkownikami Bitchat bez połączenia z internetem.",
+    "privacy": "Po dołączeniu Twoja nazwa i tożsamość urządzenia będą widoczne dla pobliskich użytkowników. Czaty Nearby są wstrzymane, gdy ten pokój jest otwarty. Wiadomości znikają po wyjściu.",
+    "name": "Twoja publiczna nazwa",
+    "join": "Dołącz do pobliskiego pokoju",
+    "public": "Pokój publiczny",
+    "public_notice": "Wszyscy w pobliskiej sieci mogą czytać wiadomości publiczne.",
+    "private_notice": "Wiadomości prywatne są szyfrowane. Porównaj odcisk z drugą osobą przed udostępnieniem poufnych informacji.",
+    "fingerprint": "Odcisk urządzenia: {{value}}",
+    "empty": "Nie ma jeszcze wiadomości",
+    "empty_hint": "Pozostaw Bluetooth włączony i inne urządzenie Bitchat w pobliżu.",
+    "message": "Wiadomość",
+    "limit": "{{count}} / 255 bajtów",
+    "send": "Wyślij",
+    "leave": "Wyjdź",
+    "sending": "Wysyłanie",
+    "failed": "Nie udało się wysłać",
+    "sent": "Wysłano",
+    "delivered": "Dostarczono",
+    "read": "Przeczytano",
+    "error": "Nie udało się połączyć lub wysłać. Sprawdź Bluetooth, użyj aktualnej wersji i spróbuj ponownie."
   }
 }

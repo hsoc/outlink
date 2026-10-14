@@ -21,6 +21,12 @@
 export type ProximityTransportSubscription = { remove(): void };
 
 export interface ProximityTransportPort {
+  /** Optional bearer mode; switching requires a stopped transport session. */
+  configureProtocolAsync?(protocol: 'nearby' | 'bitchat'): Promise<void>;
+  /** Negotiated GATT value size, excluding ATT overhead. */
+  maximumFrameSizeAsync?(endpointId: string): Promise<number>;
+  /** Bounded raw DEFLATE used by Bitchat peers; exact output size is required. */
+  inflateRawAsync?(bytes: Uint8Array, size: number): Promise<Uint8Array>;
   /** Whether the native transport capability is present at all. */
   isAvailable(): boolean;
   /**

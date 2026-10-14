@@ -74,6 +74,9 @@ function lazyProximityTransportAdapter(): ProximityTransportPort {
   };
   return {
     isAvailable: () => load().isAvailable(),
+    configureProtocolAsync: (protocol) => load().configureProtocolAsync!(protocol),
+    maximumFrameSizeAsync: (endpointId) => load().maximumFrameSizeAsync!(endpointId),
+    inflateRawAsync: (bytes, size) => load().inflateRawAsync!(bytes, size),
     requestPermissions: () => load().requestPermissions(),
     startAdvertisingAsync: (profile) => load().startAdvertisingAsync(profile),
     updateProfileAsync: (profile) => load().updateProfileAsync(profile),

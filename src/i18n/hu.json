@@ -1061,5 +1061,29 @@
     "not_found": "A projekt nem található",
     "link_failed": "Nem sikerült megnyitni a hivatkozást. Próbálja újra.",
     "runtime_notices": "Chromium és mellékelt összetevők"
+  },
+  "bitchat": {
+    "title": "Bitchat",
+    "default_name": "Outlink",
+    "description": "Csevegj Bluetoothon a közeli Bitchat-felhasználókkal internetkapcsolat nélkül.",
+    "privacy": "Belépéskor a neved és az eszközazonosságod láthatóvá válik a közeli felhasználóknak. A Nearby-csevegések szünetelnek, amíg ez a szoba nyitva van. A kilépés törli az üzeneteket.",
+    "name": "Nyilvános neved",
+    "join": "Belépés a közeli szobába",
+    "public": "Nyilvános szoba",
+    "public_notice": "A közeli hálózatban mindenki olvashatja a nyilvános üzeneteket.",
+    "private_notice": "A privát üzenetek titkosítottak. Bizalmas adatok megosztása előtt hasonlítsd össze az ujjlenyomatot a másik féllel.",
+    "fingerprint": "Eszközujjlenyomat: {{value}}",
+    "empty": "Még nincsenek üzenetek",
+    "empty_hint": "Tartsd bekapcsolva a Bluetooth-t, és legyen a közelben egy másik Bitchat-eszköz.",
+    "message": "Üzenet",
+    "limit": "{{count}} / 255 bájt",
+    "send": "Küldés",
+    "leave": "Kilépés",
+    "sending": "Küldés folyamatban",
+    "failed": "Sikertelen küldés",
+    "sent": "Elküldve",
+    "delivered": "Kézbesítve",
+    "read": "Olvasva",
+    "error": "Nem sikerült kapcsolódni vagy küldeni. Ellenőrizd a Bluetooth-t, használj friss verziót, és próbáld újra."
   }
 }

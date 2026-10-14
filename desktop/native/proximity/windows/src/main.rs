@@ -14,7 +14,7 @@ mod windows_runtime {
         io::{self, Write},
         sync::{
             Arc, Mutex as StdMutex,
-            atomic::{AtomicU64, Ordering},
+            atomic::{AtomicBool, AtomicU64, Ordering},
         },
         time::{Duration, Instant},
     };
@@ -57,9 +57,28 @@ mod windows_runtime {
     const MAXIMUM_INBOUND_BYTES_PER_ENDPOINT: usize = 256 * 1024;
     const INBOUND_LIFETIME: Duration = Duration::from_secs(60);
     const COMMAND_TIMEOUT: Duration = Duration::from_secs(20);
-    const SERVICE_UUID: GUID = GUID::from_u128(0x45D8B02F_6D80_4FC6_914E_B85FCD0440D3);
+    const NEARBY_SERVICE_UUID: GUID = GUID::from_u128(0x45D8B02F_6D80_4FC6_914E_B85FCD0440D3);
     const PROFILE_UUID: GUID = GUID::from_u128(0x55980CEE_27E5_48A9_BF1C_AB5DA34B4402);
-    const MAILBOX_UUID: GUID = GUID::from_u128(0x86A4C105_9A0E_4144_BCA1_40E7C78A1D93);
+    const NEARBY_MAILBOX_UUID: GUID = GUID::from_u128(0x86A4C105_9A0E_4144_BCA1_40E7C78A1D93);
+
+    static BITCHAT_MODE: AtomicBool = AtomicBool::new(false);
+    fn bitchat_mode() -> bool {
+        BITCHAT_MODE.load(Ordering::Acquire)
+    }
+    fn service_uuid() -> GUID {
+        if bitchat_mode() {
+            GUID::from_u128(0xF47B5E2D_4A9E_4C5A_9B3F_8E1D2C3A4B5C)
+        } else {
+            NEARBY_SERVICE_UUID
+        }
+    }
+    fn mailbox_uuid() -> GUID {
+        if bitchat_mode() {
+            GUID::from_u128(0xA1B2C3D4_E5F6_4A5B_8C9D_0E1F2A3B4C5D)
+        } else {
+            NEARBY_MAILBOX_UUID
+        }
+    }
 
     #[derive(Clone)]
     struct Emitter {
@@ -216,6 +235,12 @@ mod windows_runtime {
         if payload.len() > MAXIMUM_WIRE_BYTES {
             bail!("The nearby message is too large");
         }
+        if bitchat_mode() {
+            if payload.len() > maximum_frame_size {
+                bail!("Bitchat frame exceeds link MTU");
+            }
+            return Ok(vec![payload.to_vec()]);
+        }
         let chunk_size = maximum_frame_size.saturating_sub(12).max(1);
         let total = payload.len().div_ceil(chunk_size).max(1);
         if total > MAXIMUM_CHUNK_COUNT {
@@ -353,6 +378,12 @@ mod windows_runtime {
                 let Some(generation) = generation else { return };
                 generation
             };
+            if bitchat_mode() {
+                if frame.len() >= 22 && frame.len() <= MAXIMUM_WIRE_BYTES {
+                    self.emitter.event("onMessage", json!({ "endpointId": endpoint_id, "generation": generation, "payload": BASE64.encode(frame) }));
+                }
+                return;
+            }
             let assembly_endpoint = format!("{endpoint_id}:{generation}");
             if let Some(payload) = self.inbound.lock().await.accept(&assembly_endpoint, frame) {
                 self.emitter.event(
@@ -512,7 +543,7 @@ mod windows_runtime {
             if let Some(peripheral) = self.peripheral.take() {
                 peripheral.close();
             }
-            let provider_result = GattServiceProvider::CreateAsync(SERVICE_UUID)?.await?;
+            let provider_result = GattServiceProvider::CreateAsync(service_uuid())?.await?;
             if provider_result.Error()? != windows::Devices::Bluetooth::BluetoothError::Success {
                 bail!("Unable to create the Windows GATT service provider");
             }
@@ -534,11 +565,17 @@ mod windows_runtime {
 
             let mailbox_parameters = GattLocalCharacteristicParameters::new()?;
             mailbox_parameters.SetCharacteristicProperties(
-                GattCharacteristicProperties::Write | GattCharacteristicProperties::Indicate,
+                GattCharacteristicProperties::Write
+                    | if bitchat_mode() {
+                        GattCharacteristicProperties::Notify
+                            | GattCharacteristicProperties::WriteWithoutResponse
+                    } else {
+                        GattCharacteristicProperties::Indicate
+                    },
             )?;
             mailbox_parameters.SetWriteProtectionLevel(GattProtectionLevel::Plain)?;
             let mailbox_result = service
-                .CreateCharacteristicAsync(MAILBOX_UUID, &mailbox_parameters)?
+                .CreateCharacteristicAsync(mailbox_uuid(), &mailbox_parameters)?
                 .await?;
             if mailbox_result.Error()? != windows::Devices::Bluetooth::BluetoothError::Success {
                 bail!("Unable to create the nearby mailbox characteristic");
@@ -750,7 +787,7 @@ mod windows_runtime {
                 .AdvertisementFilter()?
                 .Advertisement()?
                 .ServiceUuids()?
-                .Append(SERVICE_UUID)?;
+                .Append(service_uuid())?;
             let shared = self.shared.clone();
             let handle = tokio::runtime::Handle::current();
             let generation = shared.session_generation.load(Ordering::Acquire);
@@ -1032,6 +1069,9 @@ mod windows_runtime {
             if !subscribers.contains_key(endpoint) {
                 let endpoint_id = format!("p:{endpoint}");
                 let generation = shared.next_connection_generation(&endpoint_id).await;
+                if bitchat_mode() {
+                    shared.emitter.event("onPeer", json!({ "endpointId": endpoint_id.clone(), "generation": generation, "profile": "" }));
+                }
                 shared.emitter.event(
                     "onConnection",
                     json!({ "endpointId": endpoint_id, "state": "connected", "generation": generation }),
@@ -1088,7 +1128,7 @@ mod windows_runtime {
             json!({ "endpointId": endpoint_id, "state": "connected", "generation": connection_generation }),
         );
         let service = {
-            let services_result = device.GetGattServicesForUuidAsync(SERVICE_UUID)?.await?;
+            let services_result = device.GetGattServicesForUuidAsync(service_uuid())?.await?;
             if services_result.Status()? != GattCommunicationStatus::Success {
                 bail!("Unable to enumerate nearby GATT services");
             }
@@ -1098,56 +1138,71 @@ mod windows_runtime {
             }
             services.GetAt(0)?
         };
-        let profile = first_characteristic(&service, PROFILE_UUID).await?;
-        let mailbox = first_characteristic(&service, MAILBOX_UUID).await?;
-        let profile_value = read_profile(&profile).await?;
+        let mailbox = first_characteristic(&service, mailbox_uuid()).await?;
+        let profile = if bitchat_mode() {
+            mailbox.clone()
+        } else {
+            first_characteristic(&service, PROFILE_UUID).await?
+        };
+        let profile_value = if bitchat_mode() {
+            String::new()
+        } else {
+            read_profile(&profile).await?
+        };
         let maximum_frame_size = usize::from(service.Session()?.MaxPduSize()?)
             .saturating_sub(3)
             .max(20);
 
-        let profile_shared = shared.clone();
-        let profile_handle = tokio::runtime::Handle::current();
-        let profile_value_token =
-            profile.ValueChanged(&TypedEventHandler::<
-                GattCharacteristic,
-                GattValueChangedEventArgs,
-            >::new(move |_sender, arguments| {
-                let Some(arguments) = arguments.cloned() else {
-                    return Ok(());
-                };
-                let bytes =
-                    bytes_from_buffer(&arguments.CharacteristicValue()?).unwrap_or_default();
-                let shared = profile_shared.clone();
-                profile_handle.spawn(async move {
-                    if !shared.remotes.lock().await.contains_key(&address) {
-                        return;
-                    }
-                    let generation = shared.connection_generation(&format!("c:{address}")).await;
-                    shared.emitter.event(
-                        "onPeer",
-                        json!({
-                            "endpointId": format!("c:{address}"),
-                            "generation": generation,
-                            "profile": BASE64.encode(bytes),
-                            "rssi": 0,
-                        }),
-                    );
-                });
-                Ok(())
-            }))?;
-        let profile_value_token = match profile
-            .WriteClientCharacteristicConfigurationDescriptorAsync(
-                GattClientCharacteristicConfigurationDescriptorValue::Notify,
-            )?
-            .await
-        {
-            Ok(status) if status == GattCommunicationStatus::Success => Some(profile_value_token),
-            _ => {
-                let _ = profile.RemoveValueChanged(profile_value_token);
-                None
-            }
+        let profile_value_token = if bitchat_mode() {
+            None
+        } else {
+            let profile_shared = shared.clone();
+            let profile_handle = tokio::runtime::Handle::current();
+            let profile_value_token =
+                profile.ValueChanged(&TypedEventHandler::<
+                    GattCharacteristic,
+                    GattValueChangedEventArgs,
+                >::new(move |_sender, arguments| {
+                    let Some(arguments) = arguments.cloned() else {
+                        return Ok(());
+                    };
+                    let bytes =
+                        bytes_from_buffer(&arguments.CharacteristicValue()?).unwrap_or_default();
+                    let shared = profile_shared.clone();
+                    profile_handle.spawn(async move {
+                        if !shared.remotes.lock().await.contains_key(&address) {
+                            return;
+                        }
+                        let generation =
+                            shared.connection_generation(&format!("c:{address}")).await;
+                        shared.emitter.event(
+                            "onPeer",
+                            json!({
+                                "endpointId": format!("c:{address}"),
+                                "generation": generation,
+                                "profile": BASE64.encode(bytes),
+                                "rssi": 0,
+                            }),
+                        );
+                    });
+                    Ok(())
+                }))?;
+            let result = match profile
+                .WriteClientCharacteristicConfigurationDescriptorAsync(
+                    GattClientCharacteristicConfigurationDescriptorValue::Notify,
+                )?
+                .await
+            {
+                Ok(status) if status == GattCommunicationStatus::Success => {
+                    Some(profile_value_token)
+                }
+                _ => {
+                    let _ = profile.RemoveValueChanged(profile_value_token);
+                    None
+                }
+            };
+            result
         };
-
         let value_shared = shared.clone();
         let value_handle = tokio::runtime::Handle::current();
         let mailbox_value_token =
@@ -1167,9 +1222,11 @@ mod windows_runtime {
                 Ok(())
             }))?;
         let configuration_status = mailbox
-            .WriteClientCharacteristicConfigurationDescriptorAsync(
-                GattClientCharacteristicConfigurationDescriptorValue::Indicate,
-            )?
+            .WriteClientCharacteristicConfigurationDescriptorAsync(if bitchat_mode() {
+                GattClientCharacteristicConfigurationDescriptorValue::Notify
+            } else {
+                GattClientCharacteristicConfigurationDescriptorValue::Indicate
+            })?
             .await?;
         if configuration_status != GattCommunicationStatus::Success {
             let _ = mailbox.RemoveValueChanged(mailbox_value_token);
@@ -1333,10 +1390,45 @@ mod windows_runtime {
                                 "central": true,
                                 "peripheral": true,
                                 "concurrentRoles": true,
+                                "bitchat": true,
                             },
                         })))
                     }
                     "requestPermissions" => Ok(Some(json!(runtime.request_permissions().await))),
+                    "configureProtocol" => {
+                        let mode = argument_string(&request.args, "protocol", 16)?;
+                        if runtime.peripheral.is_some() || (mode != "nearby" && mode != "bitchat") {
+                            bail!("Stop Bluetooth before changing protocol");
+                        }
+                        BITCHAT_MODE.store(mode == "bitchat", Ordering::Release);
+                        Ok(None)
+                    }
+                    "maximumFrameSize" => {
+                        let endpoint = argument_string(&request.args, "endpointId", 256)?;
+                        let address = endpoint.get(2..).context("Invalid endpoint")?;
+                        let size = if endpoint.starts_with("c:") {
+                            runtime
+                                .shared
+                                .remotes
+                                .lock()
+                                .await
+                                .get(&parse_central_endpoint(&endpoint)?)
+                                .context("Bluetooth peer is offline")?
+                                .maximum_frame_size
+                        } else {
+                            usize::from(
+                                runtime
+                                    .shared
+                                    .subscribers
+                                    .lock()
+                                    .await
+                                    .get(address)
+                                    .context("Bluetooth peer is offline")?
+                                    .MaxNotificationSize()?,
+                            )
+                        };
+                        Ok(Some(json!(size)))
+                    }
                     "startAdvertising" => {
                         runtime
                             .start_advertising(argument_string(

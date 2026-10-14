@@ -1066,5 +1066,29 @@
     "not_found": "Progetto non trovato",
     "link_failed": "Impossibile aprire il link. Riprova.",
     "runtime_notices": "Chromium e componenti inclusi"
+  },
+  "bitchat": {
+    "title": "Bitchat",
+    "default_name": "Outlink",
+    "description": "Chatta via Bluetooth con utenti Bitchat vicini, senza connessione a Internet.",
+    "privacy": "Entrando, il tuo nome e l’identità del dispositivo saranno visibili agli utenti vicini. Le chat Nearby sono sospese finché questa stanza è aperta. I messaggi vengono cancellati quando esci.",
+    "name": "Il tuo nome pubblico",
+    "join": "Entra nella stanza vicina",
+    "public": "Stanza pubblica",
+    "public_notice": "Tutti nella rete vicina possono leggere i messaggi pubblici.",
+    "private_notice": "I messaggi privati sono cifrati. Confronta l’impronta con la persona prima di condividere informazioni sensibili.",
+    "fingerprint": "Impronta del dispositivo: {{value}}",
+    "empty": "Ancora nessun messaggio",
+    "empty_hint": "Tieni il Bluetooth attivo e un altro dispositivo Bitchat vicino.",
+    "message": "Messaggio",
+    "limit": "{{count}} / 255 byte",
+    "send": "Invia",
+    "leave": "Esci",
+    "sending": "Invio in corso",
+    "failed": "Invio non riuscito",
+    "sent": "Inviato",
+    "delivered": "Consegnato",
+    "read": "Letto",
+    "error": "Impossibile connettersi o inviare. Controlla il Bluetooth, usa una versione aggiornata e riprova."
   }
 }

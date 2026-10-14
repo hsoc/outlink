@@ -19,3 +19,6 @@ matches the relevant specification.
   Bluetooth Low Energy.
 - [`nearby-file-transfer.md`](./nearby-file-transfer.md): direct and
   resumable file exchange for Nearby peers.
+
+- [`bitchat.md`](./bitchat.md): optional Bitchat live Bluetooth mesh text
+  and encrypted private messaging interoperability profile.

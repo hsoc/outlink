@@ -1061,5 +1061,29 @@
     "not_found": "Project not found",
     "link_failed": "Could not open the link. Please try again.",
     "runtime_notices": "Chromium and bundled components"
+  },
+  "bitchat": {
+    "title": "Bitchat",
+    "default_name": "Outlink",
+    "description": "Chat with nearby Bitchat users over Bluetooth, without an internet connection.",
+    "privacy": "Joining makes your name and device identity visible to nearby users. Nearby chats pause while this room is open. Messages clear when you leave.",
+    "name": "Your public name",
+    "join": "Join nearby room",
+    "public": "Public room",
+    "public_notice": "Everyone in the nearby mesh can read public messages.",
+    "private_notice": "Private messages are encrypted. Compare the fingerprint with the person before sharing sensitive information.",
+    "fingerprint": "Device fingerprint: {{value}}",
+    "empty": "No messages yet",
+    "empty_hint": "Keep Bluetooth on and another Bitchat device nearby.",
+    "message": "Message",
+    "limit": "{{count}} / 255 bytes",
+    "send": "Send",
+    "leave": "Leave",
+    "sending": "Sending",
+    "failed": "Send failed",
+    "sent": "Sent",
+    "delivered": "Delivered",
+    "read": "Read",
+    "error": "Unable to connect or send. Check Bluetooth, use an updated build, and try again."
   }
 }

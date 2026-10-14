@@ -30,14 +30,15 @@ import expo.modules.kotlin.modules.ModuleDefinition
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.UUID
+import java.util.zip.Inflater
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.random.Random
 
-private val SERVICE_UUID: UUID = UUID.fromString("45d8b02f-6d80-4fc6-914e-b85fcd0440d3")
+private val NEARBY_SERVICE_UUID: UUID = UUID.fromString("45d8b02f-6d80-4fc6-914e-b85fcd0440d3")
 private val PROFILE_UUID: UUID = UUID.fromString("55980cee-27e5-48a9-bf1c-ab5da34b4402")
-private val MAILBOX_UUID: UUID = UUID.fromString("86a4c105-9a0e-4144-bca1-40e7c78a1d93")
+private val NEARBY_MAILBOX_UUID: UUID = UUID.fromString("86a4c105-9a0e-4144-bca1-40e7c78a1d93")
 private val CCCD_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
 private const val DEFAULT_ATT_MTU = 23
 private const val MAXIMUM_ATT_MTU = 517
@@ -67,6 +68,9 @@ private data class InboundAssembly(
 
 @SuppressLint("MissingPermission")
 class ExpoProximityModule : Module() {
+  private var bitchatMode = false
+  private val SERVICE_UUID get() = if (bitchatMode) UUID.fromString("F47B5E2D-4A9E-4C5A-9B3F-8E1D2C3A4B5C") else NEARBY_SERVICE_UUID
+  private val MAILBOX_UUID get() = if (bitchatMode) UUID.fromString("A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D") else NEARBY_MAILBOX_UUID
   private val handler = Handler(Looper.getMainLooper())
   private var profileBytes = ByteArray(0)
   private var gattServer: BluetoothGattServer? = null
@@ -108,6 +112,30 @@ class ExpoProximityModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("ExpoProximity")
     Events("onPeer", "onSignal", "onMessage", "onConnection", "onBluetoothState")
+
+    AsyncFunction("configureProtocolAsync") { mode: String, promise: Promise ->
+      handler.post {
+        if (mode !in listOf("nearby", "bitchat") || gattServer != null || activeConnectionEndpoints.isNotEmpty()) {
+          promise.reject("ERR_PROXIMITY_MODE", "Stop Bluetooth before changing protocol.", null)
+        } else { bitchatMode = mode == "bitchat"; promise.resolve() }
+      }
+    }
+    AsyncFunction("maximumFrameSizeAsync") { endpoint: String, promise: Promise ->
+      handler.post { promise.resolve(maximumGattFrameSize(mtuByEndpoint[endpoint.drop(2)] ?: DEFAULT_ATT_MTU)) }
+    }
+    AsyncFunction("inflateRawAsync") { value: String, size: Int ->
+      require(size in 1..128 * 1024) { "Invalid compressed size" }
+      val compressed = Base64.decode(value, Base64.NO_WRAP)
+      require(compressed.size <= 128 * 1024) { "Compressed payload too large" }
+      val inflater = Inflater(true)
+      try {
+        inflater.setInput(compressed)
+        val output = ByteArray(size + 1)
+        val count = inflater.inflate(output)
+        require(count == size && inflater.finished() && inflater.remaining == 0) { "Invalid compressed payload" }
+        Base64.encodeToString(output.copyOf(size), Base64.NO_WRAP)
+      } finally { inflater.end() }
+    }
 
     AsyncFunction("startAdvertisingAsync") { profile: String, promise: Promise ->
       handler.post {
@@ -281,9 +309,9 @@ class ExpoProximityModule : Module() {
           promise.reject("ERR_PROXIMITY_MTU", "The negotiated BLE MTU is too small.", null)
           return@post
         }
-        val chunkSize = maximumFrameSize - FRAME_HEADER_BYTES
+        val chunkSize = if (bitchatMode) maximumFrameSize else maximumFrameSize - FRAME_HEADER_BYTES
         val total = max(1, ceil(bytes.size.toDouble() / chunkSize).toInt())
-        if (total > MAXIMUM_CHUNK_COUNT) {
+        if (total > MAXIMUM_CHUNK_COUNT || (bitchatMode && total != 1)) {
           promise.reject("ERR_PROXIMITY_TOO_LARGE", "The nearby message needs too many BLE chunks.", null)
           return@post
         }
@@ -302,7 +330,7 @@ class ExpoProximityModule : Module() {
             .putShort(index.toShort())
             .putShort(total.toShort())
             .array()
-          queue.add(header + bytes.copyOfRange(start, end))
+          queue.add(if (bitchatMode) bytes else header + bytes.copyOfRange(start, end))
         }
         writeQueues[endpointId] = queue
         writePromises[endpointId] = promise
@@ -346,10 +374,12 @@ class ExpoProximityModule : Module() {
           BluetoothGattDescriptor.PERMISSION_READ or BluetoothGattDescriptor.PERMISSION_WRITE,
         ),
       )
-      service.addCharacteristic(profile)
+      if (!bitchatMode) service.addCharacteristic(profile)
       val mailbox = BluetoothGattCharacteristic(
         MAILBOX_UUID,
-        BluetoothGattCharacteristic.PROPERTY_WRITE or BluetoothGattCharacteristic.PROPERTY_INDICATE,
+        BluetoothGattCharacteristic.PROPERTY_WRITE or (if (bitchatMode)
+          BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE or BluetoothGattCharacteristic.PROPERTY_NOTIFY
+          else BluetoothGattCharacteristic.PROPERTY_INDICATE),
         BluetoothGattCharacteristic.PERMISSION_WRITE,
       )
       mailbox.addDescriptor(
@@ -516,6 +546,12 @@ class ExpoProximityModule : Module() {
       if (status != BluetoothGatt.GATT_SUCCESS) return
       val service = gatt.getService(SERVICE_UUID) ?: return
       val endpoint = gatt.device.address
+      if (bitchatMode) {
+        val mailbox = service.getCharacteristic(MAILBOX_UUID) ?: return
+        mailboxes[endpoint] = mailbox
+        if (!subscribeToMailbox(gatt, mailbox)) gatt.disconnect()
+        return
+      }
       val profile = service.getCharacteristic(PROFILE_UUID)
       val mailbox = service.getCharacteristic(MAILBOX_UUID)
       profiles[endpoint] = profile
@@ -544,7 +580,9 @@ class ExpoProximityModule : Module() {
         status == BluetoothGatt.GATT_SUCCESS
       ) {
         mailboxReadyEndpoints.add(gatt.device.address)
-        profiles[gatt.device.address]?.let(gatt::readCharacteristic)
+        if (bitchatMode) sendEvent("onPeer", mapOf("endpointId" to "c:${gatt.device.address}",
+          "generation" to (connectionGenerations["c:${gatt.device.address}"] ?: 0L), "profile" to ""))
+        else profiles[gatt.device.address]?.let(gatt::readCharacteristic)
       }
     }
 
@@ -626,7 +664,8 @@ class ExpoProximityModule : Module() {
   ): Boolean {
     gatt.setCharacteristicNotification(mailbox, true)
     val descriptor = mailbox.getDescriptor(CCCD_UUID) ?: return false
-    return writeDescriptor(gatt, descriptor, BluetoothGattDescriptor.ENABLE_INDICATION_VALUE)
+    return writeDescriptor(gatt, descriptor, if (bitchatMode)
+      BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE else BluetoothGattDescriptor.ENABLE_INDICATION_VALUE)
   }
 
   private fun writeDescriptor(
@@ -760,10 +799,12 @@ class ExpoProximityModule : Module() {
             }
           }
           MAILBOX_UUID -> {
-            if (value.contentEquals(BluetoothGattDescriptor.ENABLE_INDICATION_VALUE)) {
+            if (value.contentEquals(if (bitchatMode) BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+              else BluetoothGattDescriptor.ENABLE_INDICATION_VALUE)) {
               subscribedDevices[endpoint] = device
               val generation = activateConnectionGeneration(endpoint)
               sendEvent("onConnection", mapOf("endpointId" to endpoint, "state" to "connected", "generation" to generation))
+              if (bitchatMode) sendEvent("onPeer", mapOf("endpointId" to endpoint, "generation" to generation, "profile" to ""))
             } else {
               subscribedDevices.remove(endpoint)
             }
@@ -841,12 +882,12 @@ class ExpoProximityModule : Module() {
     }
     val started = safelyStartGattOperation {
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        gattServer?.notifyCharacteristicChanged(device, characteristic, true, frame) == BluetoothGatt.GATT_SUCCESS
+        gattServer?.notifyCharacteristicChanged(device, characteristic, !bitchatMode, frame) == BluetoothGatt.GATT_SUCCESS
       } else {
         @Suppress("DEPRECATION")
         run {
           characteristic.value = frame
-          gattServer?.notifyCharacteristicChanged(device, characteristic, true) == true
+          gattServer?.notifyCharacteristicChanged(device, characteristic, !bitchatMode) == true
         }
       }
     }
@@ -858,6 +899,11 @@ class ExpoProximityModule : Module() {
 
   private fun acceptFrame(endpoint: String, frame: ByteArray) {
     val generation = connectionGenerations[endpoint] ?: return
+    if (bitchatMode) {
+      if (frame.size in 22..MAXIMUM_WIRE_BYTES) sendEvent("onMessage", mapOf("endpointId" to endpoint,
+        "generation" to generation, "payload" to Base64.encodeToString(frame, Base64.NO_WRAP)))
+      return
+    }
     if (frame.size < FRAME_HEADER_BYTES) return
     val header = ByteBuffer.wrap(frame, 0, FRAME_HEADER_BYTES).order(ByteOrder.BIG_ENDIAN)
     val packetId = header.long

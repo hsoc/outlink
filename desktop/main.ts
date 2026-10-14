@@ -1,3 +1,4 @@
+import { inflateRaw } from 'node:zlib';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from 'node:crypto';
@@ -388,6 +389,18 @@ function registerIpcHandlers(): void {
     services().secure.deleteItem(validateString(key, 'key', 512)),
   );
 
+  handle(IPC.proximityConfigureProtocol, (_event, protocol) => {
+    if (protocol !== 'nearby' && protocol !== 'bitchat') throw new Error('Invalid Bluetooth protocol');
+    return proximityService!.configureProtocol(protocol);
+  });
+  handle(IPC.proximityMaximumFrameSize, (_event, endpointId) =>
+    proximityService!.maximumFrameSize(validateString(endpointId, 'endpoint', 256)));
+  handle(IPC.proximityInflateRaw, async (_event, bytes, size) => {
+    if (!Number.isSafeInteger(size) || size < 1 || size > 128 * 1024) throw new Error('Invalid decompressed size');
+    const output = await promisify(inflateRaw)(validateBytes(bytes, 'compressed data', 128 * 1024), { maxOutputLength: size });
+    if (output.length !== size) throw new Error('Invalid decompressed size');
+    return output;
+  });
   handle(IPC.proximityRequestPermissions, () => proximityService!.requestPermissions());
   handle(IPC.proximityStartAdvertising, (_event, profile) =>
     proximityService!.startAdvertising(validateString(profile, 'proximity profile', 16 * 1024)),

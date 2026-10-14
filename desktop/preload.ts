@@ -249,6 +249,9 @@ const bridge: ElectronBridge = {
     setScreenshotPreview: (enabled) => invoke(IPC.windowChromeSetScreenshotPreview, enabled),
   },
   proximity: {
+    configureProtocol: (protocol) => ipcRenderer.invoke(IPC.proximityConfigureProtocol, protocol),
+    maximumFrameSize: (endpointId) => ipcRenderer.invoke(IPC.proximityMaximumFrameSize, endpointId),
+    inflateRaw: (bytes, size) => ipcRenderer.invoke(IPC.proximityInflateRaw, bytes, size),
     isAvailable: () => proximityAvailable,
     requestPermissions: () => invoke(IPC.proximityRequestPermissions),
     startAdvertising: (profile) => invoke(IPC.proximityStartAdvertising, profile),

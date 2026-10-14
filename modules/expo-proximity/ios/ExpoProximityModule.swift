@@ -1,10 +1,11 @@
+import Compression
 import CoreBluetooth
 import ExpoModulesCore
 import Foundation
 
-private let serviceUUID = CBUUID(string: "45D8B02F-6D80-4FC6-914E-B85FCD0440D3")
+private let nearbyServiceUUID = CBUUID(string: "45D8B02F-6D80-4FC6-914E-B85FCD0440D3")
 private let profileUUID = CBUUID(string: "55980CEE-27E5-48A9-BF1C-AB5DA34B4402")
-private let mailboxUUID = CBUUID(string: "86A4C105-9A0E-4144-BCA1-40E7C78A1D93")
+private let nearbyMailboxUUID = CBUUID(string: "86A4C105-9A0E-4144-BCA1-40E7C78A1D93")
 private let maximumWireBytes = 128 * 1024
 private let maximumChunkCount = 16_384
 private let maximumInboundMessages = 32
@@ -28,6 +29,9 @@ private struct PendingWrite {
 }
 
 public final class ExpoProximityModule: Module {
+  private var bitchatMode = false
+  private var serviceUUID: CBUUID { bitchatMode ? CBUUID(string: "F47B5E2D-4A9E-4C5A-9B3F-8E1D2C3A4B5C") : nearbyServiceUUID }
+  private var mailboxUUID: CBUUID { bitchatMode ? CBUUID(string: "A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D") : nearbyMailboxUUID }
   private let bluetoothQueue = DispatchQueue(label: "chat.psstpsst.app.proximity.bluetooth")
   private lazy var bluetoothDelegate = ExpoProximityBluetoothDelegate(owner: self)
   private var central: CBCentralManager?
@@ -76,6 +80,40 @@ public final class ExpoProximityModule: Module {
   public func definition() -> ModuleDefinition {
     Name("ExpoProximity")
     Events("onPeer", "onSignal", "onMessage", "onConnection", "onBluetoothState")
+
+    AsyncFunction("configureProtocolAsync") { (mode: String, promise: Promise) in
+      self.bluetoothQueue.async {
+        guard ["nearby", "bitchat"].contains(mode), !self.advertisingRequested,
+          self.activeConnectionEndpoints.isEmpty else {
+          promise.reject("ERR_PROXIMITY_MODE", "Stop Bluetooth before changing protocol."); return
+        }
+        self.bitchatMode = mode == "bitchat"
+        promise.resolve()
+      }
+    }
+    AsyncFunction("maximumFrameSizeAsync") { (endpoint: String, promise: Promise) in
+      self.bluetoothQueue.async {
+        if endpoint.hasPrefix("c:"), let peer = self.peripherals[String(endpoint.dropFirst(2))] {
+          promise.resolve(peer.maximumWriteValueLength(for: .withResponse))
+        } else if let peer = self.subscribedCentrals[endpoint] {
+          promise.resolve(peer.maximumUpdateValueLength)
+        } else { promise.reject("ERR_PROXIMITY_OFFLINE", "Bluetooth peer is offline.") }
+      }
+    }
+    AsyncFunction("inflateRawAsync") { (value: String, size: Int, promise: Promise) in
+      guard size > 0, size <= 128 * 1024, let input = Data(base64Encoded: value), !input.isEmpty, input.count <= 128 * 1024 else {
+        promise.reject("ERR_PROXIMITY_COMPRESSION", "Invalid compressed size."); return
+      }
+      var output = Data(count: size + 1)
+      let written = output.withUnsafeMutableBytes { destination in
+        input.withUnsafeBytes { source in
+          compression_decode_buffer(destination.bindMemory(to: UInt8.self).baseAddress!, size + 1,
+            source.bindMemory(to: UInt8.self).baseAddress!, input.count, nil, COMPRESSION_ZLIB)
+        }
+      }
+      guard written == size else { promise.reject("ERR_PROXIMITY_COMPRESSION", "Invalid compressed payload."); return }
+      promise.resolve(output.prefix(size).base64EncodedString())
+    }
 
     AsyncFunction("startAdvertisingAsync") { (profile: String, promise: Promise) in
       self.bluetoothQueue.async {
@@ -368,12 +406,12 @@ public final class ExpoProximityModule: Module {
     )
     let mailbox = CBMutableCharacteristic(
       type: mailboxUUID,
-      properties: [.write, .indicate],
+      properties: bitchatMode ? [.write, .writeWithoutResponse, .notify] : [.write, .indicate],
       value: nil,
       permissions: [.writeable]
     )
     let service = CBMutableService(type: serviceUUID, primary: true)
-    service.characteristics = [profile, mailbox]
+    service.characteristics = bitchatMode ? [mailbox] : [profile, mailbox]
     profileCharacteristic = profile
     mailboxCharacteristic = mailbox
     manager.add(service)
@@ -476,7 +514,7 @@ public final class ExpoProximityModule: Module {
       return
     }
     for service in peripheral.services ?? [] where service.uuid == serviceUUID {
-      peripheral.discoverCharacteristics([profileUUID, mailboxUUID], for: service)
+      peripheral.discoverCharacteristics(bitchatMode ? [mailboxUUID] : [profileUUID, mailboxUUID], for: service)
     }
   }
 
@@ -526,6 +564,12 @@ public final class ExpoProximityModule: Module {
     trace(
       "notification state endpoint=c:\(peripheral.identifier.uuidString) notifying=\(characteristic.isNotifying) error=\(error?.localizedDescription ?? "none")"
     )
+    if bitchatMode, error == nil, characteristic.uuid == mailboxUUID, characteristic.isNotifying {
+      let endpoint = "c:\(peripheral.identifier.uuidString)"
+      sendEvent("onPeer", ["endpointId": endpoint, "generation": connectionGenerations[endpoint] ?? 0,
+        "profile": "", "rssi": rssiByEndpoint[peripheral.identifier.uuidString] ?? 0])
+      return
+    }
     guard error == nil, characteristic.uuid == mailboxUUID, characteristic.isNotifying,
       let profile = profileByEndpoint[peripheral.identifier.uuidString]
     else { return }
@@ -602,6 +646,12 @@ public final class ExpoProximityModule: Module {
     } else {
       guard let currentGeneration = connectionGenerations[endpointId] else { return }
       generation = currentGeneration
+    }
+    if bitchatMode {
+      guard frame.count >= 22, frame.count <= maximumWireBytes else { return }
+      sendEvent("onMessage", ["endpointId": endpointId, "generation": generation,
+        "payload": frame.base64EncodedString()])
+      return
     }
     guard frame.count >= 12 else { return }
     let packetId = frame.prefix(8).reduce(UInt64(0)) { ($0 << 8) | UInt64($1) }
@@ -780,6 +830,7 @@ public final class ExpoProximityModule: Module {
     let endpoint = "p:\(central.identifier.uuidString)"
     subscribedCentrals[endpoint] = central
     let generation = activateConnectionGeneration(endpointId: endpoint)
+    if bitchatMode { sendEvent("onPeer", ["endpointId": endpoint, "generation": generation, "profile": ""]) }
     trace("subscribed endpoint=\(endpoint) generation=\(generation)")
     sendEvent("onConnection", [
       "endpointId": endpoint, "state": "connected", "generation": generation,
@@ -844,6 +895,7 @@ public final class ExpoProximityModule: Module {
   }
 
   private func frames(payload: Data, packetId: UInt64, maximumFrameSize: Int) -> [Data]? {
+    if bitchatMode { return payload.count <= maximumFrameSize ? [payload] : nil }
     let chunkSize = max(1, maximumFrameSize - 12)
     let total = max(1, Int(ceil(Double(payload.count) / Double(chunkSize))))
     guard total <= maximumChunkCount else { return nil }

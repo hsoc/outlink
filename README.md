@@ -213,3 +213,16 @@ If you like this project, you can buy me a coffee :)
 PsstPsst is licensed under the [MIT License](LICENSE). Third-party components
 retain their own licenses and copyright notices; see
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and the accompanying license files.
+
+### Bitchat Bluetooth compatibility
+
+**Nearby → Bitchat** opens an optional live mesh room with signed public text
+and Noise-encrypted private text. The implementation is independently written
+under this repository's MIT license, reuses existing BLE/crypto components,
+and adds no packages. It requires rebuilt native modules/helpers. Physical
+Bitchat-device interoperability and Apple/Android native builds still need
+validation before release. Nostr/geohash channels, media, couriers, and public
+history synchronization are outside this initial profile.
+
+See the [wire profile](docs/protocols/bitchat.md) and
+[implementation and validation notes](docs/implementation/bitchat.md).

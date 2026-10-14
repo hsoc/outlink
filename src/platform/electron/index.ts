@@ -76,6 +76,9 @@ export function createElectronAdapters(): PlatformAdapters {
       setScreenshotPreview: (enabled) => bridge.windowChrome.setScreenshotPreview(enabled),
     },
     proximityTransport: {
+      configureProtocolAsync: (protocol) => bridge.proximity.configureProtocol(protocol),
+      maximumFrameSizeAsync: (endpointId) => bridge.proximity.maximumFrameSize(endpointId),
+      inflateRawAsync: (bytes, size) => bridge.proximity.inflateRaw(bytes, size),
       isAvailable: () => bridge.proximity.isAvailable(),
       requestPermissions: () => bridge.proximity.requestPermissions(),
       startAdvertisingAsync: (profile) => bridge.proximity.startAdvertising(base64.encode(profile)),

@@ -217,6 +217,9 @@ export type ElectronBridge = {
     setScreenshotPreview(enabled: boolean): Promise<void>;
   };
   proximity: {
+    configureProtocol(protocol: 'nearby' | 'bitchat'): Promise<void>;
+    maximumFrameSize(endpointId: string): Promise<number>;
+    inflateRaw(bytes: Uint8Array, size: number): Promise<Uint8Array>;
     isAvailable(): boolean;
     requestPermissions(): Promise<boolean>;
     startAdvertising(profile: string): Promise<void>;

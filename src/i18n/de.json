@@ -1061,5 +1061,29 @@
     "not_found": "Projekt nicht gefunden",
     "link_failed": "Link konnte nicht geöffnet werden. Bitte erneut versuchen.",
     "runtime_notices": "Chromium und enthaltene Komponenten"
+  },
+  "bitchat": {
+    "title": "Bitchat",
+    "default_name": "Outlink",
+    "description": "Chatte über Bluetooth mit Bitchat-Nutzern in der Nähe, ohne Internetverbindung.",
+    "privacy": "Beim Beitritt sind dein Name und deine Geräteidentität für Nutzer in der Nähe sichtbar. Nearby-Chats pausieren, solange dieser Raum geöffnet ist. Nachrichten werden beim Verlassen gelöscht.",
+    "name": "Dein öffentlicher Name",
+    "join": "Raum in der Nähe betreten",
+    "public": "Öffentlicher Raum",
+    "public_notice": "Alle im nahen Mesh-Netz können öffentliche Nachrichten lesen.",
+    "private_notice": "Private Nachrichten sind verschlüsselt. Vergleiche den Fingerabdruck mit der Person, bevor du vertrauliche Informationen teilst.",
+    "fingerprint": "Gerätefingerabdruck: {{value}}",
+    "empty": "Noch keine Nachrichten",
+    "empty_hint": "Lass Bluetooth eingeschaltet und halte ein anderes Bitchat-Gerät in der Nähe.",
+    "message": "Nachricht",
+    "limit": "{{count}} / 255 Bytes",
+    "send": "Senden",
+    "leave": "Verlassen",
+    "sending": "Wird gesendet",
+    "failed": "Senden fehlgeschlagen",
+    "sent": "Gesendet",
+    "delivered": "Zugestellt",
+    "read": "Gelesen",
+    "error": "Verbindung oder Senden fehlgeschlagen. Prüfe Bluetooth, verwende eine aktuelle App-Version und versuche es erneut."
   }
 }

@@ -52,6 +52,7 @@ import {
   walletBalanceVisiblePreferenceKey,
 } from '../preferences/device-preferences.service';
 import { removeAccountWalletSecrets } from '../wallet/wallet-credentials.service';
+import { bitchatService } from '../bitchat/bitchat.service';
 import { removeProximityIdentity } from '../proximity/proximity-identity.service';
 import { pushRegistrationService } from '../notifications/push-registration.service';
 
@@ -242,6 +243,7 @@ export async function removeAccount(pubkey: string): Promise<void> {
   await removeNip46ClientKey(pubkey);
   await removeNip46BunkerSecret(pubkey);
   await clearAccountKeyMaterial(pubkey);
+  await bitchatService.removeIdentity(pubkey);
   await removeProximityIdentity(pubkey);
   await removeKeyRotationInterval(pubkey);
   await deleteDevicePreference(accountRemovalPreferenceKey(pubkey));

@@ -93,6 +93,7 @@ export class ProximityService {
     }
     if (this.desiredProfile !== null) {
       try {
+        if (this.desiredProtocol !== 'nearby') await this.request('configureProtocol', { protocol: this.desiredProtocol });
         await this.request('startAdvertising', {
           profile: this.desiredProfile,
         });
@@ -199,6 +200,21 @@ export class ProximityService {
         (available) => available && this.request('requestPermissions'),
       );
     return this.request('requestPermissions');
+  }
+
+  private desiredProtocol: 'nearby' | 'bitchat' = 'nearby';
+  async configureProtocol(protocol: 'nearby' | 'bitchat'): Promise<void> {
+    if (this.desiredProfile !== null) throw new Error('Stop Bluetooth before changing protocol');
+    if (!(await this.ensureAvailable())) throw new Error('Bluetooth transport unavailable');
+    await this.request('configureProtocol', { protocol });
+    this.desiredProtocol = protocol;
+  }
+  async maximumFrameSize(endpointId: string): Promise<number> {
+    if (!(await this.ensureAvailable())) throw new Error('Bluetooth transport unavailable');
+    const value = await this.request('maximumFrameSize', { endpointId });
+    if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 20 || value > 512)
+      throw new Error('Invalid Bluetooth MTU');
+    return value;
   }
 
   async startAdvertising(profile: string): Promise<void> {

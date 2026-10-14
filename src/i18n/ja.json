@@ -1061,5 +1061,29 @@
     "not_found": "プロジェクトが見つかりません",
     "link_failed": "リンクを開けませんでした。もう一度お試しください。",
     "runtime_notices": "Chromium と同梱コンポーネント"
+  },
+  "bitchat": {
+    "title": "Bitchat",
+    "default_name": "Outlink",
+    "description": "インターネットなしで、近くのBitchatユーザーとBluetoothでチャットできます。",
+    "privacy": "参加すると名前と端末の識別情報が近くのユーザーに公開されます。このルームを開いている間、Nearbyのチャットは一時停止します。退出するとメッセージは消去されます。",
+    "name": "公開する名前",
+    "join": "近くのルームに参加",
+    "public": "公開ルーム",
+    "public_notice": "近くのネットワーク内の全員が公開メッセージを読めます。",
+    "private_notice": "個別メッセージは暗号化されます。機密情報を共有する前に、相手とフィンガープリントを確認してください。",
+    "fingerprint": "端末のフィンガープリント: {{value}}",
+    "empty": "まだメッセージはありません",
+    "empty_hint": "Bluetoothをオンにして、別のBitchat端末を近くに置いてください。",
+    "message": "メッセージ",
+    "limit": "{{count}} / 255バイト",
+    "send": "送信",
+    "leave": "退出",
+    "sending": "送信中",
+    "failed": "送信失敗",
+    "sent": "送信済み",
+    "delivered": "配信済み",
+    "read": "既読",
+    "error": "接続または送信できません。Bluetoothを確認し、最新版で再試行してください。"
   }
 }
