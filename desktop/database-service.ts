@@ -189,7 +189,7 @@ export class DatabaseService {
     const id = randomUUID();
     if (parentId) {
       this.transaction(parentId, ownerId);
-      const savepoint = `psstpsst_nested_${id.replace(/-/g, '')}`;
+      const savepoint = `outlink_nested_${id.replace(/-/g, '')}`;
       await this.worker.request('savepoint', { name: savepoint });
       this.transactions.set(id, { id, ownerId, parentId, savepoint, dirty: false });
       return id;

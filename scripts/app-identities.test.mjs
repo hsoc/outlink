@@ -32,10 +32,10 @@ for (const variant of ['development', 'production', undefined, 'unknown']) {
         assert.equal(desktop.win.publish, null);
         assert.equal(desktop.directories.output, '../release/development');
       } else {
-        assert.equal(desktop.publish.repo, 'psstpsst');
+        assert.equal(desktop.publish.repo, 'outlink');
         assert.equal(desktop.directories.output, '../release');
       }
-      assert.equal(base.name, 'PsstPsst');
+      assert.equal(base.name, 'Outlink');
     } finally {
       if (previous === undefined) delete process.env.EXPO_PUBLIC_APP_ENV;
       else process.env.EXPO_PUBLIC_APP_ENV = previous;

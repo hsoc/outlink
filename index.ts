@@ -7,7 +7,7 @@ if (IS_ELECTRON) {
   // Metro development and packaged export both load the same global CSS. Mark
   // the document before Expo Router evaluates so desktop-only browser resets
   // apply on the first frame without affecting ordinary web.
-  document.documentElement.dataset.psstpsstElectron = '';
+  document.documentElement.dataset.outlinkElectron = '';
   // Keep desktop-only adapters out of ordinary runtime evaluation while still
   // installing them synchronously before Expo Router loads route modules.
   // eslint-disable-next-line @typescript-eslint/no-require-imports

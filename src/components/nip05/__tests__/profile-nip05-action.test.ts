@@ -18,14 +18,14 @@ describe('resolveProfileNip05Action', () => {
   it('offers to switch a different provider to the owned address', () => {
     expect(resolveProfileNip05Action('alice@example.com', 'alice')).toEqual({
       kind: 'switch',
-      identifier: 'alice@psstpsst.chat',
+      identifier: 'alice@outlink.invalid',
     });
   });
 
   it('opens management when the draft already uses the owned address', () => {
-    expect(resolveProfileNip05Action(' ALICE@PSSTPSST.CHAT ', 'alice')).toEqual({
+    expect(resolveProfileNip05Action(' ALICE@OUTLINK.INVALID ', 'alice')).toEqual({
       kind: 'manage',
-      identifier: 'alice@psstpsst.chat',
+      identifier: 'alice@outlink.invalid',
     });
   });
 });

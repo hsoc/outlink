@@ -2,7 +2,7 @@ import { platform } from '@/platform';
 
 const DIAGNOSTICS_DIRECTORY = 'diagnostics/';
 const JOURNAL_FILE = 'app-errors.json';
-const EXPORT_FILE = 'psstpsst-diagnostics.json';
+const EXPORT_FILE = 'outlink-diagnostics.json';
 const MAX_ENTRIES = 10;
 const MAX_JOURNAL_BYTES = 128 * 1024;
 const MAX_STACK_LENGTH = 4_000;
@@ -41,7 +41,7 @@ function sanitizeStack(stack: string | undefined): string | undefined {
     .slice(1, 33)
     .map((line) =>
       line
-        .replace(/(?:https?|wss?|file|content|psstpsst(?:-dev)?):[^\s)]+/gi, '[uri]')
+        .replace(/(?:https?|wss?|file|content|outlink(?:-dev)?):[^\s)]+/gi, '[uri]')
         .replace(/\b(?:npub|nsec|nprofile|nevent|note)1[023456789acdefghjklmnpqrstuvwxyz]+\b/gi, '[nostr]')
         .replace(/\b[0-9a-f]{64}\b/gi, '[hex64]')
         .replace(/\/[^\s():]+\/(src|modules|desktop|node_modules)\//g, '$1/')

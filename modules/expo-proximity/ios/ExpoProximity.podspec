@@ -1,10 +1,10 @@
 Pod::Spec.new do |s|
   s.name           = 'ExpoProximity'
   s.version        = '0.1.0'
-  s.summary        = 'BLE proximity transport for PsstPsst'
+  s.summary        = 'BLE proximity transport for Outlink'
   s.description    = 'A BLE central and peripheral transport for nearby messages.'
-  s.author         = 'psstpsst'
-  s.homepage       = 'https://github.com/codytseng/psstpsst'
+  s.author         = 'outlink'
+  s.homepage       = 'https://github.com/hsoc/outlink'
   s.license        = 'MIT'
   s.platforms      = { :ios => '16.4' }
   s.swift_version  = '5.0'

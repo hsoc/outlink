@@ -1,6 +1,6 @@
 {
   "welcome": {
-    "title": "PsstPsst",
+    "title": "Outlink",
     "subtitle": "Dezentrale, Ende-zu-Ende-verschlüsselte Nachrichten",
     "choose_title": "Konto auswählen",
     "login_nsec": "Mit privatem Schlüssel anmelden",
@@ -26,7 +26,7 @@
     },
     "nostr_connect": {
       "title": "Nostr Connect",
-      "subtitle": "Scanne diesen Code mit deinem Signierer oder tippe darauf, um einen Signierer auf diesem Gerät zu öffnen. PsstPsst meldet dich an, sobald der Signierer zustimmt.",
+      "subtitle": "Scanne diesen Code mit deinem Signierer oder tippe darauf, um einen Signierer auf diesem Gerät zu öffnen. Outlink meldet dich an, sobald der Signierer zustimmt.",
       "copy": "Link kopieren",
       "copied": "Kopiert",
       "waiting": "Warten auf deinen Signierer…",
@@ -37,7 +37,7 @@
   },
   "generate": {
     "title": "Neues Konto",
-    "subtitle": "PsstPsst hat gerade ein neues Konto für dich erstellt.",
+    "subtitle": "Outlink hat gerade ein neues Konto für dich erstellt.",
     "warning": "Sichere den privaten Schlüssel unten. Wer ihn besitzt, kann deine Nachrichten lesen und sich als dich ausgeben.",
     "copy": "Kopieren",
     "copied": "Kopiert",
@@ -87,7 +87,7 @@
     "qr_save": "Speichern",
     "qr_saved": "In deinen Fotos gespeichert.",
     "qr_save_failed": "Speichern fehlgeschlagen. Versuche es erneut.",
-    "qr_save_permission": "PsstPsst benötigt Fotozugriff, um die Karte zu speichern."
+    "qr_save_permission": "Outlink benötigt Fotozugriff, um die Karte zu speichern."
   },
   "report": {
     "title": "Nutzer melden",
@@ -121,14 +121,14 @@
     "url_confirm": "Dieses Bild verwenden",
     "image_url_placeholder": "https://…",
     "save": "Speichern",
-    "photo_permission": "PsstPsst benötigt Fotozugriff, um dein Foto festzulegen.",
-    "camera_permission": "PsstPsst benötigt Kamerazugriff, um ein Foto aufzunehmen.",
+    "photo_permission": "Outlink benötigt Fotozugriff, um dein Foto festzulegen.",
+    "camera_permission": "Outlink benötigt Kamerazugriff, um ein Foto aufzunehmen.",
     "upload_failed": "Bild-Upload fehlgeschlagen. Versuche es erneut.",
     "save_failed": "Dein Profil konnte nicht gespeichert werden. Versuche es erneut."
   },
   "nip05": {
     "title": "Persönliche Kennung",
-    "subtitle": "Sichere dir eine persönliche Kennung auf psstpsst.chat, damit andere dich ohne deinen öffentlichen Schlüssel finden.",
+    "subtitle": "Sichere dir eine persönliche Kennung auf outlink.invalid, damit andere dich ohne deinen öffentlichen Schlüssel finden.",
     "name_label": "Name",
     "name_placeholder": "Name",
     "name_hint": "5 bis 30 Zeichen: Buchstaben, Ziffern, Punkte, Bindestriche und Unterstriche. Beginne und ende mit einem Buchstaben oder einer Ziffer.",
@@ -145,7 +145,7 @@
     "change": "Kennung ändern",
     "claim_failed": "Die Kennung konnte nicht gesichert werden. Versuche es erneut.",
     "skip": "Vorerst überspringen",
-    "profile_entry": "psstpsst.chat-Kennung sichern",
+    "profile_entry": "outlink.invalid-Kennung sichern",
     "profile_switch": "Zu {{address}} wechseln"
   },
   "conversations": {
@@ -299,7 +299,7 @@
     "sent": "Gesendet",
     "enter_conversation": "Chat öffnen",
     "send_failed": "Es konnte nicht alles gesendet werden. Versuche erneut zu teilen.",
-    "receive_failed_title": "Teilen mit PsstPsst nicht möglich",
+    "receive_failed_title": "Teilen mit Outlink nicht möglich",
     "receive_failed": "Der geteilte Inhalt ist nicht mehr verfügbar. Versuche erneut, ihn zu teilen.",
     "stage_failed": "Die geteilten Dateien konnten nicht vorbereitet werden. Versuche es erneut.",
     "too_many_items": "Teile bis zu 10 Elemente gleichzeitig.",
@@ -528,10 +528,10 @@
     "unavailable": "Nachrichten an diesen Kontakt nicht möglich",
     "unavailable_title": "Nachrichten an diesen Kontakt nicht möglich",
     "unavailable_summary": {
-      "checking": "PsstPsst prüft, ob dieser Kontakt jetzt Nachrichten empfangen kann.",
+      "checking": "Outlink prüft, ob dieser Kontakt jetzt Nachrichten empfangen kann.",
       "missingRelays": "Die Relays, über die dieser Kontakt Nachrichten empfängt, konnten nicht gefunden werden.",
-      "missingEncryptionKey": "Die App dieses Kontakts unterstützt möglicherweise nicht das von PsstPsst verwendete verschlüsselte Nachrichtenprotokoll.",
-      "unknown": "PsstPsst konnte nicht bestätigen, dass dieser Kontakt Nachrichten empfangen kann."
+      "missingEncryptionKey": "Die App dieses Kontakts unterstützt möglicherweise nicht das von Outlink verwendete verschlüsselte Nachrichtenprotokoll.",
+      "unknown": "Outlink konnte nicht bestätigen, dass dieser Kontakt Nachrichten empfangen kann."
     },
     "check_relays": "Nachrichten-Relays",
     "check_key": "Öffentlicher Verschlüsselungsschlüssel",
@@ -564,16 +564,16 @@
     "background_service_message": "Warten auf neue Nachrichten",
     "new_message": "Neue Nachricht",
     "new_messages": "{{count}} neue Nachrichten",
-    "open_to_view_message": "Öffne PsstPsst, um die Nachricht anzuzeigen",
-    "delivery_note_ios": "Mitteilungen im Hintergrund werden über APNs mit relay.psstpsst.chat zugestellt.",
+    "open_to_view_message": "Öffne Outlink, um die Nachricht anzuzeigen",
+    "delivery_note_ios": "Mitteilungen im Hintergrund werden über APNs mit relay.outlink.invalid zugestellt.",
     "required_relay_note": "Füge {{relay}} zu deinen Nachrichten-Relays hinzu, um iOS-Mitteilungen zu aktivieren.",
     "relay_settings_action": "Zu den Einstellungen",
-    "delivery_note_android": "Android kann die Nachrichtenverbindung im Hintergrund aktiv halten, aber das System oder der Gerätehersteller kann sie beenden. Erlaube PsstPsst für zuverlässigere Benachrichtigungen die Hintergrundausführung und nimm die App in den Systemeinstellungen von der Akkuoptimierung aus. Die Optionen unterscheiden sich je nach Gerät.",
-    "delivery_note_desktop": "Benachrichtigungen treffen ein, solange PsstPsst im Infobereich ausgeführt wird. Wenn du die App vollständig beendest, werden auch die Hintergrundprüfungen beendet.",
+    "delivery_note_android": "Android kann die Nachrichtenverbindung im Hintergrund aktiv halten, aber das System oder der Gerätehersteller kann sie beenden. Erlaube Outlink für zuverlässigere Benachrichtigungen die Hintergrundausführung und nimm die App in den Systemeinstellungen von der Akkuoptimierung aus. Die Optionen unterscheiden sich je nach Gerät.",
+    "delivery_note_desktop": "Benachrichtigungen treffen ein, solange Outlink im Infobereich ausgeführt wird. Wenn du die App vollständig beendest, werden auch die Hintergrundprüfungen beendet.",
     "privacy_note": "Diese Angaben sind standardmäßig ausgeblendet. Wenn du sie anzeigst, können sie im Benachrichtigungsverlauf dieses Geräts verbleiben.",
-    "system_permission_note": "Erlaube Benachrichtigungen für PsstPsst auch in den Systemeinstellungen. Die App kann nicht prüfen, ob Systembenachrichtigungen aktiviert sind.",
+    "system_permission_note": "Erlaube Benachrichtigungen für Outlink auch in den Systemeinstellungen. Die App kann nicht prüfen, ob Systembenachrichtigungen aktiviert sind.",
     "permission_denied_title": "Benachrichtigungen sind deaktiviert",
-    "permission_denied_message": "Erlaube PsstPsst-Benachrichtigungen in den Systemeinstellungen, um über neue Nachrichten informiert zu werden.",
+    "permission_denied_message": "Erlaube Outlink-Benachrichtigungen in den Systemeinstellungen, um über neue Nachrichten informiert zu werden.",
     "unavailable_title": "Benachrichtigungen sind nicht verfügbar",
     "unavailable_message": "Diese Desktop-Umgebung unterstützt keine Systembenachrichtigungen.",
     "open_settings": "Einstellungen öffnen",
@@ -596,7 +596,7 @@
     "dm_relays": "Nachrichten-Relays",
     "media_servers": "Medienserver",
     "blocked_users": "Blockierte Nutzer",
-    "about": "Über PsstPsst",
+    "about": "Über Outlink",
     "security": "Sicherheit",
     "export_nsec": "Privaten Schlüssel kopieren",
     "export_nsec_title": "Privaten Schlüssel kopieren?",
@@ -618,13 +618,13 @@
     "not_now": "Nicht jetzt",
     "downloading": "Version {{version}} wird heruntergeladen…",
     "download_failed_title": "Download fehlgeschlagen",
-    "download_failed_message": "Das Update konnte nicht heruntergeladen werden. Versuche es beim nächsten Öffnen von PsstPsst erneut.",
+    "download_failed_message": "Das Update konnte nicht heruntergeladen werden. Versuche es beim nächsten Öffnen von Outlink erneut.",
     "ready_title": "Bereit zur Installation",
-    "ready_message": "Version {{version}} wurde heruntergeladen. PsstPsst jetzt neu starten und installieren?",
+    "ready_message": "Version {{version}} wurde heruntergeladen. Outlink jetzt neu starten und installieren?",
     "restart_and_install": "Neu starten und installieren",
     "later": "Später",
     "install_failed_title": "Installation konnte nicht gestartet werden",
-    "install_failed_message": "PsstPsst konnte das Installationsprogramm nicht neu starten. Versuche es beim nächsten Öffnen der App erneut."
+    "install_failed_message": "Outlink konnte das Installationsprogramm nicht neu starten. Versuche es beim nächsten Öffnen der App erneut."
   },
   "legal": {
     "privacy_policy": "Datenschutzerklärung",
@@ -773,7 +773,7 @@
   "secure_storage": {
     "setup_title": "App schützen",
     "setup_hint": "Dieses System kann deine Schlüssel nicht selbst sicher speichern. Erstelle ein App-Passwort, um sie zu verschlüsseln.",
-    "unlock_title": "PsstPsst entsperren",
+    "unlock_title": "Outlink entsperren",
     "unlock_hint": "Gib dein App-Passwort ein, um deine Schlüssel und dein Konto zu entsperren.",
     "password": "App-Passwort",
     "confirm_password": "App-Passwort bestätigen",
@@ -820,7 +820,7 @@
     "description_placeholder": "Wofür ist das?",
     "direction": "Richtung",
     "empty_title": "Lightning-Zahlungen",
-    "empty_hint": "Bezahle mit einer Wallet-App oder verbinde eine Wallet für Zahlungen und Zahlungsanfragen in PsstPsst.",
+    "empty_hint": "Bezahle mit einer Wallet-App oder verbinde eine Wallet für Zahlungen und Zahlungsanfragen in Outlink.",
     "expires": "Läuft ab",
     "expires_at": "Läuft ab",
     "expires_in": "Läuft ab in",

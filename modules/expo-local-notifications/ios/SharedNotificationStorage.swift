@@ -4,8 +4,8 @@ import SQLite3
 
 /** Shared storage is scoped to the installed development/production identity. */
 enum SharedNotificationStorage {
-  static var appGroup: String? { Bundle.main.object(forInfoDictionaryKey: "PsstPsstAppGroup") as? String }
-  static var keychainGroup: String? { Bundle.main.object(forInfoDictionaryKey: "PsstPsstKeychainGroup") as? String }
+  static var appGroup: String? { Bundle.main.object(forInfoDictionaryKey: "OutlinkAppGroup") as? String }
+  static var keychainGroup: String? { Bundle.main.object(forInfoDictionaryKey: "OutlinkKeychainGroup") as? String }
 
   static func databaseDirectory(legacyDirectory: String) throws -> String {
     guard let group = appGroup,
@@ -14,10 +14,10 @@ enum SharedNotificationStorage {
     let directory = container.appendingPathComponent("SQLite", isDirectory: true)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true,
       attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
-    let target = directory.appendingPathComponent("psstpsst.db")
+    let target = directory.appendingPathComponent("outlink.db")
     let legacy = URL(string: legacyDirectory)?.isFileURL == true
-      ? URL(string: legacyDirectory)!.appendingPathComponent("psstpsst.db")
-      : URL(fileURLWithPath: legacyDirectory).appendingPathComponent("psstpsst.db")
+      ? URL(string: legacyDirectory)!.appendingPathComponent("outlink.db")
+      : URL(fileURLWithPath: legacyDirectory).appendingPathComponent("outlink.db")
     let migrationMarker = directory.appendingPathComponent("migration-source.txt")
     if !FileManager.default.fileExists(atPath: target.path), FileManager.default.fileExists(atPath: legacy.path) {
       // SQLite backup includes committed WAL pages. Publish only a complete backup
@@ -55,6 +55,6 @@ enum SharedNotificationStorage {
   }
 
   private static func failure(_ message: String) -> NSError {
-    NSError(domain: "PsstPsstSharedStorage", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
+    NSError(domain: "OutlinkSharedStorage", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
   }
 }

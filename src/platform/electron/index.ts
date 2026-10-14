@@ -175,7 +175,7 @@ export function createElectronAdapters(): PlatformAdapters {
     sharing: {
       isAvailable: () => Promise.resolve(true),
       async share(uri) {
-        const encodedName = uri.split('/').pop() ?? 'psstpsst-export';
+        const encodedName = uri.split('/').pop() ?? 'outlink-export';
         let name = encodedName;
         try {
           name = decodeURIComponent(encodedName);
@@ -200,7 +200,7 @@ export function createElectronAdapters(): PlatformAdapters {
         return { width: image.naturalWidth, height: image.naturalHeight };
       },
       async renderAndSave(uri, options) {
-        if (uri.startsWith('psstpsst-file://')) return bridge.image.renderAndSave(uri, options);
+        if (uri.startsWith('outlink-file://')) return bridge.image.renderAndSave(uri, options);
         const cacheUri = `${await bridge.fileSystem.cacheDirectoryUri()}image-input-${await bridge.deviceCrypto.randomUUID()}`;
         const response = await fetch(uri);
         if (!response.ok) throw new Error(`Unable to stage image (${response.status})`);

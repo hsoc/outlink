@@ -1,32 +1,21 @@
-# PsstPsst
+# Outlink
 
 **Decentralized, end-to-end encrypted messaging. No phone number required.**
 
-PsstPsst is a free, open-source messenger for iOS, Android, and desktop. Your
+Outlink is a free, open-source messenger for iOS, Android, and desktop. Your
 cryptographic keys are your account: get started without a phone number or
 email address, and exchange encrypted messages over Nostr or nearby Bluetooth.
 
 [Downloads](#downloads) · [Build from source](#build-from-source) ·
-[Contribute](CONTRIBUTING.md) · [Privacy](https://psstpsst.chat/privacy/) · [Security](SECURITY.md)
+[Contribute](CONTRIBUTING.md) · [Privacy](https://github.com/hsoc/outlink/blob/master/docs/PRIVACY.md) · [Security](SECURITY.md)
 
-<p>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/images/desktop-dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="docs/images/desktop-light.png">
-    <img src="docs/images/desktop-light.png" alt="PsstPsst on desktop, with a conversation list and an open chat" width="72%">
-  </picture>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/images/mobile-dark-framed.svg">
-    <source media="(prefers-color-scheme: light)" srcset="docs/images/mobile-light-framed.svg">
-    <img src="docs/images/mobile-light-framed.svg" alt="PsstPsst conversation list on iOS" width="27%">
-  </picture>
-</p>
+New Outlink screenshots will be added after native builds are verified.
 
 ## Downloads
 
 The first public release is being prepared. Published installers and release
 notes will be available on
-[GitHub Releases](https://github.com/codytseng/psstpsst/releases).
+[GitHub Releases](https://github.com/hsoc/outlink/releases).
 Until then, use the source-build instructions below.
 
 | Platform | Distribution target                                                    |
@@ -47,18 +36,21 @@ Check each release's notes for tested OS versions and known issues.
 - **Keys as accounts:** no central account provider, phone number, or email
   requirement; optional Nostr names make people easier to find.
 - **Nearby messaging:** exchange messages and files over Bluetooth Low Energy
-  without Internet access, with compatible PsstPsst peers.
+  without Internet access, with compatible Outlink peers.
 - **Connected wallets:** non-custodial Lightning wallet connections through
   Nostr Wallet Connect.
 - **Mobile and desktop:** shared conversations UI with light and dark themes
   and layouts that adapt to the available space.
 
+See [application identity and compatibility](docs/implementation/outlink-renaming.md)
+for installation, data, and protocol changes in this fork.
+
 ## Before you start
 
 Back up your identity key and use the app's key-transfer and archive features
 when moving devices. An identity-key backup alone does not guarantee recovery
-of encrypted chat history. The [privacy policy](https://psstpsst.chat/privacy/)
-is maintained on the official website.
+of encrypted chat history. The [privacy policy](https://github.com/hsoc/outlink/blob/master/docs/PRIVACY.md)
+describes the current client behavior.
 
 - Messaging currently supports one-to-one conversations. The messaging-key
   extension requires compatible peers; support for Nostr alone does not
@@ -85,14 +77,14 @@ On Windows, run the commands in Git Bash and use `npm --script-shell=bash run ..
 in place of `npm run ...`.
 
 ```bash
-git clone https://github.com/codytseng/psstpsst.git
-cd psstpsst
+git clone https://github.com/hsoc/outlink.git
+cd outlink
 npm ci
 ```
 
 The local builds below need no release signing credentials. They bundle
-JavaScript, so no Metro server is needed to run them. They use the production identity (**PsstPsst**,
-`chat.psstpsst.app`). For development with Fast Refresh, use `npm start` plus
+JavaScript, so no Metro server is needed to run them. They use the production identity (**Outlink**,
+`io.github.hsoc.outlink`). For development with Fast Refresh, use `npm start` plus
 `npm run ios:dev` / `npm run android:dev`, or `npm run electron:dev`; see
 [CONTRIBUTING.md](CONTRIBUTING.md#running-the-app).
 
@@ -201,16 +193,9 @@ with the maintainer before implementation. Report vulnerabilities through the
 - [Android QR scanner maintenance](docs/ANDROID_QR_SCANNER.md)
 - [Third-party notice maintenance](docs/OPEN_SOURCE_NOTICES.md)
 
-## Donate
-
-If you like this project, you can buy me a coffee :)
-
-- **Lightning:** [codytseng@getalby.com](https://bitcointipjar.com/cody)
-- **Bitcoin:** bc1qwp2uqjd2dy32qfe39kehnlgx3hyey0h502fvht
-
 ## License
 
-PsstPsst is licensed under the [MIT License](LICENSE). Third-party components
+Outlink is licensed under the [MIT License](LICENSE). Third-party components
 retain their own licenses and copyright notices; see
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and the accompanying license files.
 

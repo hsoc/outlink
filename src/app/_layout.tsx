@@ -236,9 +236,9 @@ function RootLayoutContent() {
   useEffect(() => {
     if (!IS_ELECTRON) return;
     const rootStyle = document.documentElement.style;
-    rootStyle.setProperty('--psstpsst-scrollbar-thumb', c.border);
+    rootStyle.setProperty('--outlink-scrollbar-thumb', c.border);
     return () => {
-      rootStyle.removeProperty('--psstpsst-scrollbar-thumb');
+      rootStyle.removeProperty('--outlink-scrollbar-thumb');
     };
   }, [c.border]);
 

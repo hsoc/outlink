@@ -1,4 +1,4 @@
-PsstPsst 0.2.2
+Outlink 0.2.2
 
 - Swipe either way on a message to reply.
 - On desktop, start typing to jump straight into the message box.

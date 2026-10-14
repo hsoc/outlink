@@ -1,6 +1,6 @@
 {
   "welcome": {
-    "title": "PsstPsst",
+    "title": "Outlink",
     "subtitle": "Mensajería descentralizada con cifrado de extremo a extremo",
     "choose_title": "Elige una cuenta",
     "login_nsec": "Iniciar sesión con clave privada",
@@ -26,7 +26,7 @@
     },
     "nostr_connect": {
       "title": "Nostr Connect",
-      "subtitle": "Escanea este código con tu firmante o tócalo para abrir uno en este dispositivo. PsstPsst iniciará sesión cuando el firmante lo apruebe.",
+      "subtitle": "Escanea este código con tu firmante o tócalo para abrir uno en este dispositivo. Outlink iniciará sesión cuando el firmante lo apruebe.",
       "copy": "Copiar enlace",
       "copied": "Copiado",
       "waiting": "Esperando a tu firmante…",
@@ -37,7 +37,7 @@
   },
   "generate": {
     "title": "Nueva cuenta",
-    "subtitle": "PsstPsst acaba de crear una cuenta para ti.",
+    "subtitle": "Outlink acaba de crear una cuenta para ti.",
     "warning": "Guarda una copia de la clave privada que aparece abajo. Quien la tenga podrá leer tus mensajes y hacerse pasar por ti.",
     "copy": "Copiar",
     "copied": "Copiado",
@@ -87,7 +87,7 @@
     "qr_save": "Guardar",
     "qr_saved": "Guardado en tus fotos.",
     "qr_save_failed": "No se pudo guardar. Inténtalo de nuevo.",
-    "qr_save_permission": "PsstPsst necesita acceso a las fotos para guardar la tarjeta."
+    "qr_save_permission": "Outlink necesita acceso a las fotos para guardar la tarjeta."
   },
   "report": {
     "title": "Denunciar usuario",
@@ -121,14 +121,14 @@
     "url_confirm": "Usar esta imagen",
     "image_url_placeholder": "https://…",
     "save": "Guardar",
-    "photo_permission": "PsstPsst necesita acceso a las fotos para configurar tu foto.",
-    "camera_permission": "PsstPsst necesita acceso a la cámara para hacer una foto.",
+    "photo_permission": "Outlink necesita acceso a las fotos para configurar tu foto.",
+    "camera_permission": "Outlink necesita acceso a la cámara para hacer una foto.",
     "upload_failed": "No se pudo subir la imagen. Inténtalo de nuevo.",
     "save_failed": "No se pudo guardar tu perfil. Inténtalo de nuevo."
   },
   "nip05": {
     "title": "Identificador personal",
-    "subtitle": "Registra un identificador personal en psstpsst.chat para que otros te encuentren sin tu clave pública.",
+    "subtitle": "Registra un identificador personal en outlink.invalid para que otros te encuentren sin tu clave pública.",
     "name_label": "Nombre",
     "name_placeholder": "nombre",
     "name_hint": "De 5 a 30 caracteres: letras, dígitos, puntos, guiones y guiones bajos. Empieza y termina con una letra o un dígito.",
@@ -145,7 +145,7 @@
     "change": "Cambiar identificador",
     "claim_failed": "No se pudo registrar el identificador. Inténtalo de nuevo.",
     "skip": "Omitir por ahora",
-    "profile_entry": "Consigue un identificador de psstpsst.chat",
+    "profile_entry": "Consigue un identificador de outlink.invalid",
     "profile_switch": "Cambiar a {{address}}"
   },
   "conversations": {
@@ -299,7 +299,7 @@
     "sent": "Enviado",
     "enter_conversation": "Abrir chat",
     "send_failed": "No se pudo enviar todo. Intenta compartirlo de nuevo.",
-    "receive_failed_title": "No se puede compartir con PsstPsst",
+    "receive_failed_title": "No se puede compartir con Outlink",
     "receive_failed": "El contenido compartido ya no está disponible. Intenta compartirlo de nuevo.",
     "stage_failed": "No se pudieron preparar los archivos compartidos. Inténtalo de nuevo.",
     "too_many_items": "Comparte hasta 10 elementos a la vez.",
@@ -531,10 +531,10 @@
     "unavailable": "No puedes escribir a este contacto",
     "unavailable_title": "No puedes escribir a este contacto",
     "unavailable_summary": {
-      "checking": "PsstPsst está comprobando si este contacto puede recibir mensajes ahora.",
+      "checking": "Outlink está comprobando si este contacto puede recibir mensajes ahora.",
       "missingRelays": "No se encontraron los relays donde este contacto recibe mensajes.",
-      "missingEncryptionKey": "Es posible que la aplicación de este contacto no admita el protocolo de mensajería cifrada que usa PsstPsst.",
-      "unknown": "PsstPsst no pudo confirmar que este contacto pueda recibir mensajes."
+      "missingEncryptionKey": "Es posible que la aplicación de este contacto no admita el protocolo de mensajería cifrada que usa Outlink.",
+      "unknown": "Outlink no pudo confirmar que este contacto pueda recibir mensajes."
     },
     "check_relays": "Relays de mensajes",
     "check_key": "Clave pública de cifrado",
@@ -567,16 +567,16 @@
     "background_service_message": "Esperando mensajes nuevos",
     "new_message": "Mensaje nuevo",
     "new_messages": "{{count}} mensajes nuevos",
-    "open_to_view_message": "Abre PsstPsst para ver el mensaje",
-    "delivery_note_ios": "Las notificaciones en segundo plano se entregan mediante APNs usando relay.psstpsst.chat.",
+    "open_to_view_message": "Abre Outlink para ver el mensaje",
+    "delivery_note_ios": "Las notificaciones en segundo plano se entregan mediante APNs usando relay.outlink.invalid.",
     "required_relay_note": "Añade {{relay}} a tus relés de mensajes para activar las notificaciones de iOS.",
     "relay_settings_action": "Ir a ajustes",
-    "delivery_note_android": "Android puede mantener activa la conexión de mensajes en segundo plano, pero el sistema o el fabricante puede detenerla. Para recibir notificaciones de forma más fiable, permite que PsstPsst se ejecute en segundo plano y exclúyelo de la optimización de batería en los ajustes del sistema. Las opciones varían según el dispositivo.",
-    "delivery_note_desktop": "Las notificaciones llegan mientras PsstPsst siga ejecutándose en la bandeja del sistema. Al cerrar completamente la aplicación, también se detienen las comprobaciones en segundo plano.",
+    "delivery_note_android": "Android puede mantener activa la conexión de mensajes en segundo plano, pero el sistema o el fabricante puede detenerla. Para recibir notificaciones de forma más fiable, permite que Outlink se ejecute en segundo plano y exclúyelo de la optimización de batería en los ajustes del sistema. Las opciones varían según el dispositivo.",
+    "delivery_note_desktop": "Las notificaciones llegan mientras Outlink siga ejecutándose en la bandeja del sistema. Al cerrar completamente la aplicación, también se detienen las comprobaciones en segundo plano.",
     "privacy_note": "Estos datos están ocultos de forma predeterminada. Si los muestras, pueden permanecer en el historial de notificaciones de este dispositivo.",
-    "system_permission_note": "Permite también las notificaciones de PsstPsst en los ajustes del sistema. La aplicación no puede comprobar si las notificaciones del sistema están activadas.",
+    "system_permission_note": "Permite también las notificaciones de Outlink en los ajustes del sistema. La aplicación no puede comprobar si las notificaciones del sistema están activadas.",
     "permission_denied_title": "Las notificaciones están desactivadas",
-    "permission_denied_message": "Permite las notificaciones de PsstPsst en los ajustes del sistema para recibir avisos de mensajes nuevos.",
+    "permission_denied_message": "Permite las notificaciones de Outlink en los ajustes del sistema para recibir avisos de mensajes nuevos.",
     "unavailable_title": "Las notificaciones no están disponibles",
     "unavailable_message": "Este entorno de escritorio no admite notificaciones del sistema.",
     "open_settings": "Abrir Ajustes",
@@ -599,7 +599,7 @@
     "dm_relays": "Relays de mensajes",
     "media_servers": "Servidores multimedia",
     "blocked_users": "Usuarios bloqueados",
-    "about": "Acerca de PsstPsst",
+    "about": "Acerca de Outlink",
     "security": "Seguridad",
     "export_nsec": "Copiar clave privada",
     "export_nsec_title": "¿Copiar la clave privada?",
@@ -621,13 +621,13 @@
     "not_now": "Ahora no",
     "downloading": "Descargando la versión {{version}}…",
     "download_failed_title": "Error de descarga",
-    "download_failed_message": "No se pudo descargar la actualización. Inténtalo de nuevo la próxima vez que abras PsstPsst.",
+    "download_failed_message": "No se pudo descargar la actualización. Inténtalo de nuevo la próxima vez que abras Outlink.",
     "ready_title": "Lista para instalar",
-    "ready_message": "Se descargó la versión {{version}}. ¿Quieres reiniciar PsstPsst e instalarla ahora?",
+    "ready_message": "Se descargó la versión {{version}}. ¿Quieres reiniciar Outlink e instalarla ahora?",
     "restart_and_install": "Reiniciar e instalar",
     "later": "Más tarde",
     "install_failed_title": "No se pudo iniciar la instalación",
-    "install_failed_message": "PsstPsst no pudo reiniciar el instalador. Inténtalo de nuevo la próxima vez que abras la aplicación."
+    "install_failed_message": "Outlink no pudo reiniciar el instalador. Inténtalo de nuevo la próxima vez que abras la aplicación."
   },
   "legal": {
     "privacy_policy": "Política de privacidad",
@@ -777,7 +777,7 @@
   "secure_storage": {
     "setup_title": "Protege tu aplicación",
     "setup_hint": "Este sistema no puede guardar tus claves de forma segura por sí solo. Crea una contraseña de la aplicación para cifrarlas.",
-    "unlock_title": "Desbloquear PsstPsst",
+    "unlock_title": "Desbloquear Outlink",
     "unlock_hint": "Introduce la contraseña de la aplicación para desbloquear tus claves y tu cuenta.",
     "password": "Contraseña de la aplicación",
     "confirm_password": "Confirmar contraseña de la aplicación",
@@ -824,7 +824,7 @@
     "description_placeholder": "¿Para qué es?",
     "direction": "Dirección",
     "empty_title": "Pagos Lightning",
-    "empty_hint": "Paga con una aplicación de cartera o conecta una para hacer pagos y solicitudes de pago en PsstPsst.",
+    "empty_hint": "Paga con una aplicación de cartera o conecta una para hacer pagos y solicitudes de pago en Outlink.",
     "expires": "Caduca",
     "expires_at": "Caduca",
     "expires_in": "Caduca en",

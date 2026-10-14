@@ -47,12 +47,12 @@ type Props = {
   intro?: boolean;
   /** Known reverse-lookup result, supplied by a parent that already fetched it. */
   ownedNameHint?: string | null;
-  /** Called with `name@psstpsst.chat` once the server-side binding succeeds. */
+  /** Called with `name@outlink.invalid` once the server-side binding succeeds. */
   onClaimed: (identifier: string) => void | Promise<void>;
 };
 
 /**
- * Shared "claim a psstpsst.chat address" form used by onboarding and the
+ * Shared "claim a outlink.invalid address" form used by onboarding and the
  * profile sheet. Reverse lookup prefills an existing name; edits check
  * availability live (debounced, stale responses discarded). Registration,
  * renaming, and confirming an owned name all use the same upsert request.

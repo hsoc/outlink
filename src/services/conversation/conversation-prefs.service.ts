@@ -23,8 +23,8 @@ import type { Signer } from '../signer/signer.interface';
  */
 const KIND_FOLLOW_SET = 30000;
 /** d-tag of the private muted set. */
-export const MUTED_D = 'psstpsst-muted';
-const MUTED_TITLE = 'PsstPsst Muted';
+export const MUTED_D = 'outlink-muted';
+const MUTED_TITLE = 'Outlink Muted';
 
 /** Stable keys and identity kind for every muted conversation. */
 async function collectMutedConversations(

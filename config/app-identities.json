@@ -1,14 +1,14 @@
 {
   "production": {
-    "name": "PsstPsst",
-    "id": "chat.psstpsst.app",
-    "scheme": "psstpsst",
-    "packageName": "psstpsst-desktop"
+    "name": "Outlink",
+    "id": "io.github.hsoc.outlink",
+    "scheme": "outlink",
+    "packageName": "outlink-desktop"
   },
   "development": {
-    "name": "PsstPsst Dev",
-    "id": "chat.psstpsst.app.dev",
-    "scheme": "psstpsst-dev",
-    "packageName": "psstpsst-desktop-dev"
+    "name": "Outlink Dev",
+    "id": "io.github.hsoc.outlink.dev",
+    "scheme": "outlink-dev",
+    "packageName": "outlink-desktop-dev"
   }
 }

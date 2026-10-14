@@ -1,6 +1,6 @@
 {
   "welcome": {
-    "title": "PsstPsst",
+    "title": "Outlink",
     "subtitle": "Decentralized, end-to-end encrypted messaging",
     "choose_title": "Choose an account",
     "login_nsec": "Sign in with private key",
@@ -26,7 +26,7 @@
     },
     "nostr_connect": {
       "title": "Nostr Connect",
-      "subtitle": "Scan this code with your signer, or tap it to open a signer on this device. PsstPsst will sign in once the signer approves.",
+      "subtitle": "Scan this code with your signer, or tap it to open a signer on this device. Outlink will sign in once the signer approves.",
       "copy": "Copy link",
       "copied": "Copied",
       "waiting": "Waiting for your signer…",
@@ -37,7 +37,7 @@
   },
   "generate": {
     "title": "New account",
-    "subtitle": "PsstPsst just created a new account for you.",
+    "subtitle": "Outlink just created a new account for you.",
     "warning": "Back up the private key below. Anyone who has it can read your messages and impersonate you.",
     "copy": "Copy",
     "copied": "Copied",
@@ -87,7 +87,7 @@
     "qr_save": "Save",
     "qr_saved": "Saved to your photos.",
     "qr_save_failed": "Couldn't save. Try again.",
-    "qr_save_permission": "PsstPsst needs photo access to save the card."
+    "qr_save_permission": "Outlink needs photo access to save the card."
   },
   "report": {
     "title": "Report user",
@@ -121,14 +121,14 @@
     "url_confirm": "Use this image",
     "image_url_placeholder": "https://…",
     "save": "Save",
-    "photo_permission": "PsstPsst needs photo access to set your photo.",
-    "camera_permission": "PsstPsst needs camera access to take a photo.",
+    "photo_permission": "Outlink needs photo access to set your photo.",
+    "camera_permission": "Outlink needs camera access to take a photo.",
     "upload_failed": "Image upload failed. Try again.",
     "save_failed": "Couldn't save your profile. Try again."
   },
   "nip05": {
     "title": "Personal identifier",
-    "subtitle": "Claim a personal identifier on psstpsst.chat so others can find you without your public key.",
+    "subtitle": "Claim a personal identifier on outlink.invalid so others can find you without your public key.",
     "name_label": "Name",
     "name_placeholder": "name",
     "name_hint": "5 to 30 characters: letters, digits, dots, dashes and underscores. Start and end with a letter or digit.",
@@ -145,7 +145,7 @@
     "change": "Change identifier",
     "claim_failed": "Couldn't claim that personal identifier. Try again.",
     "skip": "Skip for now",
-    "profile_entry": "Get a psstpsst.chat identifier",
+    "profile_entry": "Get a outlink.invalid identifier",
     "profile_switch": "Switch to {{address}}"
   },
   "conversations": {
@@ -299,7 +299,7 @@
     "sent": "Sent",
     "enter_conversation": "Enter chat",
     "send_failed": "Couldn't send everything. Try sharing again.",
-    "receive_failed_title": "Can't share to PsstPsst",
+    "receive_failed_title": "Can't share to Outlink",
     "receive_failed": "The shared content is no longer available. Try sharing it again.",
     "stage_failed": "Couldn't prepare the shared files. Try again.",
     "too_many_items": "Share up to 10 items at a time.",
@@ -528,10 +528,10 @@
     "unavailable": "Can't message this contact",
     "unavailable_title": "Can't message this contact",
     "unavailable_summary": {
-      "checking": "PsstPsst is checking whether this contact can receive messages now.",
+      "checking": "Outlink is checking whether this contact can receive messages now.",
       "missingRelays": "Could not find the relays where this contact receives messages.",
-      "missingEncryptionKey": "This contact's app may not support the encrypted messaging protocol PsstPsst uses.",
-      "unknown": "PsstPsst could not confirm that this contact can receive messages."
+      "missingEncryptionKey": "This contact's app may not support the encrypted messaging protocol Outlink uses.",
+      "unknown": "Outlink could not confirm that this contact can receive messages."
     },
     "check_relays": "Message relays",
     "check_key": "Encryption public key",
@@ -564,16 +564,16 @@
     "background_service_message": "Listening for new messages",
     "new_message": "New message",
     "new_messages": "{{count}} new messages",
-    "open_to_view_message": "Open PsstPsst to view the message",
-    "delivery_note_ios": "Background notifications are delivered through APNs using relay.psstpsst.chat.",
+    "open_to_view_message": "Open Outlink to view the message",
+    "delivery_note_ios": "Background notifications are delivered through APNs using relay.outlink.invalid.",
     "required_relay_note": "Add {{relay}} to your message relays to enable iOS notifications.",
     "relay_settings_action": "Go to settings",
-    "delivery_note_android": "Android can keep the messaging connection active in the background, but the system or device maker may stop it. For more reliable notifications, allow PsstPsst to run in the background and exclude it from battery optimization in system settings. Options vary by device.",
-    "delivery_note_desktop": "Notifications arrive while PsstPsst remains running in the system tray. Fully quitting the app stops background checks.",
+    "delivery_note_android": "Android can keep the messaging connection active in the background, but the system or device maker may stop it. For more reliable notifications, allow Outlink to run in the background and exclude it from battery optimization in system settings. Options vary by device.",
+    "delivery_note_desktop": "Notifications arrive while Outlink remains running in the system tray. Fully quitting the app stops background checks.",
     "privacy_note": "These details are hidden by default. If you show them, they may remain in this device's notification history.",
-    "system_permission_note": "Also allow notifications for PsstPsst in your system settings. The app cannot check whether system notifications are enabled.",
+    "system_permission_note": "Also allow notifications for Outlink in your system settings. The app cannot check whether system notifications are enabled.",
     "permission_denied_title": "Notifications are off",
-    "permission_denied_message": "Allow notifications for PsstPsst in your system settings to be notified about new messages.",
+    "permission_denied_message": "Allow notifications for Outlink in your system settings to be notified about new messages.",
     "unavailable_title": "Notifications aren't available",
     "unavailable_message": "This desktop environment doesn't support system notifications.",
     "open_settings": "Open Settings",
@@ -596,7 +596,7 @@
     "dm_relays": "Message relays",
     "media_servers": "Media servers",
     "blocked_users": "Blocked users",
-    "about": "About PsstPsst",
+    "about": "About Outlink",
     "security": "Security",
     "export_nsec": "Copy private key",
     "export_nsec_title": "Copy private key?",
@@ -618,13 +618,13 @@
     "not_now": "Not now",
     "downloading": "Downloading version {{version}}…",
     "download_failed_title": "Download failed",
-    "download_failed_message": "Couldn't download the update. Try again the next time you open PsstPsst.",
+    "download_failed_message": "Couldn't download the update. Try again the next time you open Outlink.",
     "ready_title": "Ready to install",
-    "ready_message": "Version {{version}} has been downloaded. Restart PsstPsst to install it now?",
+    "ready_message": "Version {{version}} has been downloaded. Restart Outlink to install it now?",
     "restart_and_install": "Restart and install",
     "later": "Later",
     "install_failed_title": "Installation couldn't start",
-    "install_failed_message": "PsstPsst couldn't restart the installer. Try again the next time you open the app."
+    "install_failed_message": "Outlink couldn't restart the installer. Try again the next time you open the app."
   },
   "legal": {
     "privacy_policy": "Privacy Policy",
@@ -773,7 +773,7 @@
   "secure_storage": {
     "setup_title": "Protect your app",
     "setup_hint": "This system cannot securely store your keys by itself. Create an app password to encrypt them.",
-    "unlock_title": "Unlock PsstPsst",
+    "unlock_title": "Unlock Outlink",
     "unlock_hint": "Enter your app password to unlock your keys and account.",
     "password": "App password",
     "confirm_password": "Confirm app password",
@@ -820,7 +820,7 @@
     "description_placeholder": "What is this for?",
     "direction": "Direction",
     "empty_title": "Lightning payments",
-    "empty_hint": "Pay with a wallet app, or connect one for payments and payment requests in PsstPsst.",
+    "empty_hint": "Pay with a wallet app, or connect one for payments and payment requests in Outlink.",
     "expires": "Expires",
     "expires_at": "Expires",
     "expires_in": "Expires in",

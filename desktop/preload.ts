@@ -13,8 +13,8 @@ ipcRenderer.on(IPC.appUpdateStatus, (_event, status: AppUpdateStatus) => {
 });
 
 const proximityAvailable =
-  process.argv.includes('--psstpsst-proximity-available=1') ||
-  process.env.PSSTPSST_PROXIMITY_AVAILABLE === '1';
+  process.argv.includes('--outlink-proximity-available=1') ||
+  process.env.OUTLINK_PROXIMITY_AVAILABLE === '1';
 
 const databaseChangeListeners = new Set<(value: { tableName?: string }) => void>();
 ipcRenderer.on(IPC.databaseChanged, (_event, value: { tableName?: string }) => {
@@ -293,4 +293,4 @@ const bridge: ElectronBridge = {
   },
 };
 
-contextBridge.exposeInMainWorld('psstpsstDesktop', bridge);
+contextBridge.exposeInMainWorld('outlinkDesktop', bridge);

@@ -190,7 +190,7 @@ function reportMediaDimensions(opts: UploadAttachmentOpts | StageNearbyAttachmen
 }
 
 async function ensureUploadDir(): Promise<string> {
-  const dir = `${await platform.fileSystem.cacheDirectoryUri()}psstpsst-uploads/`;
+  const dir = `${await platform.fileSystem.cacheDirectoryUri()}outlink-uploads/`;
   const info = await platform.fileSystem.stat(dir);
   if (!info.exists) {
     await platform.fileSystem.makeDirectory(dir, { intermediates: true });
@@ -707,7 +707,7 @@ export async function copyForShare(uri: string, name?: string): Promise<string> 
   if (!name) return uri;
   try {
     const safe = name.replace(/[^\w.\- ]+/g, '_').slice(0, 120) || 'file';
-    const dir = `${await platform.fileSystem.cacheDirectoryUri()}psstpsst-share/`;
+    const dir = `${await platform.fileSystem.cacheDirectoryUri()}outlink-share/`;
     await platform.fileSystem.makeDirectory(dir, { intermediates: true }).catch(() => {});
     const dest = `${dir}${safe}`;
     await platform.fileSystem.delete(dest, { idempotent: true }).catch(() => {});

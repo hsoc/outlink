@@ -1,11 +1,11 @@
-PsstPsst Nearby Messaging
+Outlink Nearby Messaging
 =========================
 
 `draft` `optional`
 
 ## Abstract
 
-This document specifies PsstPsst Nearby Messaging version `1`: discovery,
+This document specifies Outlink Nearby Messaging version `1`: discovery,
 authentication, access approval, and Nostr rumor exchange over Bluetooth Low
 Energy (BLE). BLE is only the byte transport. Noise XX authenticates peers and
 protects application records.
@@ -21,7 +21,7 @@ The proximity key authorizes the Noise key with:
 
 ```text
 bindingMessage = SHA256(
-  UTF8("PsstPsst Nearby Noise Binding/1") ||
+  UTF8("Outlink Nearby Noise Binding/1") ||
   proximityPublicKey ||
   noiseStaticPublicKey
 )
@@ -83,7 +83,7 @@ The fixed suite and prologue are:
 
 ```text
 Noise_XX_25519_ChaChaPoly_SHA256
-UTF8("PsstPsst Nearby/1")
+UTF8("Outlink Nearby/1")
 ```
 
 The exchange is:

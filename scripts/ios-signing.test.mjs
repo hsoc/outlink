@@ -13,9 +13,10 @@ const { IOSConfig } = require('@expo/config-plugins');
 const xcode = require('xcode');
 const app = require('../app.json').expo;
 const identities = require('../config/app-identities.json');
+const testTeamId = 'TESTTEAM01';
 
 test('clean prebuild assigns the configured team to the app and newly created share extension', () => {
-  const directory = mkdtempSync(join(tmpdir(), 'psstpsst-signing-test-'));
+  const directory = mkdtempSync(join(tmpdir(), 'outlink-signing-test-'));
   try {
     symlinkSync(join(root, 'node_modules'), join(directory, 'node_modules'), 'dir');
     // Preserve the real registration order: Xcode mods run in reverse order.
@@ -30,14 +31,14 @@ test('clean prebuild assigns the configured team to the app and newly created sh
         },
       }));
       writeFileSync(join(directory, 'app.json'), JSON.stringify({ expo: {
-        name: 'PsstPsst', slug: 'psstpsst', scheme: identity.scheme, plugins,
-        ios: { appleTeamId: app.ios.appleTeamId, bundleIdentifier: identity.id },
+        name: 'Outlink', slug: 'outlink', scheme: identity.scheme, plugins,
+        ios: { appleTeamId: testTeamId, bundleIdentifier: identity.id },
       } }));
       execFileSync(process.execPath, [
         join(root, 'node_modules/expo/bin/cli'), 'prebuild', '--platform', 'ios',
         '--clean', '--no-install', '--template', join(root, 'node_modules/expo/template.tgz'),
       ], { cwd: directory, env: { ...process.env, CI: '1' }, stdio: 'pipe', timeout: 60_000 });
-      const project = xcode.project(join(directory, 'ios/PsstPsst.xcodeproj/project.pbxproj'));
+      const project = xcode.project(join(directory, 'ios/Outlink.xcodeproj/project.pbxproj'));
       project.parseSync();
       const targets = IOSConfig.Target.getNativeTargets(project);
       assert.equal(targets.length, 2);
@@ -45,7 +46,7 @@ test('clean prebuild assigns the configured team to the app and newly created sh
         const configurations = IOSConfig.XcodeUtils.getBuildConfigurationsForListId(project, target.buildConfigurationList);
         assert.deepEqual(configurations.map(([, config]) => config.name).sort(), ['Debug', 'Release']);
         for (const [, config] of configurations) {
-          assert.equal(config.buildSettings.DEVELOPMENT_TEAM, app.ios.appleTeamId, `${target.name} ${config.name}`);
+          assert.equal(config.buildSettings.DEVELOPMENT_TEAM, testTeamId, `${target.name} ${config.name}`);
         }
       }
     }

@@ -20,7 +20,7 @@ const signer = {
   getPublicKey: jest.fn(),
   signEvent: jest.fn(async (template) => finalizeEvent(template, key)),
 };
-const origin = 'https://relay.psstpsst.chat';
+const origin = 'https://relay.outlink.invalid';
 const device = { token: '0012abcd', environment: 'sandbox' as const };
 const mockFetch = jest.fn();
 const originalFetch = global.fetch;
@@ -79,10 +79,10 @@ it('does not send a PUT if consent is withdrawn while signing', async () => {
 });
 
 it('discovers the exact supported API version and NIP-98 capability', async () => {
-  mockFetch.mockResolvedValue({ ok: true, json: async () => ({ supported_nips: [98], psstpsst: { push: { version: 1 } } }) });
+  mockFetch.mockResolvedValue({ ok: true, json: async () => ({ supported_nips: [98], outlink: { push: { version: 1 } } }) });
   await expect(supportsPush(origin)).resolves.toBe(true);
   expect(mockFetch.mock.calls[0]).toEqual([`${origin}/`, expect.objectContaining({ headers: { Accept: 'application/nostr+json' } })]);
-  mockFetch.mockResolvedValue({ ok: true, json: async () => ({ supported_nips: [], psstpsst: { push: { version: 1 } } }) });
+  mockFetch.mockResolvedValue({ ok: true, json: async () => ({ supported_nips: [], outlink: { push: { version: 1 } } }) });
   await expect(supportsPush(origin)).resolves.toBe(false);
 });
 
@@ -91,7 +91,7 @@ it('fetches an ID from the fixed endpoint with a signed bodyless NIP-98 GET', as
   mockFetch.mockResolvedValue({ status: 200, json: async () => ({ id, kind: 1059 }) });
   await expect(fetchApnsGiftWrap(signer, id)).resolves.toEqual({ id, kind: 1059 });
   const [url, init] = mockFetch.mock.calls[0];
-  expect(url).toBe(`https://relay.psstpsst.chat/v1/events/${id}`);
+  expect(url).toBe(`https://relay.outlink.invalid/v1/events/${id}`);
   expect(init.method).toBe('GET');
   expect(init).not.toHaveProperty('body');
   expect(authEvent().tags).toEqual([['u', url], ['method', 'GET']]);

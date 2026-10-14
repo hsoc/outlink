@@ -8,7 +8,7 @@ import { test } from 'node:test';
 // Compile the installed dependency's relevant methods in small native probes.
 // UIKit and JSI are excluded; the probes exercise selector dispatch and type equality.
 function nativeProbe(extension, source, compiler, flags) {
-  const directory = mkdtempSync(join(tmpdir(), 'psstpsst-ios-regression-'));
+  const directory = mkdtempSync(join(tmpdir(), 'outlink-ios-regression-'));
   try {
     const input = join(directory, `main.${extension}`);
     const output = join(directory, 'probe');
@@ -89,5 +89,5 @@ if !data.equals(data) { exit(1) }
 if !data.equals(DynamicDataType()) { exit(2) }
 if data.equals(OtherType()) { exit(3) }
 if !data.wraps(Data.self) || data.wraps(String.self) { exit(4) }
-`, 'swiftc', ['-module-cache-path', join(tmpdir(), 'psstpsst-swift-module-cache')]);
+`, 'swiftc', ['-module-cache-path', join(tmpdir(), 'outlink-swift-module-cache')]);
 });

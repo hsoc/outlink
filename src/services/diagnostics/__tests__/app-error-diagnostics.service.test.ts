@@ -57,7 +57,7 @@ describe('app error diagnostics', () => {
     await expect(recordAppError(context)).resolves.toBe(2);
 
     const exported = await exportAppErrorDiagnostics();
-    expect(exported).toBe('file:///cache/psstpsst-diagnostics.json');
+    expect(exported).toBe('file:///cache/outlink-diagnostics.json');
     const contents = mockFiles.get(exported!);
     expect(contents).toBeDefined();
     expect(contents).not.toContain('private message content');

@@ -8,8 +8,7 @@ import { spacing, useThemeColors } from '@/theme';
 import { AppButton } from './AppButton';
 
 export const LEGAL_LINKS = [
-  { label: 'legal.privacy_policy', url: 'https://psstpsst.chat/privacy/' },
-  { label: 'legal.terms_of_service', url: 'https://psstpsst.chat/terms/' },
+  { label: 'legal.privacy_policy', url: 'https://github.com/hsoc/outlink/blob/master/docs/PRIVACY.md' },
 ] as const;
 
 export function LegalLinks() {

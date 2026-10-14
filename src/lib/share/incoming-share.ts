@@ -71,7 +71,7 @@ function isResolvedPayload(
 }
 
 /**
- * Normalize Expo's raw/resolved payload pair into the two things PsstPsst sends:
+ * Normalize Expo's raw/resolved payload pair into the two things Outlink sends:
  * plain messages and local attachment URIs. The raw array is available on the
  * first render; resolved entries progressively add reliable file metadata.
  */

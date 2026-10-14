@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(psst_noise_core LANGUAGES C)
+project(outlink_noise_core LANGUAGES C)
 
 set(NOISE_C_ROOT "${CMAKE_CURRENT_LIST_DIR}/../vendor/noise-c")
 
-set(PSST_NOISE_SOURCES
-  psst_noise.c
+set(OUTLINK_NOISE_SOURCES
+  outlink_noise.c
   ${NOISE_C_ROOT}/src/protocol/cipherstate.c
   ${NOISE_C_ROOT}/src/protocol/dhstate.c
   ${NOISE_C_ROOT}/src/protocol/errors.c
@@ -26,22 +26,22 @@ set(PSST_NOISE_SOURCES
   ${NOISE_C_ROOT}/src/crypto/ed25519/ed25519.c
 )
 
-add_library(psst-noise-core STATIC ${PSST_NOISE_SOURCES})
-target_compile_features(psst-noise-core PRIVATE c_std_11)
-target_include_directories(psst-noise-core PUBLIC
+add_library(outlink-noise-core STATIC ${OUTLINK_NOISE_SOURCES})
+target_compile_features(outlink-noise-core PRIVATE c_std_11)
+target_include_directories(outlink-noise-core PUBLIC
   ${CMAKE_CURRENT_LIST_DIR}
   ${NOISE_C_ROOT}/include
   ${NOISE_C_ROOT}/src
   ${NOISE_C_ROOT}/src/protocol
 )
-target_compile_definitions(psst-noise-core PRIVATE
+target_compile_definitions(outlink-noise-core PRIVATE
   ED25519_CUSTOMRANDOM=1
   ED25519_REFHASH=1
 )
 
-if(PSST_NOISE_BUILD_TESTS)
+if(OUTLINK_NOISE_BUILD_TESTS)
   enable_testing()
-  add_executable(psst-noise-core-test psst_noise_test.c)
-  target_link_libraries(psst-noise-core-test PRIVATE psst-noise-core)
-  add_test(NAME psst-noise-core-test COMMAND psst-noise-core-test)
+  add_executable(outlink-noise-core-test outlink_noise_test.c)
+  target_link_libraries(outlink-noise-core-test PRIVATE outlink-noise-core)
+  add_test(NAME outlink-noise-core-test COMMAND outlink-noise-core-test)
 endif()

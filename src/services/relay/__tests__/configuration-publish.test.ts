@@ -498,15 +498,15 @@ it('queues complete private snapshots after local writes and protects them from 
   await jest.runAllTimersAsync(); await Promise.all(saves);
   expect((await pending(30000, MUTED_D))?.event.content).toBe(`encrypted:${JSON.stringify([['p', peer]])}`);
   expect((await pending(30000, BLOCKED_D))?.event.content).toBe(`encrypted:${JSON.stringify([['p', peer]])}`);
-  expect((await pending(30000, 'psstpsst-contacts'))?.event.content).toBe(
+  expect((await pending(30000, 'outlink-contacts'))?.event.content).toBe(
     `encrypted:${JSON.stringify([['h', groupId]])}`,
   );
-  expect(await pending(30078, 'psstpsst-saved-groups')).toBeNull();
+  expect(await pending(30078, 'outlink-saved-groups')).toBeNull();
   const empty = { ...event(30000), content: 'encrypted:[]' };
   await applyMutedEvent(SELF, empty, mockSigner);
   await applyBlockedEvent(SELF, empty, mockSigner);
   const { applyContactsEvent } = jest.requireActual('../../contact/contact.service') as typeof import('../../contact/contact.service');
-  await applyContactsEvent(SELF, { ...empty, tags: [['d', 'psstpsst-contacts']] }, mockSigner);
+  await applyContactsEvent(SELF, { ...empty, tags: [['d', 'outlink-contacts']] }, mockSigner);
   expect(sqlite.prepare(
     'SELECT muted FROM conversations WHERE conversation_key = ?',
   ).get(peer)).toEqual({ muted: 1 });
@@ -566,17 +566,17 @@ it('migrates local saved groups and atomically removes only their old account co
   const { migrateLocalSavedGroups, CONTACTS_D } = jest.requireActual('../../contact/contact.service') as typeof import('../../contact/contact.service');
   sqlite.prepare('INSERT INTO saved_groups (account_pubkey, group_id) VALUES (?, ?)').run(SELF, 'local-room');
   // Legacy encrypted payload is no longer decoded; the saved table is authoritative.
-  const old = { ...event(30078, 'psstpsst-saved-groups'), content: 'opaque-legacy-content' };
+  const old = { ...event(30078, 'outlink-saved-groups'), content: 'opaque-legacy-content' };
   await service.enqueueConfigurationEvent(old);
   await service.enqueueConfigurationEvent(event(30078, 'unrelated'));
-  await service.enqueueConfigurationEvent(event(30078, 'psstpsst-saved-groups', 100, 'other'));
+  await service.enqueueConfigurationEvent(event(30078, 'outlink-saved-groups', 100, 'other'));
   const migrating = migrateLocalSavedGroups(SELF, mockSigner);
   await jest.runAllTimersAsync(); await migrating;
   expect((await pending(30000, CONTACTS_D))?.event.content).toBe('encrypted:[["h","local-room"]]');
   expect((await pending(30000, CONTACTS_D))?.event.tags.some((tag) => tag[0] === 'version')).toBe(false);
-  expect(await pending(30078, 'psstpsst-saved-groups')).toBeNull();
+  expect(await pending(30078, 'outlink-saved-groups')).toBeNull();
   expect(sqlite.prepare('SELECT event FROM replaceable_events WHERE pubkey = ? AND kind = 30078 AND d_tag = ?')
-    .get(SELF, 'psstpsst-saved-groups')).toBeUndefined();
+    .get(SELF, 'outlink-saved-groups')).toBeUndefined();
   expect(await pending(30078, 'unrelated')).not.toBeNull();
   expect(sqlite.prepare('SELECT event_id FROM configuration_outbox WHERE account_pubkey = ?').get('other')).toBeDefined();
   mockSigner.signEvent.mockClear();
@@ -708,7 +708,7 @@ it('preserves contacts and group membership when either domain publishes an edit
   await jest.runAllTimersAsync(); await saving;
   expect((await pending(30000, CONTACTS_D))?.event.content)
     .toBe(`encrypted:${JSON.stringify([['p', peer], ['h', 'room']])}`);
-  expect(await pending(30078, 'psstpsst-saved-groups')).toBeNull();
+  expect(await pending(30078, 'outlink-saved-groups')).toBeNull();
   await setPetname(SELF, peer, 'Friend'); await jest.runAllTimersAsync();
   expect((await pending(30000, CONTACTS_D))?.event.content)
     .toBe(`encrypted:${JSON.stringify([['p', peer, '', 'Friend'], ['h', 'room']])}`);
@@ -752,14 +752,14 @@ it('preserves contacts and nicknames when migrating local saved-group rows', asy
   const contacts = { ...event(30000, CONTACTS_D), content: `encrypted:${JSON.stringify([['p', peer, '', 'Friend']])}` };
   await service.enqueueConfigurationEvent(contacts); sqlite.exec('DELETE FROM configuration_outbox;');
   sqlite.prepare('INSERT INTO saved_groups (account_pubkey, group_id) VALUES (?, ?)').run(SELF, 'room');
-  await service.enqueueConfigurationEvent(event(30078, 'psstpsst-saved-groups'));
+  await service.enqueueConfigurationEvent(event(30078, 'outlink-saved-groups'));
   const migrating = migrateLocalSavedGroups(SELF, mockSigner);
   await jest.runAllTimersAsync(); await migrating;
   const result = (await pending(30000, CONTACTS_D))!.event;
   expect(result.content).toBe(`encrypted:${JSON.stringify([['p', peer, '', 'Friend'], ['h', 'room']])}`);
   expect(result.tags.some((tag) => tag[0] === 'version')).toBe(false);
   expect(result.created_at).toBeGreaterThan(contacts.created_at);
-  expect(await pending(30078, 'psstpsst-saved-groups')).toBeNull();
+  expect(await pending(30078, 'outlink-saved-groups')).toBeNull();
 });
 
 it('coalesces concurrent contact and group edits into the latest complete snapshot', async () => {
@@ -821,19 +821,19 @@ it('clears saved groups absent from the contact list and rejects malformed h ent
 it('keeps old local cache and pending rows when migration signing fails, then retries safely', async () => {
   const { migrateLocalSavedGroups, CONTACTS_D } = jest.requireActual('../../contact/contact.service') as typeof import('../../contact/contact.service');
   sqlite.prepare('INSERT INTO saved_groups (account_pubkey, group_id) VALUES (?, ?)').run(SELF, 'room');
-  const old = event(30078, 'psstpsst-saved-groups');
+  const old = event(30078, 'outlink-saved-groups');
   await service.enqueueConfigurationEvent(old);
   mockSigner.nip44Encrypt.mockRejectedValueOnce(new Error('signer unavailable'));
   const migrating = migrateLocalSavedGroups(SELF, mockSigner);
   await migrating;
   await jest.runAllTimersAsync();
-  expect((await pending(30078, 'psstpsst-saved-groups'))?.eventId).toBe(old.id);
+  expect((await pending(30078, 'outlink-saved-groups'))?.eventId).toBe(old.id);
   expect(sqlite.prepare('SELECT event FROM replaceable_events WHERE kind = 30078').get()).toBeDefined();
   expect(sqlite.prepare('SELECT group_id FROM saved_groups').all()).toEqual([{ group_id: 'room' }]);
   const retrying = migrateLocalSavedGroups(SELF, mockSigner);
   await jest.runAllTimersAsync(); await retrying;
   expect((await pending(30000, CONTACTS_D))?.event.content).toBe('encrypted:[["h","room"]]');
-  expect(await pending(30078, 'psstpsst-saved-groups')).toBeNull();
+  expect(await pending(30078, 'outlink-saved-groups')).toBeNull();
   expect(sqlite.prepare('SELECT event FROM replaceable_events WHERE kind = 30078').get()).toBeUndefined();
 });
 
@@ -841,33 +841,33 @@ it('keeps old local cache and pending rows when migration signing fails, then re
 it('rolls back legacy cleanup when storing the migrated list fails', async () => {
   const { migrateLocalSavedGroups, CONTACTS_D } = jest.requireActual('../../contact/contact.service') as typeof import('../../contact/contact.service');
   sqlite.prepare('INSERT INTO saved_groups (account_pubkey, group_id) VALUES (?, ?)').run(SELF, 'room');
-  const old = event(30078, 'psstpsst-saved-groups');
+  const old = event(30078, 'outlink-saved-groups');
   await service.enqueueConfigurationEvent(old);
   sqlite.exec("CREATE TRIGGER fail_migration BEFORE UPDATE ON contact_sync_state WHEN NEW.dirty = 0 BEGIN SELECT RAISE(ABORT, 'disk failure'); END;");
   const migrating = migrateLocalSavedGroups(SELF, mockSigner);
   await migrating;
   await jest.runAllTimersAsync();
-  expect((await pending(30078, 'psstpsst-saved-groups'))?.eventId).toBe(old.id);
+  expect((await pending(30078, 'outlink-saved-groups'))?.eventId).toBe(old.id);
   expect(sqlite.prepare('SELECT event FROM replaceable_events WHERE kind = 30078').get()).toBeDefined();
   expect(await pending(30000, CONTACTS_D)).toBeNull();
   sqlite.exec('DROP TRIGGER fail_migration;');
   const retrying = migrateLocalSavedGroups(SELF, mockSigner);
   await jest.runAllTimersAsync(); await retrying;
   expect((await pending(30000, CONTACTS_D))?.event.content).toBe('encrypted:[["h","room"]]');
-  expect(await pending(30078, 'psstpsst-saved-groups')).toBeNull();
+  expect(await pending(30078, 'outlink-saved-groups')).toBeNull();
 });
 
 
 it.each(['cache', 'outbox'])('migrates when only the local legacy %s row remains', async (remaining) => {
   const { migrateLocalSavedGroups, CONTACTS_D } = jest.requireActual('../../contact/contact.service') as typeof import('../../contact/contact.service');
   sqlite.prepare('INSERT INTO saved_groups (account_pubkey, group_id) VALUES (?, ?)').run(SELF, 'room');
-  await service.enqueueConfigurationEvent(event(30078, 'psstpsst-saved-groups'));
+  await service.enqueueConfigurationEvent(event(30078, 'outlink-saved-groups'));
   if (remaining === 'cache') sqlite.exec('DELETE FROM configuration_outbox;');
   else sqlite.exec('DELETE FROM replaceable_events;');
   const migrating = migrateLocalSavedGroups(SELF, mockSigner);
   await jest.runAllTimersAsync(); await migrating;
   expect((await pending(30000, CONTACTS_D))?.event.content).toBe('encrypted:[["h","room"]]');
-  expect(await pending(30078, 'psstpsst-saved-groups')).toBeNull();
+  expect(await pending(30078, 'outlink-saved-groups')).toBeNull();
   expect(sqlite.prepare('SELECT * FROM replaceable_events WHERE kind = 30078').all()).toEqual([]);
 });
 

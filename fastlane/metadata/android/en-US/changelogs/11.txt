@@ -1,4 +1,4 @@
-PsstPsst 26.10.4
+Outlink 26.10.4
 
 - Added download progress with pause and resume for attachments.
 - Added resending for any of your messages.

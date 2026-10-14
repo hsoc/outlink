@@ -1,6 +1,6 @@
 {
   "welcome": {
-    "title": "PsstPsst",
+    "title": "Outlink",
     "subtitle": "去中心化的端對端加密通訊",
     "choose_title": "選擇帳號",
     "login_nsec": "使用私密金鑰登入",
@@ -26,7 +26,7 @@
     },
     "nostr_connect": {
       "title": "Nostr Connect",
-      "subtitle": "使用簽章器掃描此代碼，或點一下以在此裝置開啟簽章器。簽章器核准後，PsstPsst 就會登入。",
+      "subtitle": "使用簽章器掃描此代碼，或點一下以在此裝置開啟簽章器。簽章器核准後，Outlink 就會登入。",
       "copy": "複製連結",
       "copied": "已複製",
       "waiting": "正在等候簽章器…",
@@ -37,7 +37,7 @@
   },
   "generate": {
     "title": "新帳號",
-    "subtitle": "PsstPsst 剛剛為你建立了新帳號。",
+    "subtitle": "Outlink 剛剛為你建立了新帳號。",
     "warning": "請備份下方的私密金鑰。任何取得此金鑰的人都能讀取你的訊息並冒充你。",
     "copy": "複製",
     "copied": "已複製",
@@ -87,7 +87,7 @@
     "qr_save": "儲存",
     "qr_saved": "已儲存至照片。",
     "qr_save_failed": "無法儲存，請再試一次。",
-    "qr_save_permission": "PsstPsst 需要照片存取權才能儲存名片。"
+    "qr_save_permission": "Outlink 需要照片存取權才能儲存名片。"
   },
   "report": {
     "title": "檢舉使用者",
@@ -121,14 +121,14 @@
     "url_confirm": "使用此圖片",
     "image_url_placeholder": "https://…",
     "save": "儲存",
-    "photo_permission": "PsstPsst 需要照片存取權才能設定你的照片。",
-    "camera_permission": "PsstPsst 需要相機存取權才能拍照。",
+    "photo_permission": "Outlink 需要照片存取權才能設定你的照片。",
+    "camera_permission": "Outlink 需要相機存取權才能拍照。",
     "upload_failed": "圖片上傳失敗，請再試一次。",
     "save_failed": "無法儲存個人檔案，請再試一次。"
   },
   "nip05": {
     "title": "個人標識",
-    "subtitle": "在 psstpsst.chat 上註冊個人標識，讓別人不需要你的公鑰也能找到你。",
+    "subtitle": "在 outlink.invalid 上註冊個人標識，讓別人不需要你的公鑰也能找到你。",
     "name_label": "名稱",
     "name_placeholder": "名稱",
     "name_hint": "5 到 30 個字元：字母、數字、點、連字號和底線，必須以字母或數字開頭和結尾。",
@@ -145,7 +145,7 @@
     "change": "更換個人標識",
     "claim_failed": "註冊個人標識失敗，請重試。",
     "skip": "暫時略過",
-    "profile_entry": "取得 psstpsst.chat 個人標識",
+    "profile_entry": "取得 outlink.invalid 個人標識",
     "profile_switch": "改用 {{address}}"
   },
   "conversations": {
@@ -299,7 +299,7 @@
     "sent": "已傳送",
     "enter_conversation": "進入對話",
     "send_failed": "無法傳送所有內容，請重新分享。",
-    "receive_failed_title": "無法分享到 PsstPsst",
+    "receive_failed_title": "無法分享到 Outlink",
     "receive_failed": "分享的內容已無法使用，請重新分享。",
     "stage_failed": "無法準備分享的檔案，請再試一次。",
     "too_many_items": "一次最多分享 10 個項目。",
@@ -528,10 +528,10 @@
     "unavailable": "無法傳訊息給此聯絡人",
     "unavailable_title": "無法傳訊息給此聯絡人",
     "unavailable_summary": {
-      "checking": "PsstPsst 正在檢查此聯絡人目前能否接收訊息。",
+      "checking": "Outlink 正在檢查此聯絡人目前能否接收訊息。",
       "missingRelays": "找不到此聯絡人接收訊息的中繼站。",
-      "missingEncryptionKey": "此聯絡人的應用程式可能不支援 PsstPsst 使用的加密通訊協定。",
-      "unknown": "PsstPsst 無法確認此聯絡人能否接收訊息。"
+      "missingEncryptionKey": "此聯絡人的應用程式可能不支援 Outlink 使用的加密通訊協定。",
+      "unknown": "Outlink 無法確認此聯絡人能否接收訊息。"
     },
     "check_relays": "訊息中繼站",
     "check_key": "加密公開金鑰",
@@ -564,16 +564,16 @@
     "background_service_message": "正在接收新訊息",
     "new_message": "新訊息",
     "new_messages": "{{count}} 則新訊息",
-    "open_to_view_message": "開啟 PsstPsst 查看訊息",
-    "delivery_note_ios": "背景通知透過 relay.psstpsst.chat 使用 APNs 推送。",
+    "open_to_view_message": "開啟 Outlink 查看訊息",
+    "delivery_note_ios": "背景通知透過 relay.outlink.invalid 使用 APNs 推送。",
     "required_relay_note": "請將 {{relay}} 加入訊息中繼，以啟用 iOS 通知。",
     "relay_settings_action": "前往設定",
-    "delivery_note_android": "Android 可以讓訊息連線在背景運作，但系統或裝置廠商仍可能停止它。為提高通知穩定性，請在系統設定中允許 PsstPsst 於背景運作，並將它排除於電池最佳化之外。實際選項因裝置而異。",
-    "delivery_note_desktop": "PsstPsst 保持在系統匣中執行時才能接收通知。完全結束應用程式後，背景檢查也會停止。",
+    "delivery_note_android": "Android 可以讓訊息連線在背景運作，但系統或裝置廠商仍可能停止它。為提高通知穩定性，請在系統設定中允許 Outlink 於背景運作，並將它排除於電池最佳化之外。實際選項因裝置而異。",
+    "delivery_note_desktop": "Outlink 保持在系統匣中執行時才能接收通知。完全結束應用程式後，背景檢查也會停止。",
     "privacy_note": "這些資訊預設隱藏。開啟後，相關資訊可能會保留在裝置的通知記錄中。",
-    "system_permission_note": "請同時在系統設定中允許 PsstPsst 傳送通知。應用程式無法檢查系統通知是否已開啟。",
+    "system_permission_note": "請同時在系統設定中允許 Outlink 傳送通知。應用程式無法檢查系統通知是否已開啟。",
     "permission_denied_title": "通知已關閉",
-    "permission_denied_message": "請在系統設定中允許 PsstPsst 通知，以接收新訊息通知。",
+    "permission_denied_message": "請在系統設定中允許 Outlink 通知，以接收新訊息通知。",
     "unavailable_title": "通知無法使用",
     "unavailable_message": "此桌面環境不支援系統通知。",
     "open_settings": "開啟設定",
@@ -596,7 +596,7 @@
     "dm_relays": "訊息中繼站",
     "media_servers": "媒體伺服器",
     "blocked_users": "已封鎖的使用者",
-    "about": "關於 PsstPsst",
+    "about": "關於 Outlink",
     "security": "安全性",
     "export_nsec": "複製私密金鑰",
     "export_nsec_title": "要複製私密金鑰嗎？",
@@ -618,13 +618,13 @@
     "not_now": "稍後再說",
     "downloading": "正在下載版本 {{version}}…",
     "download_failed_title": "下載失敗",
-    "download_failed_message": "無法下載更新。請在下次開啟 PsstPsst 時重試。",
+    "download_failed_message": "無法下載更新。請在下次開啟 Outlink 時重試。",
     "ready_title": "可以安裝更新",
-    "ready_message": "版本 {{version}} 已下載。現在重新啟動 PsstPsst 並安裝嗎？",
+    "ready_message": "版本 {{version}} 已下載。現在重新啟動 Outlink 並安裝嗎？",
     "restart_and_install": "重新啟動並安裝",
     "later": "稍後",
     "install_failed_title": "無法開始安裝",
-    "install_failed_message": "PsstPsst 無法重新啟動安裝程式。請在下次開啟應用程式時重試。"
+    "install_failed_message": "Outlink 無法重新啟動安裝程式。請在下次開啟應用程式時重試。"
   },
   "legal": {
     "privacy_policy": "隱私政策",
@@ -773,7 +773,7 @@
   "secure_storage": {
     "setup_title": "保護應用程式",
     "setup_hint": "此系統本身無法安全儲存你的金鑰。請建立應用程式密碼來加密金鑰。",
-    "unlock_title": "解鎖 PsstPsst",
+    "unlock_title": "解鎖 Outlink",
     "unlock_hint": "輸入應用程式密碼以解鎖金鑰和帳號。",
     "password": "應用程式密碼",
     "confirm_password": "確認應用程式密碼",
@@ -820,7 +820,7 @@
     "description_placeholder": "這筆款項的用途是什麼？",
     "direction": "方向",
     "empty_title": "Lightning 支付",
-    "empty_hint": "使用錢包應用程式付款，或連接錢包以便在 PsstPsst 中付款及請款。",
+    "empty_hint": "使用錢包應用程式付款，或連接錢包以便在 Outlink 中付款及請款。",
     "expires": "到期",
     "expires_at": "到期",
     "expires_in": "剩餘時間",

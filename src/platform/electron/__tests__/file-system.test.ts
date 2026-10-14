@@ -2,21 +2,21 @@ import type { ElectronBridge } from '../bridge';
 import { electronFileSystemAdapter } from '../file-system';
 
 function installBridge(fileSystem: Partial<ElectronBridge['fileSystem']>): void {
-  window.psstpsstDesktop = {
+  window.outlinkDesktop = {
     fileSystem: fileSystem as ElectronBridge['fileSystem'],
   } as ElectronBridge;
 }
 
 describe('Electron file-system adapter', () => {
   afterEach(() => {
-    delete window.psstpsstDesktop;
+    delete window.outlinkDesktop;
   });
 
   it('reports reveal-in-folder unavailable when the preload has not restarted', async () => {
     installBridge({});
 
     await expect(
-      electronFileSystemAdapter.revealInFolder('psstpsst-file://documents/archive.zip'),
+      electronFileSystemAdapter.revealInFolder('outlink-file://documents/archive.zip'),
     ).resolves.toBe(false);
   });
 
@@ -25,10 +25,10 @@ describe('Electron file-system adapter', () => {
     installBridge({ revealInFolder });
 
     await expect(
-      electronFileSystemAdapter.revealInFolder('psstpsst-file://documents/archive.zip'),
+      electronFileSystemAdapter.revealInFolder('outlink-file://documents/archive.zip'),
     ).resolves.toBe(true);
     expect(revealInFolder).toHaveBeenCalledWith(
-      'psstpsst-file://documents/archive.zip',
+      'outlink-file://documents/archive.zip',
     );
   });
 
@@ -40,7 +40,7 @@ describe('Electron file-system adapter', () => {
 
     const upload = electronFileSystemAdapter.uploadFile(
       'https://media.example/upload',
-      'psstpsst-file://cache/cipher.bin',
+      'outlink-file://cache/cipher.bin',
       { httpMethod: 'PUT', signal: controller.signal },
     );
     controller.abort();
@@ -70,7 +70,7 @@ describe('Electron file-system adapter', () => {
 
     await electronFileSystemAdapter.uploadFile(
       'https://media.example/upload',
-      'psstpsst-file://cache/cipher.bin',
+      'outlink-file://cache/cipher.bin',
       { httpMethod: 'PUT', onProgress },
     );
 
@@ -91,21 +91,21 @@ describe('Electron file-system adapter', () => {
     });
 
     const reader = await electronFileSystemAdapter.openReadHandle(
-      'psstpsst-file://documents/plain.bin',
+      'outlink-file://documents/plain.bin',
       { offset: 40 },
     );
     await electronFileSystemAdapter.openWriteHandle(
-      'psstpsst-file://documents/partial.bin',
+      'outlink-file://documents/partial.bin',
       { offset: 40, truncate: false },
     );
 
     expect(reader.offset).toBe(40);
     expect(openReadHandle).toHaveBeenCalledWith(
-      'psstpsst-file://documents/plain.bin',
+      'outlink-file://documents/plain.bin',
       40,
     );
     expect(openWriteHandle).toHaveBeenCalledWith(
-      'psstpsst-file://documents/partial.bin',
+      'outlink-file://documents/partial.bin',
       40,
       false,
     );
@@ -157,5 +157,5 @@ it('forwards matching remote-download progress and removes the listener', async 
     expect(onProgress).toHaveBeenCalledTimes(1);
     expect(onProgress).toHaveBeenCalledWith(5, 10);
     expect(remove).toHaveBeenCalledTimes(1);
-  } finally { delete window.psstpsstDesktop; }
+  } finally { delete window.outlinkDesktop; }
 });

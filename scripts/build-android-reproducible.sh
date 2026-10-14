@@ -3,7 +3,7 @@
 set -euo pipefail
 
 readonly IMAGE="registry.gitlab.com/fdroid/fdroidserver:buildserver-trixie@sha256:9cb68105642ca4e7b295f0ceab10f069f5b3247dc18fa7c36046e9d81aa469a8"
-readonly PROJECT_DIR="/home/vagrant/build/chat.psstpsst.app"
+readonly PROJECT_DIR="/home/vagrant/build/io.github.hsoc.outlink"
 readonly NODE_VERSION="24.15.0"
 readonly NODE_ARCHIVE="node-v${NODE_VERSION}-linux-x64.tar.xz"
 readonly NODE_SHA256="472655581fb851559730c48763e0c9d3bc25975c59d518003fc0849d3e4ba0f6"
@@ -24,7 +24,7 @@ if [[ "${ANDROID_BUILD_APK:-1}" != "1" && "${ANDROID_BUILD_BUNDLE:-0}" != "1" ]]
   exit 1
 fi
 
-if [[ "${PSSTPSST_FDROID_CONTAINER:-}" != "1" ]]; then
+if [[ "${OUTLINK_FDROID_CONTAINER:-}" != "1" ]]; then
   repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
   output_dir="${1:-$repo_root/release/fdroid-build}"
   mkdir -p "$output_dir"
@@ -36,25 +36,25 @@ if [[ "${PSSTPSST_FDROID_CONTAINER:-}" != "1" ]]; then
     --env ANDROID_RELEASE_UNSIGNED="${ANDROID_RELEASE_UNSIGNED:-1}" \
     --env ANDROID_BUILD_APK="${ANDROID_BUILD_APK:-1}" \
     --env ANDROID_BUILD_BUNDLE="${ANDROID_BUILD_BUNDLE:-0}" \
-    --env PSSTPSST_FDROID_CONTAINER=1 \
+    --env OUTLINK_FDROID_CONTAINER=1 \
     "$IMAGE" \
     bash /workspace/scripts/build-android-reproducible.sh
   exit
 fi
 
-if [[ "${PSSTPSST_FDROID_USER:-}" != "1" ]]; then
-  echo 'deb https://deb.debian.org/debian bookworm main' > /etc/apt/sources.list.d/psstpsst-bookworm.list
-  echo 'deb https://security.debian.org/debian-security bookworm-security main' >> /etc/apt/sources.list.d/psstpsst-bookworm.list
+if [[ "${OUTLINK_FDROID_USER:-}" != "1" ]]; then
+  echo 'deb https://deb.debian.org/debian bookworm main' > /etc/apt/sources.list.d/outlink-bookworm.list
+  echo 'deb https://security.debian.org/debian-security bookworm-security main' >> /etc/apt/sources.list.d/outlink-bookworm.list
   apt-get update
   apt-get install -y openjdk-17-jdk-headless ca-certificates curl xz-utils sudo
   test "$(dpkg-query -W -f='${Version}' openjdk-17-jdk-headless)" = "$JDK_PACKAGE_VERSION"
 
   curl --fail --location --retry 3 \
     "https://nodejs.org/dist/v${NODE_VERSION}/${NODE_ARCHIVE}" \
-    --output /tmp/psstpsst-node.tar.xz
-  echo "${NODE_SHA256}  /tmp/psstpsst-node.tar.xz" | sha256sum -c -
-  mkdir -p /opt/psstpsst-node
-  tar -xJf /tmp/psstpsst-node.tar.xz --strip-components=1 -C /opt/psstpsst-node
+    --output /tmp/outlink-node.tar.xz
+  echo "${NODE_SHA256}  /tmp/outlink-node.tar.xz" | sha256sum -c -
+  mkdir -p /opt/outlink-node
+  tar -xJf /tmp/outlink-node.tar.xz --strip-components=1 -C /opt/outlink-node
 
   sdkmanager --sdk_root=/opt/android-sdk \
     'platforms;android-36' \
@@ -70,9 +70,9 @@ if [[ "${PSSTPSST_FDROID_USER:-}" != "1" ]]; then
 
   sudo --preserve-env --user vagrant env \
     HOME=/home/vagrant \
-    PATH="/opt/psstpsst-node/bin:/usr/lib/jvm/java-17-openjdk-amd64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/android-sdk/tools:/opt/android-sdk/platform-tools" \
-    PSSTPSST_FDROID_CONTAINER=1 \
-    PSSTPSST_FDROID_USER=1 \
+    PATH="/opt/outlink-node/bin:/usr/lib/jvm/java-17-openjdk-amd64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/android-sdk/tools:/opt/android-sdk/platform-tools" \
+    OUTLINK_FDROID_CONTAINER=1 \
+    OUTLINK_FDROID_USER=1 \
     ANDROID_RELEASE_UNSIGNED="${ANDROID_RELEASE_UNSIGNED:-1}" \
     ANDROID_BUILD_APK="${ANDROID_BUILD_APK:-1}" \
     ANDROID_BUILD_BUNDLE="${ANDROID_BUILD_BUNDLE:-0}" \

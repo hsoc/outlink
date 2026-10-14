@@ -17,11 +17,11 @@ type PerfStat = {
 declare global {
   // Set from a local debug session when profiling is explicitly needed.
   // It stays off by default so development builds do not spam perf logs.
-  var __PSSTPSST_PERF_LOGS__: boolean | undefined;
+  var __OUTLINK_PERF_LOGS__: boolean | undefined;
 }
 
 const ENABLED =
-  IS_DEVELOPMENT_BUILD && globalThis.__PSSTPSST_PERF_LOGS__ === true;
+  IS_DEVELOPMENT_BUILD && globalThis.__OUTLINK_PERF_LOGS__ === true;
 const SLOW_STEP_MS = 8;
 const SLOW_SPAN_MS = 32;
 const STATS_FLUSH_MS = 10_000;

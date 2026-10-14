@@ -4,11 +4,11 @@
 >
 > This document records implementation details and product behavior.
 > The event-format extensions are specified in
-> [PsstPsst NIP-17 Extensions](../protocols/nip17-extensions.md).
+> [Outlink NIP-17 Extensions](../protocols/nip17-extensions.md).
 
 ## 1. Scope and trust model
 
-PsstPsst groups are intended for small circles of trusted people such as family
+Outlink groups are intended for small circles of trusted people such as family
 and close friends. They use ordinary NIP-17 kind-14, kind-15, and kind-7 rumors,
 with the existing seal and gift-wrap delivery pipeline.
 
@@ -26,12 +26,12 @@ member from changing an existing group, but it does not attempt Byzantine
 consensus or protect against a trusted member's deliberate false state.
 
 This is only partially interoperable with generic NIP-17 clients. The encrypted
-messages, `p` tags, and `subject` tags remain readable, but PsstPsst uses a stable
+messages, `p` tags, and `subject` tags remain readable, but Outlink uses a stable
 `h` identity and explicit membership actions. Standard NIP-17 instead treats a
 changed `pubkey + p` set as a new room. A foreign client may therefore split one
-PsstPsst group into several rooms, and a reply that omits `h` cannot return to
-the stable PsstPsst group. A foreign client's plain-message `p` changes only
-that message's delivery audience; they do not change PsstPsst membership.
+Outlink group into several rooms, and a reply that omits `h` cannot return to
+the stable Outlink group. A foreign client's plain-message `p` changes only
+that message's delivery audience; they do not change Outlink membership.
 
 ## 2. Group identity
 
@@ -47,7 +47,7 @@ Received group ids have no character-format restriction, but their UTF-8
 encoding must be between 1 and 256 bytes. Reject an empty or oversized first
 `h` value before hashing, persistence, quarantine, or route/cache use.
 
-PsstPsst generates its own group ids as 32 cryptographically random bytes
+Outlink generates its own group ids as 32 cryptographically random bytes
 encoded as 64 lowercase hexadecimal characters. The value looks like a pubkey
 but is not a key and has no corresponding private key.
 
@@ -207,7 +207,7 @@ For a valid current-member kind-14 or kind-15 rumor:
 A subject changes the cached name only when its event is newer than the cached
 name cursor. Older or backfilled subjects never roll the current name backward.
 
-PsstPsst emits the current `subject` on every ordinary text/file message, with
+Outlink emits the current `subject` on every ordinary text/file message, with
 an empty value for an unnamed group, so a device can recover the name without
 earlier history. Rename and invites also communicate name state. A foreign
 client's valid group message may still change the name by carrying a subject.
@@ -263,7 +263,7 @@ An invite has exactly one target. The target must appear in the rumor's `p`
 tags. During ordered replay, an authorized invite adds its target. For a known
 group, its other `p` values do not change membership.
 
-When the group has a custom name, PsstPsst includes its current `subject` so a
+When the group has a custom name, Outlink includes its current `subject` so a
 new member can initialize the name. An invite does not overwrite an existing
 member's newer cached name. A concurrent rename may leave the invitee with a
 temporarily stale name until a later rename; v1 accepts this.
@@ -864,7 +864,7 @@ Read `docs/DESIGN.md`, especially section 12, before implementation.
   saved conversation there. An explicit local leave removes the saved state and
   publishes the replacement snapshot after the leave commits locally.
 - Saved group ids sync as private `h` tags alongside `p` contacts in the
-  NIP-44 encrypt-to-self `kind 30000`, `d=psstpsst-contacts` snapshot. Names,
+  NIP-44 encrypt-to-self `kind 30000`, `d=outlink-contacts` snapshot. Names,
   rosters, and presentation remain derived from group state. Local saved
   membership is migrated into the contact set before the old local `kind 30078`
   cache and outbox rows are deleted. The old coordinate is never queried or watched.

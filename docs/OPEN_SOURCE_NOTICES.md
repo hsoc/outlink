@@ -3,7 +3,7 @@
 About links to a searchable catalog and offline license reader. Package names,
 resolved versions, original copyright statements, license texts, and additional
 notices are preserved. Repository and website links are separate actions.
-PsstPsst's own MIT license is readable from About as well.
+Outlink's own MIT license is readable from About as well.
 
 ## Sources and coverage
 

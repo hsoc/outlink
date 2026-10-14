@@ -5,6 +5,6 @@
     "podspecPath": "./ExpoNoise.podspec"
   },
   "android": {
-    "modules": ["chat.psstpsst.app.noise.ExpoNoiseModule"]
+    "modules": ["io.github.hsoc.outlink.noise.ExpoNoiseModule"]
   }
 }

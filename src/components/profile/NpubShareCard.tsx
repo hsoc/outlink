@@ -20,9 +20,9 @@ type Props = {
 };
 
 /**
- * PsstPsst's "scan to add me" card. Borrows the balanced proportions of a good QR
+ * Outlink's "scan to add me" card. Borrows the balanced proportions of a good QR
  * card — a snug accent panel framing a white QR tile, identity stacked below —
- * but in PsstPsst's own colors and fields (accent-blue dotted QR, both nip-05 and
+ * but in Outlink's own colors and fields (accent-blue dotted QR, both nip-05 and
  * npub shown). No avatar/wordmark, so the card stays close to square instead of a
  * tall column. The rounded preview wrapper sits outside the forwarded capture
  * ref, so exported images have square outer corners while preserving the

@@ -1,7 +1,7 @@
 const { withAppBuildGradle, withXcodeProject } = require('expo/config-plugins');
 
 const PHASE_NAME = 'Copy third-party notices';
-const GRADLE_MARKER = '// PsstPsst third-party notices';
+const GRADLE_MARKER = '// Outlink third-party notices';
 const IOS_SCRIPT = [
   'set -eu',
   'notice_root="${PROJECT_DIR}/.."',
@@ -39,7 +39,7 @@ module.exports = function withThirdPartyNotices(config) {
     if (!config.modResults.contents.includes(GRADLE_MARKER)) {
       config.modResults.contents += `
 ${GRADLE_MARKER}
-def thirdPartyNotices = tasks.register("copyPsstPsstThirdPartyNotices", Sync) {
+def thirdPartyNotices = tasks.register("copyOutlinkThirdPartyNotices", Sync) {
     from(new File(rootProject.projectDir, "../licenses/third-party/common")) {
         into "ThirdPartyNotices/licenses/third-party/common"
     }

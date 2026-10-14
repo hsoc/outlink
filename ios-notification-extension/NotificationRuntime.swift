@@ -22,7 +22,7 @@ final class NotificationRuntime: NSObject, URLSessionDataDelegate, URLSessionWeb
   private static let executionGate = DispatchSemaphore(value: 1)
   private var ownsExecutionGate = false
   private var deadline = Date()
-  private let queue = DispatchQueue(label: "chat.psstpsst.notification-runtime", qos: .userInitiated)
+  private let queue = DispatchQueue(label: "io.github.hsoc.outlink.notification-runtime", qos: .userInitiated)
   private var context: JSContext?
   private var database: OpaquePointer?
   private var finished = false
@@ -65,7 +65,7 @@ final class NotificationRuntime: NSObject, URLSessionDataDelegate, URLSessionWeb
         }
         let data = try JSONSerialization.data(withJSONObject: payload)
         guard data.count <= 8_192, let serialized = String(data: data, encoding: .utf8) else { throw self.failure() }
-        context.objectForKeyedSubscript("PsstPsstNotification")?.invokeMethod("receive", withArguments: [serialized])
+        context.objectForKeyedSubscript("OutlinkNotification")?.invokeMethod("receive", withArguments: [serialized])
       } catch { self.finish(nil) }
     }
   }
@@ -78,11 +78,11 @@ final class NotificationRuntime: NSObject, URLSessionDataDelegate, URLSessionWeb
     if let location = databaseLocation {
       (path, expected) = try location()
     } else {
-      guard let group = Bundle.main.object(forInfoDictionaryKey: "PsstPsstAppGroup") as? String,
+      guard let group = Bundle.main.object(forInfoDictionaryKey: "OutlinkAppGroup") as? String,
         let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group),
-        let version = Bundle.main.object(forInfoDictionaryKey: "PsstPsstSchemaVersion") as? NSNumber
+        let version = Bundle.main.object(forInfoDictionaryKey: "OutlinkSchemaVersion") as? NSNumber
       else { throw failure() }
-      path = container.appendingPathComponent("SQLite/psstpsst.db").path
+      path = container.appendingPathComponent("SQLite/outlink.db").path
       expected = version
     }
     // Never create a second empty database, run migrations or upgrade beyond the app.
@@ -252,7 +252,7 @@ final class NotificationRuntime: NSObject, URLSessionDataDelegate, URLSessionWeb
   private func keychain(_ method: String, _ args: [Any]) throws -> Any {
     let key = args[0] as! String
     guard ["identity_privkey_", "encryption_keys_", "nip46_client_privkey_", "nip46_bunker_secret_"].contains(where: key.hasPrefix),
-      let group = Bundle.main.object(forInfoDictionaryKey: "PsstPsstKeychainGroup") as? String
+      let group = Bundle.main.object(forInfoDictionaryKey: "OutlinkKeychainGroup") as? String
     else {
       // Non-secret legacy preferences are never copied into the extension's keychain.
       if method == "keyGet" { return NSNull() }
@@ -260,7 +260,7 @@ final class NotificationRuntime: NSObject, URLSessionDataDelegate, URLSessionWeb
     }
     let encodedKey = Data(key.utf8)
     let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
-      kSecAttrService as String: "psstpsst.notifications:no-auth", kSecAttrAccessGroup as String: group,
+      kSecAttrService as String: "outlink.notifications:no-auth", kSecAttrAccessGroup as String: group,
       kSecAttrAccount as String: encodedKey, kSecAttrGeneric as String: encodedKey]
     if method == "keyDelete" {
       let status = SecItemDelete(query as CFDictionary)
@@ -307,7 +307,7 @@ final class NotificationRuntime: NSObject, URLSessionDataDelegate, URLSessionWeb
     callback?(result)
   }
 
-  private func failure() -> NSError { NSError(domain: "PsstPsstNotificationRuntime", code: 1) }
+  private func failure() -> NSError { NSError(domain: "OutlinkNotificationRuntime", code: 1) }
 
   func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
     newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {

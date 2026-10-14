@@ -1,12 +1,11 @@
-repository: https://github.com/codytseng/psstpsst
-match: ^PsstPsst-android\.apk$
-name: PsstPsst
+repository: https://github.com/hsoc/outlink
+match: ^Outlink-android\.apk$
+name: Outlink
 tags:
     - messaging
     - privacy
     - nostr
 license: MIT
-website: https://psstpsst.chat
+website: https://github.com/hsoc/outlink
 metadata_sources:
     - fastlane
-pubkey: npub1syjmjy0dp62dhccq3g97fr87tngvpvzey08llyt6ul58m2zqpzps9wf6wl

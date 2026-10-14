@@ -11,7 +11,7 @@ let clipboardPaths: string[];
 let snapshots: ClipboardSnapshots;
 const readClipboardPaths = jest.fn<Promise<string[]>, []>();
 beforeEach(async () => {
-  directory = await fs.mkdtemp(path.join(os.tmpdir(), 'psstpsst-clipboard-'));
+  directory = await fs.mkdtemp(path.join(os.tmpdir(), 'outlink-clipboard-'));
   root = path.join(directory, 'snapshots');
   source = path.join(directory, 'source');
   await fs.writeFile(source, 'original');

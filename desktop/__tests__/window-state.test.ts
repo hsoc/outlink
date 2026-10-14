@@ -11,7 +11,7 @@ import {
 } from '../window-state';
 
 let directory: string;
-beforeEach(async () => { directory = await fs.mkdtemp(path.join(os.tmpdir(), 'psstpsst-window-')); });
+beforeEach(async () => { directory = await fs.mkdtemp(path.join(os.tmpdir(), 'outlink-window-')); });
 afterEach(async () => { await fs.rm(directory, { recursive: true, force: true }); });
 
 it('restores the latest normal bounds and maximization after a restart, flushing pending events', async () => {

@@ -4,6 +4,6 @@
     "modules": ["ExpoFileDropModule"]
   },
   "android": {
-    "modules": ["chat.psstpsst.app.filedrop.ExpoFileDropModule"]
+    "modules": ["io.github.hsoc.outlink.filedrop.ExpoFileDropModule"]
   }
 }

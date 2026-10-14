@@ -94,7 +94,7 @@ export async function getVideoMetadata(
   options?: { includeThumbhash?: boolean; signal?: AbortSignal },
 ): Promise<VideoThumbnailMetadata | undefined> {
   if (options?.signal?.aborted) return undefined;
-  if (!/^(?:file|content|blob|psstpsst-file|ph|assets-library):/.test(uri)) return undefined;
+  if (!/^(?:file|content|blob|outlink-file|ph|assets-library):/.test(uri)) return undefined;
   let metadata: VideoThumbnailMetadata | undefined;
   const cached = memory.get(uri);
   if (cached && cached.expires > Date.now() &&

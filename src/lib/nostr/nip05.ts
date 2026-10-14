@@ -5,9 +5,9 @@ import { normalizeRelayUrls } from './relay-url';
 const HEX_PUBKEY_RE = /^[0-9a-f]{64}$/;
 const NIP05_LOCAL_PART_RE = /^[a-z0-9._-]+$/;
 
-/** The app's own NIP-05 hosting service. A bare name in user search resolves
- * against this domain, and the registration service binds names on it. */
-export const NIP05_SERVICE_DOMAIN = 'psstpsst.chat';
+/** Reserved placeholder for dormant registration code; no service is deployed.
+ * User search accepts complete external identifiers and never uses this fallback. */
+export const NIP05_SERVICE_DOMAIN = 'outlink.invalid';
 export const NIP05_SERVICE_BASE_URL = `https://${NIP05_SERVICE_DOMAIN}`;
 
 /** A bare local part (no `@domain`) — eligible for the service-domain fallback. */

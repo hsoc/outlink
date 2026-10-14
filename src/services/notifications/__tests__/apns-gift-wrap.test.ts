@@ -17,7 +17,7 @@ jest.mock('@/services/dm/sync-store', () => ({
   isGiftWrapProcessed: (...args: unknown[]) => mockProcessed(...args),
 }));
 jest.mock('../push-api', () => ({
-  APNS_RELAY_URL: 'wss://relay.psstpsst.chat/',
+  APNS_RELAY_URL: 'wss://relay.outlink.invalid/',
   fetchApnsGiftWrap: (...args: unknown[]) => mockFetch(...args),
 }));
 

@@ -77,7 +77,7 @@ secp256k1_context* get_context() {
 } // namespace
 
 extern "C" JNIEXPORT jbyteArray JNICALL
-Java_chat_psstpsst_app_cryptoaccelerator_ExpoCryptoAcceleratorModule_deriveSharedXNative(
+Java_io_github_hsoc_outlink_cryptoaccelerator_ExpoCryptoAcceleratorModule_deriveSharedXNative(
     JNIEnv* env,
     jobject /* this */,
     jstring privkey_hex,
@@ -144,7 +144,7 @@ Java_chat_psstpsst_app_cryptoaccelerator_ExpoCryptoAcceleratorModule_deriveShare
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_chat_psstpsst_app_cryptoaccelerator_ExpoCryptoAcceleratorModule_verifySchnorrNative(
+Java_io_github_hsoc_outlink_cryptoaccelerator_ExpoCryptoAcceleratorModule_verifySchnorrNative(
     JNIEnv* env,
     jobject /* this */,
     jstring signature_hex,

@@ -104,7 +104,7 @@ function DesktopTitlebar({ immersive }: { immersive: boolean }) {
     >
       {immersive ? null : (
         <AppText variant="caption" style={{ userSelect: 'none' }}>
-          PsstPsst
+          Outlink
         </AppText>
       )}
     </View>

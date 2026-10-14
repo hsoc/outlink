@@ -105,7 +105,7 @@ let publisher: typeof import('../../relay/configuration-publish.service')['confi
 
 function remote(pubkeys: string[], createdAt = NOW - 60): Event {
   return {
-    pubkey: SELF, kind: 30000, tags: [['d', 'psstpsst-contacts']],
+    pubkey: SELF, kind: 30000, tags: [['d', 'outlink-contacts']],
     content: JSON.stringify(pubkeys.map((pubkey) => ['p', pubkey])),
     created_at: createdAt, id: `remote-${++serial}`, sig: 'sig',
   };

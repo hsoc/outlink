@@ -10,7 +10,7 @@ export const fileSaverAdapter: FileSaverPort = {
       const name =
         options.suggestedName
           .replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_')
-          .slice(0, 120) || 'psstpsst-file';
+          .slice(0, 120) || 'outlink-file';
       const destination = destinationDirectory.createFile(
         name,
         options.mimeType ?? 'application/octet-stream',

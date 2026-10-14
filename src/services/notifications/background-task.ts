@@ -14,7 +14,7 @@ import { getNotificationsEnabled } from './notification-prefs';
  * Android recovery is best-effort after the resident process exits, with a
  * minimum interval of 15 minutes; the OS determines the actual cadence.
  */
-export const BACKGROUND_POLL_TASK = 'psstpsst-background-poll';
+export const BACKGROUND_POLL_TASK = 'outlink-background-poll';
 /** Floor only — the OS decides actual cadence (15 min is the platform minimum). */
 const MINIMUM_INTERVAL_MINUTES = 15;
 

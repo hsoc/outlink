@@ -13,7 +13,7 @@ import { platform } from '@/platform';
  * absolute path with {@link attachmentPath} each time — the `documentDirectory`
  * base embeds an iOS container UUID that changes across reinstalls.
  */
-const ATTACHMENT_DIR_NAME = 'psstpsst-files';
+const ATTACHMENT_DIR_NAME = 'outlink-files';
 
 export async function attachmentDir(): Promise<string> {
   const base = await platform.fileSystem.documentDirectoryUri();

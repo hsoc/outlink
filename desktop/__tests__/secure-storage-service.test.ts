@@ -20,7 +20,7 @@ describe('Electron secure-storage password fallback', () => {
   let directory: string;
 
   beforeEach(async () => {
-    directory = await fs.mkdtemp(path.join(os.tmpdir(), 'psstpsst-secure-storage-test-'));
+    directory = await fs.mkdtemp(path.join(os.tmpdir(), 'outlink-secure-storage-test-'));
     mockSafeStorage.isEncryptionAvailable.mockReturnValue(false);
     mockSafeStorage.getSelectedStorageBackend.mockReturnValue('basic_text');
   });
@@ -64,7 +64,7 @@ describe('password vault integrity and setup ordering', () => {
   let directory: string;
 
   beforeEach(async () => {
-    directory = await fs.mkdtemp(path.join(os.tmpdir(), 'psstpsst-vault-integrity-test-'));
+    directory = await fs.mkdtemp(path.join(os.tmpdir(), 'outlink-vault-integrity-test-'));
     mockSafeStorage.isEncryptionAvailable.mockReturnValue(false);
     mockSafeStorage.getSelectedStorageBackend.mockReturnValue('basic_text');
   });

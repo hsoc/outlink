@@ -1,9 +1,9 @@
-PsstPsst NIP-17 Extensions
+Outlink NIP-17 Extensions
 ==========================
 
 `draft` `optional`
 
-This document defines how PsstPsst uses
+This document defines how Outlink uses
 [NIP-17](https://github.com/nostr-protocol/nips/blob/master/17.md) with separate
 encryption keys, millisecond timestamps, and stable group conversations. Key
 announcement and synchronization are specified separately in the
@@ -97,7 +97,7 @@ authenticated rumor order (`created_at`, optional `ms`, then event ID); kind
 share one latest-evidence row, so a newer message or announcement replaces an
 older key while delayed history cannot roll the key back.
 
-A relay-delivered seal without a valid `n` tag is not a PsstPsst split-key
+A relay-delivered seal without a valid `n` tag is not a Outlink split-key
 envelope.
 
 ## `ms` tag
@@ -131,7 +131,7 @@ specification.
 ## Stable group identity
 
 NIP-17 normally identifies a room by the rumor author and its `p` tags, so a
-membership change creates another room. PsstPsst adds an opaque stable ID:
+membership change creates another room. Outlink adds an opaque stable ID:
 
 ```text
 ["h", "<group-id>"]
@@ -229,16 +229,16 @@ This extension does not deliver earlier rumors to a newly invited member.
 
 ## Private saved groups
 
-PsstPsst stores explicit saved-group membership in the NIP-44 encrypt-to-self
-`kind 30000`, `d = psstpsst-contacts` list. Its encrypted content is a JSON tag
+Outlink stores explicit saved-group membership in the NIP-44 encrypt-to-self
+`kind 30000`, `d = outlink-contacts` list. Its encrypted content is a JSON tag
 array: `p` entries identify contacts (with an optional petname in slot 3), and
 `h` entries identify saved groups by their raw group id. This is an
 application-specific extension of the NIP-51 follow-set format.
 
 Each snapshot replaces both sets, including an empty `h` set. No format version
 tag is required. Saved membership does not alter group roster or message
-encryption. PsstPsst no longer queries or subscribes to the old `kind 30078`,
-`d = psstpsst-saved-groups` coordinate; migration uses local saved membership.
+encryption. Outlink no longer queries or subscribes to the old `kind 30078`,
+`d = outlink-saved-groups` coordinate; migration uses local saved membership.
 
 ## Compatibility
 

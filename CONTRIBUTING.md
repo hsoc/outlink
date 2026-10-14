@@ -1,4 +1,4 @@
-# Contributing to PsstPsst
+# Contributing to Outlink
 
 Bug reports, documentation, translations, tests, and focused fixes are welcome.
 Search existing issues before starting work. Discuss major features with the
@@ -25,7 +25,7 @@ issue with technical details.
 
 Use the [Expo SDK 57 documentation](https://docs.expo.dev/versions/v57.0.0/)
 when changing native configuration or Expo APIs. SDK 57 targets React Native
-0.86. Native development requires a development build because PsstPsst includes
+0.86. Native development requires a development build because Outlink includes
 local native modules; Expo Go is not sufficient for the complete application.
 
 ### Install
@@ -116,7 +116,7 @@ npm run electron:dev
 
 Renderer changes use Fast Refresh. Changes to the Electron main process,
 preload, database worker, or native Nearby helper require restarting the
-command. Only one PsstPsst Electron instance should be running during
+command. Only one Outlink Electron instance should be running during
 development.
 
 Rebuild native desktop dependencies after changing Electron or native package versions:
@@ -130,9 +130,9 @@ npm run electron:rebuild
 Development builds ship opt-in performance instrumentation (`[perf]` spans,
 `[perf:stats]` aggregates, and a `[perf:lag]` event-loop stall warning). It is
 gated by `src/lib/perf/profiler.ts`, which reads
-`globalThis.__PSSTPSST_PERF_LOGS__ === true` once at module load, so the flag
+`globalThis.__OUTLINK_PERF_LOGS__ === true` once at module load, so the flag
 must be set before the app's imports evaluate: add
-`globalThis.__PSSTPSST_PERF_LOGS__ = true;` to a one-line module imported first
+`globalThis.__OUTLINK_PERF_LOGS__ = true;` to a one-line module imported first
 from `index.ts` (a plain statement in `index.ts` runs too late — `import`
 declarations are hoisted), or temporarily hardcode the gate in `profiler.ts`.
 Then reload the app so every module re-evaluates; a native rebuild is not

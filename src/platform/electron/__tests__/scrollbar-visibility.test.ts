@@ -21,8 +21,8 @@ describe('Electron scrollbar visibility', () => {
     // fires scroll events without any preceding wheel/touch input.
     scroller.dispatchEvent(new Event('scroll'));
 
-    expect(document.querySelector('[data-psstpsst-scrollbar-thumb="vertical"]')).toBeNull();
-    expect(document.querySelector('[data-psstpsst-scrollbar-thumb="horizontal"]')).toBeNull();
+    expect(document.querySelector('[data-outlink-scrollbar-thumb="vertical"]')).toBeNull();
+    expect(document.querySelector('[data-outlink-scrollbar-thumb="horizontal"]')).toBeNull();
 
     jest.useRealTimers();
   });
@@ -56,18 +56,18 @@ describe('Electron scrollbar visibility', () => {
     scroller.dispatchEvent(new Event('scroll'));
 
     const vertical = document.querySelector<HTMLElement>(
-      '[data-psstpsst-scrollbar-thumb="vertical"]',
+      '[data-outlink-scrollbar-thumb="vertical"]',
     );
     const horizontal = document.querySelector<HTMLElement>(
-      '[data-psstpsst-scrollbar-thumb="horizontal"]',
+      '[data-outlink-scrollbar-thumb="horizontal"]',
     );
     expect(vertical).not.toBeNull();
-    expect(vertical?.classList.contains('psstpsst-scroll-active')).toBe(true);
+    expect(vertical?.classList.contains('outlink-scroll-active')).toBe(true);
     expect(vertical?.style.top).toBe('36px');
     expect(vertical?.style.left).toBe('114px');
     expect(vertical?.style.width).toBe('4px');
     expect(vertical?.style.height).toBe('24px');
-    expect(horizontal?.classList.contains('psstpsst-scroll-active')).toBe(false);
+    expect(horizontal?.classList.contains('outlink-scroll-active')).toBe(false);
     expect(scroller.className).toBe('');
 
     const invertedScroller = document.createElement('div');
@@ -94,8 +94,8 @@ describe('Electron scrollbar visibility', () => {
     const topChrome = document.createElement('div');
     const bottomChrome = document.createElement('div');
     const unmarkedNavigationLayer = document.createElement('div');
-    topChrome.dataset.psstpsstScrollbarOcclusion = 'top';
-    bottomChrome.dataset.psstpsstScrollbarOcclusion = 'bottom';
+    topChrome.dataset.outlinkScrollbarOcclusion = 'top';
+    bottomChrome.dataset.outlinkScrollbarOcclusion = 'bottom';
     jest.spyOn(topChrome, 'getBoundingClientRect').mockReturnValue({
       top: 0,
       right: 220,
@@ -143,10 +143,10 @@ describe('Electron scrollbar visibility', () => {
     invertedScroller.dispatchEvent(new Event('wheel'));
     invertedScroller.dispatchEvent(new Event('scroll'));
     jest.advanceTimersByTime(499);
-    expect(vertical?.classList.contains('psstpsst-scroll-active')).toBe(true);
+    expect(vertical?.classList.contains('outlink-scroll-active')).toBe(true);
 
     jest.advanceTimersByTime(1);
-    expect(vertical?.classList.contains('psstpsst-scroll-active')).toBe(false);
+    expect(vertical?.classList.contains('outlink-scroll-active')).toBe(false);
 
     jest.useRealTimers();
   });
@@ -154,7 +154,7 @@ describe('Electron scrollbar visibility', () => {
   it('keeps shared compact horizontal rails out of the overlay scrollbar system', () => {
     jest.useFakeTimers();
     const scroller = document.createElement('div');
-    scroller.dataset.psstpsstScrollbarHidden = 'true';
+    scroller.dataset.outlinkScrollbarHidden = 'true';
     Object.defineProperties(scroller, {
       clientHeight: { value: 40 },
       clientWidth: { value: 100 },
@@ -169,9 +169,9 @@ describe('Electron scrollbar visibility', () => {
     scroller.dispatchEvent(new Event('scroll'));
 
     const horizontal = document.querySelector<HTMLElement>(
-      '[data-psstpsst-scrollbar-thumb="horizontal"]',
+      '[data-outlink-scrollbar-thumb="horizontal"]',
     );
-    expect(horizontal?.classList.contains('psstpsst-scroll-active')).not.toBe(true);
+    expect(horizontal?.classList.contains('outlink-scroll-active')).not.toBe(true);
 
     jest.useRealTimers();
   });

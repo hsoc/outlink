@@ -10,7 +10,7 @@ import { validNoiseRecordType } from './noise-record-types';
 
 const noiseCrypto = wrapCrypto(pureJsCrypto);
 const protocolName = 'Noise_XX_25519_ChaChaPoly_SHA256';
-const prologue = new TextEncoder().encode('PsstPsst Nearby/1');
+const prologue = new TextEncoder().encode('Outlink Nearby/1');
 const maxSessionAgeMs = 24 * 60 * 60 * 1000;
 const maxRecords = 2 ** 20;
 const maxSessionBytes = 64 * 1024 * 1024 * 1024;

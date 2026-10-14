@@ -1,15 +1,15 @@
-# PsstPsst Architecture
+# Outlink Architecture
 
-> The durable system boundaries and data-flow rules for PsstPsst. Keep this file
+> The durable system boundaries and data-flow rules for Outlink. Keep this file
 > concise. Interoperable event and wire formats belong in
 > [`protocols/`](./protocols/); product and runtime details belong in code,
 > tests, or [`implementation/`](./implementation/).
 
-PsstPsst supports iOS, Android, and Electron. Ordinary web is not a supported
+Outlink supports iOS, Android, and Electron. Ordinary web is not a supported
 product runtime; React Native Web is used inside the Electron renderer.
 
-The user-facing product name is `PsstPsst`; application identifiers, internal
-namespaces, storage keys, and generated artifact prefixes use `psstpsst`.
+The user-facing product name is `Outlink`; application identifiers, internal
+namespaces, storage keys, and generated artifact prefixes use `outlink`.
 
 ## 1. System shape
 
@@ -105,7 +105,7 @@ savepoints, and large reads stream in bounded batches.
 
 ## 4. Private messaging protocol
 
-PsstPsst combines the
+Outlink combines the
 [NIP-4E proposal](https://github.com/nostr-protocol/nips/pull/1647) with
 [NIP-17 private direct messages](https://github.com/nostr-protocol/nips/blob/master/17.md).
 
@@ -150,9 +150,9 @@ marked processed without decrypting its content. Envelopes that fail decryption
 with all available messaging keys are also marked processed; later key changes
 do not retry them. Results from an invalidated receive session are discarded.
 Encryption-key announcement and synchronization are specified in the
-[PsstPsst NIP-4E Profile](protocols/nip4e.md). Split-key envelopes, message
+[Outlink NIP-4E Profile](protocols/nip4e.md). Split-key envelopes, message
 timestamps, and stable-group events are specified in
-[PsstPsst NIP-17 Extensions](protocols/nip17-extensions.md).
+[Outlink NIP-17 Extensions](protocols/nip17-extensions.md).
 
 All signing goes through the `Signer` interface. Local private keys, remote
 NIP-46 signers, encryption-key rotation, and device key transfer remain behind
@@ -336,7 +336,7 @@ TypeScript receiver and notification policy in an independent JavaScriptCore
 runtime. Mobile notification
 cleanup must preserve Android's foreground-service notification.
 
-APNs event resolution attributes gift wraps to `wss://relay.psstpsst.chat/`.
+APNs event resolution attributes gift wraps to `wss://relay.outlink.invalid/`.
 ID references use its fixed HTTPS event endpoint, with durable processed-ID checks
 before fetching. Transport resolution never substitutes for shared intake validation
 or final deduplication. WebSocket, history, recovery and APNs use the same

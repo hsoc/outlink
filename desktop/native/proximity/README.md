@@ -1,6 +1,6 @@
 # Desktop proximity native modules
 
-Electron launches one platform-owned `psstpsst-proximity` helper from
+Electron launches one platform-owned `outlink-proximity` helper from
 `bin/<node-platform>/`. Each helper uses the operating system Bluetooth stack
 directly and implements both BLE Central and Peripheral roles:
 

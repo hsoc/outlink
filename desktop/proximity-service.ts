@@ -40,8 +40,8 @@ export class ProximityService {
   static executable(resourcesPath: string, applicationRoot: string): string {
     const name =
       process.platform === 'win32'
-        ? 'psstpsst-proximity.exe'
-        : 'psstpsst-proximity';
+        ? 'outlink-proximity.exe'
+        : 'outlink-proximity';
     const packaged = path.join(
       resourcesPath,
       'proximity',

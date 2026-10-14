@@ -1,14 +1,13 @@
 {
-  "name": "psstpsst-desktop",
+  "name": "outlink-desktop",
   "version": "26.10.5",
   "license": "MIT",
-  "description": "Electron runtime for the PsstPsst encrypted messenger",
+  "description": "Electron runtime for the Outlink encrypted messenger",
   "author": {
-    "name": "Cody Tseng",
-    "email": "codytseng98@gmail.com"
+    "name": "Outlink contributors"
   },
   "private": true,
-  "repository": "https://github.com/codytseng/psstpsst",
+  "repository": "https://github.com/hsoc/outlink",
   "main": "dist/main.js",
   "dependencies": {
     "archiver": "^8.0.0",
@@ -19,8 +18,8 @@
     "yauzl": "^3.4.0"
   },
   "build": {
-    "appId": "chat.psstpsst.app",
-    "productName": "PsstPsst",
+    "appId": "io.github.hsoc.outlink",
+    "productName": "Outlink",
     "directories": {
       "output": "../release"
     },
@@ -64,8 +63,8 @@
     ],
     "protocols": [
       {
-        "name": "PsstPsst",
-        "schemes": ["psstpsst"]
+        "name": "Outlink",
+        "schemes": ["outlink"]
       }
     ],
     "mac": {
@@ -74,9 +73,9 @@
       "category": "public.app-category.social-networking",
       "forceCodeSigning": true,
       "extendInfo": {
-        "NSBluetoothAlwaysUsageDescription": "Allow PsstPsst to discover and communicate with nearby PsstPsst users.",
-        "NSCameraUsageDescription": "Allow PsstPsst to use the camera to take photos and scan QR codes.",
-        "NSMicrophoneUsageDescription": "Allow PsstPsst to use the microphone to record voice messages."
+        "NSBluetoothAlwaysUsageDescription": "Allow Outlink to discover and communicate with nearby Outlink users.",
+        "NSCameraUsageDescription": "Allow Outlink to use the camera to take photos and scan QR codes.",
+        "NSMicrophoneUsageDescription": "Allow Outlink to use the microphone to record voice messages."
       }
     },
     "win": {
@@ -84,8 +83,8 @@
       "icon": "../assets/images/icon.png",
       "publish": {
         "provider": "github",
-        "owner": "codytseng",
-        "repo": "psstpsst",
+        "owner": "hsoc",
+        "repo": "outlink",
         "channel": "latest-${arch}",
         "releaseType": "draft"
       }
@@ -97,8 +96,8 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "codytseng",
-      "repo": "psstpsst",
+      "owner": "hsoc",
+      "repo": "outlink",
       "releaseType": "draft"
     }
   }

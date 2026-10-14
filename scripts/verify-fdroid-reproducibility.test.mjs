@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import { verifyFdroidReproducibility } from './verify-fdroid-reproducibility.mjs';
 
 test('verification copies the release signature and verifies the result', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'psstpsst-fdroid-test-'));
+  const dir = mkdtempSync(join(tmpdir(), 'outlink-fdroid-test-'));
   try {
     const unsigned = join(dir, 'unsigned.apk');
     const signed = join(dir, 'signed.apk');
@@ -37,7 +37,7 @@ test('verification copies the release signature and verifies the result', () => 
 });
 
 test('verification cleans its temporary APK after a tool failure', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'psstpsst-fdroid-failure-test-'));
+  const dir = mkdtempSync(join(tmpdir(), 'outlink-fdroid-failure-test-'));
   try {
     const unsigned = join(dir, 'unsigned.apk');
     const signed = join(dir, 'signed.apk');

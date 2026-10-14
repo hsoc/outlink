@@ -3,11 +3,11 @@ plugins {
   id 'expo-module-gradle-plugin'
 }
 
-group = 'chat.psstpsst.app.filedrop'
+group = 'io.github.hsoc.outlink.filedrop'
 version = '0.1.0'
 
 android {
-  namespace "chat.psstpsst.app.filedrop"
+  namespace "io.github.hsoc.outlink.filedrop"
   defaultConfig {
     minSdkVersion rootProject.ext.minSdkVersion
     versionCode 1

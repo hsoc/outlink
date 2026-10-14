@@ -17,7 +17,7 @@ for (const theme of ['light', 'dark']) {
     throw new Error('Update the frame dimensions for the new mobile screenshot.');
   }
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${canvasWidth}" height="${canvasHeight}" viewBox="0 0 ${canvasWidth} ${canvasHeight}">
-  <title>PsstPsst on iOS in ${theme} mode</title>
+  <title>Outlink on iOS in ${theme} mode</title>
   <defs>
     <clipPath id="screen">
       <rect x="${insetX}" y="${insetY}" width="${width}" height="${height}" rx="${radius}"/>

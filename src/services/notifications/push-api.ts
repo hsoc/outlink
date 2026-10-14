@@ -4,8 +4,9 @@ import { platform } from '@/platform';
 import type { PushDevice } from '@/platform/ports/push-notifications';
 import type { Signer } from '@/services/signer/signer.interface';
 
-export const APNS_RELAY_URL = 'wss://relay.psstpsst.chat/';
-export const APNS_HTTP_ORIGIN = 'https://relay.psstpsst.chat';
+/** Reserved placeholders: internet push stays disabled until a service is configured. */
+export const APNS_RELAY_URL = 'wss://relay.outlink.invalid/';
+export const APNS_HTTP_ORIGIN = 'https://relay.outlink.invalid';
 
 export class PushApiError extends Error {
   constructor(readonly status: number) { super(`Push API returned ${status}`); }
@@ -26,7 +27,7 @@ export async function supportsPush(origin: string): Promise<boolean> {
   if (!response.ok) throw new PushApiError(response.status);
   const info = await response.json();
   return Array.isArray(info?.supported_nips) && info.supported_nips.includes(98) &&
-    info?.psstpsst?.push?.version === 1;
+    info?.outlink?.push?.version === 1;
 }
 
 /** Resolve only the deployed APNs relay's ID payload; no push-supplied destination is used. */

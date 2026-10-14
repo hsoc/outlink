@@ -5,7 +5,7 @@
 Do not post vulnerability details, exploit code, private keys, wallet connection
 strings, or real message data in public issues or pull requests.
 
-Use [GitHub private vulnerability reporting](https://github.com/codytseng/psstpsst/security/advisories/new)
+Use [GitHub private vulnerability reporting](https://github.com/hsoc/outlink/security/advisories/new)
 when it is available. If that page is unavailable, open an issue asking only for
 a private security contact, without describing the vulnerability. Wait for a
 private channel before sharing technical details.
@@ -30,7 +30,6 @@ This repository does not currently include a published independent security
 audit report. Use of Nostr encryption specifications and Noise does not establish
 that the complete application has been independently audited.
 
-The [privacy policy](https://psstpsst.chat/privacy/) is maintained on the official
-website. The
+The [privacy policy](https://github.com/hsoc/outlink/blob/master/docs/PRIVACY.md) describes the current client behavior. The
 [architecture guide](docs/ARCHITECTURE.md) and
 [protocol documents](docs/protocols/) describe implementation boundaries.

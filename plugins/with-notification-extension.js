@@ -5,7 +5,7 @@ const { join } = require('node:path');
 const { pathToFileURL } = require('node:url');
 const journal = require('../src/db/migrations/meta/_journal.json');
 
-const TARGET = 'PsstPsstNotificationService';
+const TARGET = 'OutlinkNotificationService';
 
 module.exports = function withNotificationExtension(config) {
   const identity = config.ios.bundleIdentifier;
@@ -57,8 +57,8 @@ module.exports = function withNotificationExtension(config) {
     mod.modResults.NSUserActivityTypes = [...new Set([
       ...(mod.modResults.NSUserActivityTypes ?? []), 'INSendMessageIntent',
     ])];
-    mod.modResults.PsstPsstAppGroup = appGroup;
-    mod.modResults.PsstPsstKeychainGroup = keychainGroup;
+    mod.modResults.OutlinkAppGroup = appGroup;
+    mod.modResults.OutlinkKeychainGroup = keychainGroup;
     return mod;
   });
   const existing = config.extra?.eas?.build?.experimental?.ios?.appExtensions ?? [];
@@ -84,7 +84,7 @@ module.exports = function withNotificationExtension(config) {
     const { buildNotificationExtension } = await import(pathToFileURL(join(root, 'scripts/build-notification-extension.mjs')).href);
     await buildNotificationExtension(join(directory, 'processor.js'));
     await writeFile(join(directory, 'Info.plist'), plist.default.build({
-      CFBundleDisplayName: 'PsstPsst Notifications',
+      CFBundleDisplayName: 'Outlink Notifications',
       CFBundleExecutable: '$(EXECUTABLE_NAME)',
       CFBundleIdentifier: '$(PRODUCT_BUNDLE_IDENTIFIER)',
       CFBundleInfoDictionaryVersion: '6.0',
@@ -92,9 +92,9 @@ module.exports = function withNotificationExtension(config) {
       CFBundlePackageType: 'XPC!',
       CFBundleShortVersionString: config.version,
       CFBundleVersion: config.ios.buildNumber,
-      PsstPsstAppGroup: appGroup,
-      PsstPsstKeychainGroup: keychainGroup,
-      PsstPsstSchemaVersion: journal.entries.at(-1).when,
+      OutlinkAppGroup: appGroup,
+      OutlinkKeychainGroup: keychainGroup,
+      OutlinkSchemaVersion: journal.entries.at(-1).when,
       NSUserActivityTypes: ['INSendMessageIntent'],
       NSExtension: {
         NSExtensionAttributes: { IntentsSupported: ['INSendMessageIntent'] },
@@ -151,7 +151,7 @@ module.exports = function withNotificationExtension(config) {
         INFOPLIST_FILE: `${TARGET}/Info.plist`,
         CODE_SIGN_ENTITLEMENTS: `${TARGET}/${TARGET}.entitlements`,
         CODE_SIGN_STYLE: 'Automatic',
-        DEVELOPMENT_TEAM: config.ios.appleTeamId,
+        ...(config.ios.appleTeamId ? { DEVELOPMENT_TEAM: config.ios.appleTeamId } : {}),
         IPHONEOS_DEPLOYMENT_TARGET: '16.4',
         SWIFT_VERSION: '5.0',
         TARGETED_DEVICE_FAMILY: '"1,2"',

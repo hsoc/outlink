@@ -6,7 +6,7 @@ export type EmbeddedMedia = {
   mime?: string;
   /** Expected sha256 of the remote plaintext bytes (`x` in NIP-92 imeta).
    * Used as a stable native image-cache key; ordinary URL media is not copied
-   * into PsstPsst's persistent attachment store. */
+   * into Outlink's persistent attachment store. */
   sha256?: string;
   size?: number;
   width?: number;

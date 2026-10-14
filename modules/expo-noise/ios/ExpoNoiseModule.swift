@@ -33,7 +33,7 @@ private final class NoiseHandshakeBox: @unchecked Sendable {
 
   func close() {
     lock.withLock {
-      if let pointer { psst_noise_handshake_destroy(pointer) }
+      if let pointer { outlink_noise_handshake_destroy(pointer) }
       pointer = nil
     }
   }
@@ -58,7 +58,7 @@ private final class NoiseSessionBox: @unchecked Sendable {
 
   func close() {
     lock.withLock {
-      if let pointer { psst_noise_session_destroy(pointer) }
+      if let pointer { outlink_noise_session_destroy(pointer) }
       pointer = nil
     }
   }
@@ -80,13 +80,13 @@ public final class ExpoNoiseModule: Module {
       let error = privateKey.withUnsafeMutableBytes { privateBytes in
         publicKey.withUnsafeMutableBytes { publicBytes in
           seed?.withUnsafeBytes { seedBytes in
-            psst_noise_keypair(
+            outlink_noise_keypair(
               seedBytes.bindMemory(to: UInt8.self).baseAddress,
               seedBytes.count,
               privateBytes.bindMemory(to: UInt8.self).baseAddress,
               publicBytes.bindMemory(to: UInt8.self).baseAddress
             )
-          } ?? psst_noise_keypair(
+          } ?? outlink_noise_keypair(
             nil,
             0,
             privateBytes.bindMemory(to: UInt8.self).baseAddress,
@@ -106,7 +106,7 @@ public final class ExpoNoiseModule: Module {
       var pointer: OpaquePointer?
       let error = staticPrivateKey.withUnsafeBytes { staticBytes in
         fixedEphemeralPrivateKey?.withUnsafeBytes { ephemeralBytes in
-          psst_noise_handshake_create(
+          outlink_noise_handshake_create(
             role == "initiator" ? 1 : 0,
             staticBytes.bindMemory(to: UInt8.self).baseAddress,
             staticBytes.count,
@@ -114,7 +114,7 @@ public final class ExpoNoiseModule: Module {
             ephemeralBytes.count,
             &pointer
           )
-        } ?? psst_noise_handshake_create(
+        } ?? outlink_noise_handshake_create(
           role == "initiator" ? 1 : 0,
           staticBytes.bindMemory(to: UInt8.self).baseAddress,
           staticBytes.count,
@@ -134,7 +134,7 @@ public final class ExpoNoiseModule: Module {
       try handshake(handle).access { pointer in
         try withOutput(capacity: 65_535) { output, outputLength in
           payload.withUnsafeBytes { payloadBytes in
-            psst_noise_handshake_write(
+            outlink_noise_handshake_write(
               pointer,
               payloadBytes.bindMemory(to: UInt8.self).baseAddress,
               payloadBytes.count,
@@ -151,7 +151,7 @@ public final class ExpoNoiseModule: Module {
       try handshake(handle).access { pointer in
         try withOutput(capacity: 65_535) { output, outputLength in
           message.withUnsafeBytes { messageBytes in
-            psst_noise_handshake_read(
+            outlink_noise_handshake_read(
               pointer,
               messageBytes.bindMemory(to: UInt8.self).baseAddress,
               messageBytes.count,
@@ -168,7 +168,7 @@ public final class ExpoNoiseModule: Module {
       try handshake(handle).access { pointer in
         var output = Data(count: 32)
         let error = output.withUnsafeMutableBytes { bytes in
-          psst_noise_handshake_remote_static(
+          outlink_noise_handshake_remote_static(
             pointer,
             bytes.bindMemory(to: UInt8.self).baseAddress
           )
@@ -185,7 +185,7 @@ public final class ExpoNoiseModule: Module {
         var sessionPointer: OpaquePointer?
         var sessionId = Data(count: 32)
         let error = sessionId.withUnsafeMutableBytes { bytes in
-          psst_noise_handshake_finish(
+          outlink_noise_handshake_finish(
             pointer,
             maxRecordSize,
             &sessionPointer,
@@ -213,7 +213,7 @@ public final class ExpoNoiseModule: Module {
       try session(handle).access { pointer in
         var result: Int32 = 0
         try requireNoiseSuccess(
-          psst_noise_session_should_rotate(pointer, nextPayloadLength, &result)
+          outlink_noise_session_should_rotate(pointer, nextPayloadLength, &result)
         )
         return result != 0
       }
@@ -226,7 +226,7 @@ public final class ExpoNoiseModule: Module {
       return try session(handle).access { pointer in
         try withOutput(capacity: payload.count + 64) { output, outputLength in
           payload.withUnsafeBytes { payloadBytes in
-            psst_noise_session_seal(
+            outlink_noise_session_seal(
               pointer,
               packetType,
               payloadBytes.bindMemory(to: UInt8.self).baseAddress,
@@ -245,7 +245,7 @@ public final class ExpoNoiseModule: Module {
         var type: UInt8 = 0
         let payload = try withOutput(capacity: max(1, record.count)) { output, outputLength in
           record.withUnsafeBytes { recordBytes in
-            psst_noise_session_open(
+            outlink_noise_session_open(
               pointer,
               recordBytes.bindMemory(to: UInt8.self).baseAddress,
               recordBytes.count,
@@ -309,8 +309,8 @@ private func withOutput(
 }
 
 private func requireNoiseSuccess(_ error: Int32) throws {
-  guard error == PSST_NOISE_OK else {
-    throw NoiseException(String(cString: psst_noise_error_message(error)))
+  guard error == OUTLINK_NOISE_OK else {
+    throw NoiseException(String(cString: outlink_noise_error_message(error)))
   }
 }
 

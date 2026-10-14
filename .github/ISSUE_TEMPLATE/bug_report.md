@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a reproducible problem with PsstPsst
+about: Report a reproducible problem with Outlink
 title: ""
 labels: ""
 assignees: ""

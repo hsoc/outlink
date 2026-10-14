@@ -1,4 +1,4 @@
-PsstPsst 26.10.3
+Outlink 26.10.3
 
 - Added attachment copying and media viewer menus.
 - Improved video previews and playback controls, with seek previews and drag-to-close on mobile.

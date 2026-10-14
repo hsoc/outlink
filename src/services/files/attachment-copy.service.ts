@@ -26,7 +26,7 @@ export async function copyImageUri(uri: string): Promise<void> {
   }
   // Single-image viewers can also contain renderer-owned bundled assets or
   // data/blob URLs. Native rendering stages these as a managed PNG on desktop.
-  if (!localUri.startsWith('psstpsst-file://') && !localUri.startsWith('file://')) {
+  if (!localUri.startsWith('outlink-file://') && !localUri.startsWith('file://')) {
     const image = await platform.imageManipulator.renderAndSave(localUri, { format: 'png', quality: 1 });
     try {
       await copyLocalAttachment({ uri: image.uri, mime: 'image/png' });

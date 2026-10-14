@@ -1,10 +1,10 @@
 Pod::Spec.new do |s|
   s.name           = 'ExpoNoise'
   s.version        = '0.1.0'
-  s.summary        = 'Native Noise Protocol sessions for PsstPsst'
+  s.summary        = 'Native Noise Protocol sessions for Outlink'
   s.description    = 'Off-thread, stateful Noise XX handshakes and transport encryption.'
-  s.author         = 'psstpsst'
-  s.homepage       = 'https://github.com/codytseng/psstpsst'
+  s.author         = 'outlink'
+  s.homepage       = 'https://github.com/hsoc/outlink'
   s.license        = 'MIT'
   s.platforms      = { :ios => '16.4' }
   s.swift_version  = '5.0'
@@ -14,7 +14,7 @@ Pod::Spec.new do |s|
   root = 'vendor/noise-c'
   s.source_files = [
     'ios/**/*.{h,swift}',
-    'common/psst_noise.{h,c}',
+    'common/outlink_noise.{h,c}',
     "#{root}/include/**/*.h",
     "#{root}/src/protocol/{cipherstate,dhstate,errors,handshakestate,hashstate,names,patterns,randstate,symmetricstate,util,rand_os}.{h,c}",
     "#{root}/src/backend/ref/{cipher-chachapoly,dh-curve25519,hash-sha256}.c",
@@ -28,7 +28,7 @@ Pod::Spec.new do |s|
   s.preserve_paths = "#{root}/src/crypto/donna/curve25519-donna*.c"
   s.public_header_files = [
     'ios/ExpoNoise.h',
-    'common/psst_noise.h',
+    'common/outlink_noise.h',
   ]
   s.pod_target_xcconfig = {
     'DEFINES_MODULE' => 'YES',

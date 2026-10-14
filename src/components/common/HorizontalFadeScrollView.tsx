@@ -86,7 +86,7 @@ export const HorizontalFadeScrollView = forwardRef<ScrollView, Props>(
     const electronScrollbarProps = IS_ELECTRON
       ? {
           dataSet: {
-            psstpsstScrollbarHidden: 'true',
+            outlinkScrollbarHidden: 'true',
           },
         }
       : {};

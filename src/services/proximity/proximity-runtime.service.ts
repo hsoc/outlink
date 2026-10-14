@@ -3792,7 +3792,7 @@ class ProximityService {
   }
 }
 
-const PROXIMITY_SERVICE_GLOBAL_KEY = '__psstpsstProximityServiceV1__';
+const PROXIMITY_SERVICE_GLOBAL_KEY = '__outlinkProximityServiceV1__';
 const proximityGlobal = globalThis as typeof globalThis & {
   [PROXIMITY_SERVICE_GLOBAL_KEY]?: ProximityService;
 };

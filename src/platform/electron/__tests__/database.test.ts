@@ -2,14 +2,14 @@ import type { ElectronBridge } from '../bridge';
 import { electronDatabaseAdapter } from '../database';
 
 function installBridge(database: Partial<ElectronBridge['database']>): void {
-  window.psstpsstDesktop = {
+  window.outlinkDesktop = {
     database: database as ElectronBridge['database'],
   } as ElectronBridge;
 }
 
 describe('Electron database adapter', () => {
   afterEach(() => {
-    delete window.psstpsstDesktop;
+    delete window.outlinkDesktop;
   });
 
   it('scopes operations and nested savepoints to their transaction ids', async () => {

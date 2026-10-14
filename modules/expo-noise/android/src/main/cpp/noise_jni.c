@@ -1,6 +1,6 @@
 #include <jni.h>
 
-#include "psst_noise.h"
+#include "outlink_noise.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -8,7 +8,7 @@
 
 static void throw_noise_error(JNIEnv *env, int error) {
   jclass type = (*env)->FindClass(env, "java/lang/IllegalStateException");
-  if (type) (*env)->ThrowNew(env, type, psst_noise_error_message(error));
+  if (type) (*env)->ThrowNew(env, type, outlink_noise_error_message(error));
 }
 
 static jbyteArray make_bytes(JNIEnv *env, const uint8_t *bytes, size_t length) {
@@ -31,7 +31,7 @@ static uint8_t *copy_bytes(JNIEnv *env, jbyteArray value, size_t *length) {
 }
 
 JNIEXPORT jbyteArray JNICALL
-Java_chat_psstpsst_app_noise_ExpoNoiseModule_generateKeyPairNative(
+Java_io_github_hsoc_outlink_noise_ExpoNoiseModule_generateKeyPairNative(
     JNIEnv *env,
     jobject self,
     jbyteArray seed) {
@@ -46,12 +46,12 @@ Java_chat_psstpsst_app_noise_ExpoNoiseModule_generateKeyPairNative(
     seed_bytes = copy_bytes(env, seed, &seed_length);
     if (!seed_bytes) return NULL;
   }
-  error = psst_noise_keypair(seed_bytes, seed_length, private_key, public_key);
+  error = outlink_noise_keypair(seed_bytes, seed_length, private_key, public_key);
   if (seed_bytes) {
     memset(seed_bytes, 0, seed_length);
     free(seed_bytes);
   }
-  if (error != PSST_NOISE_OK) {
+  if (error != OUTLINK_NOISE_OK) {
     throw_noise_error(env, error);
     return NULL;
   }
@@ -66,13 +66,13 @@ Java_chat_psstpsst_app_noise_ExpoNoiseModule_generateKeyPairNative(
 }
 
 JNIEXPORT jlong JNICALL
-Java_chat_psstpsst_app_noise_ExpoNoiseModule_createHandshakeNative(
+Java_io_github_hsoc_outlink_noise_ExpoNoiseModule_createHandshakeNative(
     JNIEnv *env,
     jobject self,
     jboolean initiator,
     jbyteArray static_private_key,
     jbyteArray fixed_ephemeral_private_key) {
-  PsstNoiseHandshake *handshake = NULL;
+  OutlinkNoiseHandshake *handshake = NULL;
   uint8_t *static_bytes;
   uint8_t *ephemeral_bytes = NULL;
   size_t static_length;
@@ -89,7 +89,7 @@ Java_chat_psstpsst_app_noise_ExpoNoiseModule_createHandshakeNative(
       return 0;
     }
   }
-  error = psst_noise_handshake_create(
+  error = outlink_noise_handshake_create(
       initiator ? 1 : 0,
       static_bytes,
       static_length,
@@ -102,7 +102,7 @@ Java_chat_psstpsst_app_noise_ExpoNoiseModule_createHandshakeNative(
     memset(ephemeral_bytes, 0, ephemeral_length);
     free(ephemeral_bytes);
   }
-  if (error != PSST_NOISE_OK) {
+  if (error != OUTLINK_NOISE_OK) {
     throw_noise_error(env, error);
     return 0;
   }
@@ -110,7 +110,7 @@ Java_chat_psstpsst_app_noise_ExpoNoiseModule_createHandshakeNative(
 }
 
 JNIEXPORT jbyteArray JNICALL
-Java_chat_psstpsst_app_noise_ExpoNoiseModule_writeHandshakeNative(
+Java_io_github_hsoc_outlink_noise_ExpoNoiseModule_writeHandshakeNative(
     JNIEnv *env,
     jobject self,
     jlong pointer,
@@ -129,8 +129,8 @@ Java_chat_psstpsst_app_noise_ExpoNoiseModule_writeHandshakeNative(
     free(output);
     return NULL;
   }
-  error = psst_noise_handshake_write(
-      (PsstNoiseHandshake *)(intptr_t)pointer,
+  error = outlink_noise_handshake_write(
+      (OutlinkNoiseHandshake *)(intptr_t)pointer,
       payload_bytes,
       payload_length,
       output,
@@ -138,7 +138,7 @@ Java_chat_psstpsst_app_noise_ExpoNoiseModule_writeHandshakeNative(
       &output_length);
   memset(payload_bytes, 0, payload_length);
   free(payload_bytes);
-  if (error != PSST_NOISE_OK) {
+  if (error != OUTLINK_NOISE_OK) {
     free(output);
     throw_noise_error(env, error);
     return NULL;
@@ -149,7 +149,7 @@ Java_chat_psstpsst_app_noise_ExpoNoiseModule_writeHandshakeNative(
 }
 
 JNIEXPORT jbyteArray JNICALL
-Java_chat_psstpsst_app_noise_ExpoNoiseModule_readHandshakeNative(
+Java_io_github_hsoc_outlink_noise_ExpoNoiseModule_readHandshakeNative(
     JNIEnv *env,
     jobject self,
     jlong pointer,
@@ -168,15 +168,15 @@ Java_chat_psstpsst_app_noise_ExpoNoiseModule_readHandshakeNative(
     free(output);
     return NULL;
   }
-  error = psst_noise_handshake_read(
-      (PsstNoiseHandshake *)(intptr_t)pointer,
+  error = outlink_noise_handshake_read(
+      (OutlinkNoiseHandshake *)(intptr_t)pointer,
       message_bytes,
       message_length,
       output,
       65535,
       &output_length);
   free(message_bytes);
-  if (error != PSST_NOISE_OK) {
+  if (error != OUTLINK_NOISE_OK) {
     free(output);
     throw_noise_error(env, error);
     return NULL;
@@ -187,17 +187,17 @@ Java_chat_psstpsst_app_noise_ExpoNoiseModule_readHandshakeNative(
 }
 
 JNIEXPORT jbyteArray JNICALL
-Java_chat_psstpsst_app_noise_ExpoNoiseModule_getRemoteStaticKeyNative(
+Java_io_github_hsoc_outlink_noise_ExpoNoiseModule_getRemoteStaticKeyNative(
     JNIEnv *env,
     jobject self,
     jlong pointer) {
   uint8_t output[32];
   int error;
   (void)self;
-  error = psst_noise_handshake_remote_static(
-      (PsstNoiseHandshake *)(intptr_t)pointer,
+  error = outlink_noise_handshake_remote_static(
+      (OutlinkNoiseHandshake *)(intptr_t)pointer,
       output);
-  if (error != PSST_NOISE_OK) {
+  if (error != OUTLINK_NOISE_OK) {
     throw_noise_error(env, error);
     return NULL;
   }
@@ -205,24 +205,24 @@ Java_chat_psstpsst_app_noise_ExpoNoiseModule_getRemoteStaticKeyNative(
 }
 
 JNIEXPORT jbyteArray JNICALL
-Java_chat_psstpsst_app_noise_ExpoNoiseModule_finishHandshakeNative(
+Java_io_github_hsoc_outlink_noise_ExpoNoiseModule_finishHandshakeNative(
     JNIEnv *env,
     jobject self,
     jlong pointer,
     jint max_record_size) {
-  PsstNoiseSession *session = NULL;
+  OutlinkNoiseSession *session = NULL;
   uint8_t session_id[32];
   uint8_t result[40];
   uint64_t encoded_pointer;
   int error;
   size_t index;
   (void)self;
-  error = psst_noise_handshake_finish(
-      (PsstNoiseHandshake *)(intptr_t)pointer,
+  error = outlink_noise_handshake_finish(
+      (OutlinkNoiseHandshake *)(intptr_t)pointer,
       (size_t)max_record_size,
       &session,
       session_id);
-  if (error != PSST_NOISE_OK) {
+  if (error != OUTLINK_NOISE_OK) {
     throw_noise_error(env, error);
     return NULL;
   }
@@ -233,17 +233,17 @@ Java_chat_psstpsst_app_noise_ExpoNoiseModule_finishHandshakeNative(
 }
 
 JNIEXPORT void JNICALL
-Java_chat_psstpsst_app_noise_ExpoNoiseModule_destroyHandshakeNative(
+Java_io_github_hsoc_outlink_noise_ExpoNoiseModule_destroyHandshakeNative(
     JNIEnv *env,
     jobject self,
     jlong pointer) {
   (void)env;
   (void)self;
-  psst_noise_handshake_destroy((PsstNoiseHandshake *)(intptr_t)pointer);
+  outlink_noise_handshake_destroy((OutlinkNoiseHandshake *)(intptr_t)pointer);
 }
 
 JNIEXPORT jboolean JNICALL
-Java_chat_psstpsst_app_noise_ExpoNoiseModule_shouldRotateSessionNative(
+Java_io_github_hsoc_outlink_noise_ExpoNoiseModule_shouldRotateSessionNative(
     JNIEnv *env,
     jobject self,
     jlong pointer,
@@ -251,11 +251,11 @@ Java_chat_psstpsst_app_noise_ExpoNoiseModule_shouldRotateSessionNative(
   int should_rotate = 0;
   int error;
   (void)self;
-  error = psst_noise_session_should_rotate(
-      (PsstNoiseSession *)(intptr_t)pointer,
+  error = outlink_noise_session_should_rotate(
+      (OutlinkNoiseSession *)(intptr_t)pointer,
       (size_t)next_payload_length,
       &should_rotate);
-  if (error != PSST_NOISE_OK) {
+  if (error != OUTLINK_NOISE_OK) {
     throw_noise_error(env, error);
     return JNI_FALSE;
   }
@@ -263,7 +263,7 @@ Java_chat_psstpsst_app_noise_ExpoNoiseModule_shouldRotateSessionNative(
 }
 
 JNIEXPORT jbyteArray JNICALL
-Java_chat_psstpsst_app_noise_ExpoNoiseModule_sealNative(
+Java_io_github_hsoc_outlink_noise_ExpoNoiseModule_sealNative(
     JNIEnv *env,
     jobject self,
     jlong pointer,
@@ -277,7 +277,7 @@ Java_chat_psstpsst_app_noise_ExpoNoiseModule_sealNative(
   jbyteArray result;
   (void)self;
   if (type < 0 || type > 255) {
-    throw_noise_error(env, PSST_NOISE_INVALID_ARGUMENT);
+    throw_noise_error(env, OUTLINK_NOISE_INVALID_ARGUMENT);
     return NULL;
   }
   payload_bytes = copy_bytes(env, payload, &payload_length);
@@ -287,8 +287,8 @@ Java_chat_psstpsst_app_noise_ExpoNoiseModule_sealNative(
     free(output);
     return NULL;
   }
-  error = psst_noise_session_seal(
-      (PsstNoiseSession *)(intptr_t)pointer,
+  error = outlink_noise_session_seal(
+      (OutlinkNoiseSession *)(intptr_t)pointer,
       (uint8_t)type,
       payload_bytes,
       payload_length,
@@ -297,7 +297,7 @@ Java_chat_psstpsst_app_noise_ExpoNoiseModule_sealNative(
       &output_length);
   memset(payload_bytes, 0, payload_length);
   free(payload_bytes);
-  if (error != PSST_NOISE_OK) {
+  if (error != OUTLINK_NOISE_OK) {
     free(output);
     throw_noise_error(env, error);
     return NULL;
@@ -308,7 +308,7 @@ Java_chat_psstpsst_app_noise_ExpoNoiseModule_sealNative(
 }
 
 JNIEXPORT jbyteArray JNICALL
-Java_chat_psstpsst_app_noise_ExpoNoiseModule_openNative(
+Java_io_github_hsoc_outlink_noise_ExpoNoiseModule_openNative(
     JNIEnv *env,
     jobject self,
     jlong pointer,
@@ -328,8 +328,8 @@ Java_chat_psstpsst_app_noise_ExpoNoiseModule_openNative(
     free(output);
     return NULL;
   }
-  error = psst_noise_session_open(
-      (PsstNoiseSession *)(intptr_t)pointer,
+  error = outlink_noise_session_open(
+      (OutlinkNoiseSession *)(intptr_t)pointer,
       record_bytes,
       record_length,
       &packet_type,
@@ -337,7 +337,7 @@ Java_chat_psstpsst_app_noise_ExpoNoiseModule_openNative(
       record_length,
       &output_length);
   free(record_bytes);
-  if (error != PSST_NOISE_OK) {
+  if (error != OUTLINK_NOISE_OK) {
     free(output);
     throw_noise_error(env, error);
     return NULL;
@@ -350,11 +350,11 @@ Java_chat_psstpsst_app_noise_ExpoNoiseModule_openNative(
 }
 
 JNIEXPORT void JNICALL
-Java_chat_psstpsst_app_noise_ExpoNoiseModule_destroySessionNative(
+Java_io_github_hsoc_outlink_noise_ExpoNoiseModule_destroySessionNative(
     JNIEnv *env,
     jobject self,
     jlong pointer) {
   (void)env;
   (void)self;
-  psst_noise_session_destroy((PsstNoiseSession *)(intptr_t)pointer);
+  outlink_noise_session_destroy((OutlinkNoiseSession *)(intptr_t)pointer);
 }

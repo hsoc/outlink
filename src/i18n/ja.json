@@ -1,6 +1,6 @@
 {
   "welcome": {
-    "title": "PsstPsst",
+    "title": "Outlink",
     "subtitle": "分散型のエンドツーエンド暗号化メッセージ",
     "choose_title": "アカウントを選択",
     "login_nsec": "秘密鍵でサインイン",
@@ -26,7 +26,7 @@
     },
     "nostr_connect": {
       "title": "Nostr Connect",
-      "subtitle": "署名ツールでこのコードをスキャンするか、タップしてこのデバイスの署名ツールを開いてください。署名ツールが承認すると PsstPsst にサインインします。",
+      "subtitle": "署名ツールでこのコードをスキャンするか、タップしてこのデバイスの署名ツールを開いてください。署名ツールが承認すると Outlink にサインインします。",
       "copy": "リンクをコピー",
       "copied": "コピーしました",
       "waiting": "署名ツールを待機中…",
@@ -37,7 +37,7 @@
   },
   "generate": {
     "title": "新しいアカウント",
-    "subtitle": "PsstPsst が新しいアカウントを作成しました。",
+    "subtitle": "Outlink が新しいアカウントを作成しました。",
     "warning": "以下の秘密鍵をバックアップしてください。この鍵を持つ人は誰でもメッセージを読んだり、あなたになりすましたりできます。",
     "copy": "コピー",
     "copied": "コピーしました",
@@ -87,7 +87,7 @@
     "qr_save": "保存",
     "qr_saved": "写真に保存しました。",
     "qr_save_failed": "保存できませんでした。もう一度お試しください。",
-    "qr_save_permission": "カードを保存するには PsstPsst に写真へのアクセスが必要です。"
+    "qr_save_permission": "カードを保存するには Outlink に写真へのアクセスが必要です。"
   },
   "report": {
     "title": "ユーザーを通報",
@@ -121,14 +121,14 @@
     "url_confirm": "この画像を使用",
     "image_url_placeholder": "https://…",
     "save": "保存",
-    "photo_permission": "写真を設定するには PsstPsst に写真へのアクセスが必要です。",
-    "camera_permission": "写真を撮るには PsstPsst にカメラへのアクセスが必要です。",
+    "photo_permission": "写真を設定するには Outlink に写真へのアクセスが必要です。",
+    "camera_permission": "写真を撮るには Outlink にカメラへのアクセスが必要です。",
     "upload_failed": "画像のアップロードに失敗しました。もう一度お試しください。",
     "save_failed": "プロフィールを保存できませんでした。もう一度お試しください。"
   },
   "nip05": {
     "title": "個人識別子",
-    "subtitle": "psstpsst.chat で個人識別子を登録すると、公開鍵を知らない相手にも見つけてもらえます。",
+    "subtitle": "outlink.invalid で個人識別子を登録すると、公開鍵を知らない相手にも見つけてもらえます。",
     "name_label": "名前",
     "name_placeholder": "名前",
     "name_hint": "5〜30 文字: 英字、数字、ドット、ハイフン、アンダースコア。先頭と末尾には英字または数字を使用してください。",
@@ -145,7 +145,7 @@
     "change": "個人識別子を変更",
     "claim_failed": "個人識別子を登録できませんでした。もう一度お試しください。",
     "skip": "今はスキップ",
-    "profile_entry": "psstpsst.chat 個人識別子を取得",
+    "profile_entry": "outlink.invalid 個人識別子を取得",
     "profile_switch": "{{address}} に切り替える"
   },
   "conversations": {
@@ -299,7 +299,7 @@
     "sent": "送信済み",
     "enter_conversation": "会話を開く",
     "send_failed": "すべてを送信できませんでした。もう一度共有してください。",
-    "receive_failed_title": "PsstPsst に共有できません",
+    "receive_failed_title": "Outlink に共有できません",
     "receive_failed": "共有されたコンテンツは利用できなくなりました。もう一度共有してください。",
     "stage_failed": "共有ファイルを準備できませんでした。もう一度お試しください。",
     "too_many_items": "一度に共有できるのは10件までです。",
@@ -528,10 +528,10 @@
     "unavailable": "この連絡先にはメッセージを送れません",
     "unavailable_title": "この連絡先にはメッセージを送れません",
     "unavailable_summary": {
-      "checking": "この連絡先が現在メッセージを受信できるか PsstPsst が確認しています。",
+      "checking": "この連絡先が現在メッセージを受信できるか Outlink が確認しています。",
       "missingRelays": "この連絡先がメッセージを受信するリレーが見つかりませんでした。",
-      "missingEncryptionKey": "相手のアプリが PsstPsst の暗号化メッセージプロトコルに対応していない可能性があります。",
-      "unknown": "この連絡先がメッセージを受信できることを PsstPsst で確認できませんでした。"
+      "missingEncryptionKey": "相手のアプリが Outlink の暗号化メッセージプロトコルに対応していない可能性があります。",
+      "unknown": "この連絡先がメッセージを受信できることを Outlink で確認できませんでした。"
     },
     "check_relays": "メッセージリレー",
     "check_key": "暗号化公開鍵",
@@ -564,16 +564,16 @@
     "background_service_message": "新しいメッセージを待機中",
     "new_message": "新着メッセージ",
     "new_messages": "新着メッセージ{{count}}件",
-    "open_to_view_message": "PsstPsstを開いてメッセージを表示",
-    "delivery_note_ios": "バックグラウンド通知は relay.psstpsst.chat を使用して APNs 経由で配信されます。",
+    "open_to_view_message": "Outlinkを開いてメッセージを表示",
+    "delivery_note_ios": "バックグラウンド通知は relay.outlink.invalid を使用して APNs 経由で配信されます。",
     "required_relay_note": "iOS の通知を有効にするには、メッセージリレーに {{relay}} を追加してください。",
     "relay_settings_action": "設定へ移動",
-    "delivery_note_android": "Android はメッセージ接続をバックグラウンドで維持できますが、システムや端末メーカーによって停止されることがあります。通知をより安定させるには、システム設定で PsstPsst のバックグラウンド実行を許可し、バッテリー最適化の対象外にしてください。設定項目は端末によって異なります。",
-    "delivery_note_desktop": "PsstPsst がシステムトレイで動作している間は通知を受信できます。アプリを完全に終了すると、バックグラウンド確認も停止します。",
+    "delivery_note_android": "Android はメッセージ接続をバックグラウンドで維持できますが、システムや端末メーカーによって停止されることがあります。通知をより安定させるには、システム設定で Outlink のバックグラウンド実行を許可し、バッテリー最適化の対象外にしてください。設定項目は端末によって異なります。",
+    "delivery_note_desktop": "Outlink がシステムトレイで動作している間は通知を受信できます。アプリを完全に終了すると、バックグラウンド確認も停止します。",
     "privacy_note": "これらの情報は初期設定では非表示です。表示すると、この端末の通知履歴に残る場合があります。",
-    "system_permission_note": "システム設定でも PsstPsst の通知を許可してください。アプリではシステムの通知が有効かどうかを確認できません。",
+    "system_permission_note": "システム設定でも Outlink の通知を許可してください。アプリではシステムの通知が有効かどうかを確認できません。",
     "permission_denied_title": "通知はオフです",
-    "permission_denied_message": "新着メッセージの通知を受け取るには、システム設定で PsstPsst の通知を許可してください。",
+    "permission_denied_message": "新着メッセージの通知を受け取るには、システム設定で Outlink の通知を許可してください。",
     "unavailable_title": "通知を利用できません",
     "unavailable_message": "このデスクトップ環境はシステム通知に対応していません。",
     "open_settings": "設定を開く",
@@ -596,7 +596,7 @@
     "dm_relays": "メッセージリレー",
     "media_servers": "メディアサーバー",
     "blocked_users": "ブロックしたユーザー",
-    "about": "PsstPsst について",
+    "about": "Outlink について",
     "security": "セキュリティ",
     "export_nsec": "秘密鍵をコピー",
     "export_nsec_title": "秘密鍵をコピーしますか？",
@@ -618,13 +618,13 @@
     "not_now": "後で",
     "downloading": "バージョン {{version}} をダウンロード中…",
     "download_failed_title": "ダウンロードできませんでした",
-    "download_failed_message": "アップデートをダウンロードできませんでした。次回 PsstPsst を開いたときにもう一度お試しください。",
+    "download_failed_message": "アップデートをダウンロードできませんでした。次回 Outlink を開いたときにもう一度お試しください。",
     "ready_title": "インストールの準備ができました",
-    "ready_message": "バージョン {{version}} をダウンロードしました。PsstPsst を再起動して今すぐインストールしますか？",
+    "ready_message": "バージョン {{version}} をダウンロードしました。Outlink を再起動して今すぐインストールしますか？",
     "restart_and_install": "再起動してインストール",
     "later": "後で",
     "install_failed_title": "インストールを開始できませんでした",
-    "install_failed_message": "PsstPsst はインストーラーを再起動できませんでした。次回アプリを開いたときにもう一度お試しください。"
+    "install_failed_message": "Outlink はインストーラーを再起動できませんでした。次回アプリを開いたときにもう一度お試しください。"
   },
   "legal": {
     "privacy_policy": "プライバシーポリシー",
@@ -773,7 +773,7 @@
   "secure_storage": {
     "setup_title": "アプリを保護",
     "setup_hint": "このシステムだけでは鍵を安全に保存できません。暗号化するためのアプリパスワードを作成してください。",
-    "unlock_title": "PsstPsst のロックを解除",
+    "unlock_title": "Outlink のロックを解除",
     "unlock_hint": "鍵とアカウントのロックを解除するには、アプリパスワードを入力してください。",
     "password": "アプリパスワード",
     "confirm_password": "アプリパスワードを確認",
@@ -820,7 +820,7 @@
     "description_placeholder": "何のための支払いですか？",
     "direction": "方向",
     "empty_title": "Lightning 支払い",
-    "empty_hint": "ウォレットアプリで支払うか、PsstPsst での支払いと支払いリクエスト用にウォレットを接続します。",
+    "empty_hint": "ウォレットアプリで支払うか、Outlink での支払いと支払いリクエスト用にウォレットを接続します。",
     "expires": "有効期限",
     "expires_at": "有効期限",
     "expires_in": "有効期限まで",

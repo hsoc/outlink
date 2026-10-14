@@ -1,6 +1,6 @@
 # Android QR scanning
 
-PsstPsst uses ZXing-C++ 3.0.2 through a versioned `patch-package` patch for
+Outlink uses ZXing-C++ 3.0.2 through a versioned `patch-package` patch for
 `expo-camera` 57.0.5. The official Maven Android reader is Apache-2.0 and has
 barcode writers disabled. Version 3.0.2 uses Kotlin 2.2 metadata accepted by the
 current Kotlin compiler; 3.1.1 requires a newer Kotlin toolchain.

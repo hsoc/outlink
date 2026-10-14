@@ -1,13 +1,13 @@
-const ACTIVE_CLASS = 'psstpsst-scroll-active';
-const INSTALL_MARKER = 'psstpsstScrollbarVisibility';
-const VERTICAL_SELECTOR = '[data-psstpsst-scrollbar-thumb="vertical"]';
-const HORIZONTAL_SELECTOR = '[data-psstpsst-scrollbar-thumb="horizontal"]';
+const ACTIVE_CLASS = 'outlink-scroll-active';
+const INSTALL_MARKER = 'outlinkScrollbarVisibility';
+const VERTICAL_SELECTOR = '[data-outlink-scrollbar-thumb="vertical"]';
+const HORIZONTAL_SELECTOR = '[data-outlink-scrollbar-thumb="horizontal"]';
 const HIDE_DELAY_MS = 500;
 const THUMB_THICKNESS_PX = 4;
 const EDGE_INSET_PX = 2;
 const MIN_THUMB_LENGTH_PX = 24;
-const OCCLUSION_ATTRIBUTE = 'data-psstpsst-scrollbar-occlusion';
-const HIDDEN_ATTRIBUTE = 'data-psstpsst-scrollbar-hidden';
+const OCCLUSION_ATTRIBUTE = 'data-outlink-scrollbar-occlusion';
+const HIDDEN_ATTRIBUTE = 'data-outlink-scrollbar-hidden';
 /** A scroll event counts as user-driven only this soon after a wheel/touch input. */
 const USER_SCROLL_INPUT_WINDOW_MS = 200;
 
@@ -26,8 +26,8 @@ function clamp(value: number, minimum: number, maximum: number): number {
 
 function createThumb(axis: 'vertical' | 'horizontal'): HTMLDivElement {
   const thumb = document.createElement('div');
-  thumb.dataset.psstpsstScrollbarThumb = axis;
-  thumb.className = `psstpsst-scrollbar-overlay-thumb psstpsst-scrollbar-overlay-thumb--${axis}`;
+  thumb.dataset.outlinkScrollbarThumb = axis;
+  thumb.className = `outlink-scrollbar-overlay-thumb outlink-scrollbar-overlay-thumb--${axis}`;
   thumb.setAttribute('aria-hidden', 'true');
   return thumb;
 }

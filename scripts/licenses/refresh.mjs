@@ -45,7 +45,7 @@ export async function refreshInventory(root, lock, oldInventory, texts) {
   const snapshots = JSON.parse(await fs.readFile(path.join(root, 'licenses/third-party/snapshots.json'), 'utf8'));
   const prior = new Map(oldInventory.packages.map((pkg) => [packageKey(pkg), pkg]));
   const packages = [];
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'psstpsst-licenses-'));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'outlink-licenses-'));
   try {
     // Bounded concurrency keeps native archive memory use under control.
     const pending = lockedPackages(lock);

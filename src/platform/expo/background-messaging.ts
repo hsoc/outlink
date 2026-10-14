@@ -15,18 +15,18 @@ type ExpoBackgroundMessagingModule = {
   addListener(name: 'onPulse', listener: () => void): { remove(): void };
 };
 
-const HEADLESS_TASK_NAME = 'PsstPsstBackgroundMessaging';
+const HEADLESS_TASK_NAME = 'OutlinkBackgroundMessaging';
 type BackgroundMessagingTaskState = {
   registered: boolean;
   shouldRun: boolean;
   resolve: (() => void) | null;
 };
 type BackgroundMessagingGlobal = typeof globalThis & {
-  __psstPsstBackgroundMessagingTask?: BackgroundMessagingTaskState;
+  __outlinkOutlinkBackgroundMessagingTask?: BackgroundMessagingTaskState;
 };
 
 const taskGlobal = globalThis as BackgroundMessagingGlobal;
-const taskState = (taskGlobal.__psstPsstBackgroundMessagingTask ??= {
+const taskState = (taskGlobal.__outlinkOutlinkBackgroundMessagingTask ??= {
   registered: false,
   shouldRun: false,
   resolve: null,

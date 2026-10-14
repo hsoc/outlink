@@ -19,7 +19,7 @@ let disabledProcessor;
 let bootstrap;
 let journal;
 before(async () => {
-  directory = await mkdtemp(join(tmpdir(), 'psstpsst-notification-test-'));
+  directory = await mkdtemp(join(tmpdir(), 'outlink-notification-test-'));
   await buildNotificationExtension(join(directory, 'processor.js'));
   disabledProcessor = await readFile(join(directory, 'processor.js'), 'utf8');
   await buildNotificationExtension(join(directory, 'enabled-processor.js'), [{
@@ -157,7 +157,7 @@ async function receive(sqlite, input, payload, { present = false, http, bundle =
   try {
     runInContext(bootstrap, context);
     runInContext(bundle, context);
-    context.PsstPsstNotification.receive(JSON.stringify(payload));
+    context.OutlinkNotification.receive(JSON.stringify(payload));
     return await Promise.race([completed, new Promise((_, reject) => {
       const id = setTimeout(() => reject(new Error('Processor deadline exceeded')), 5000);
       timers.add(id);
@@ -179,7 +179,7 @@ test('independent runtime verifies, decrypts and stores for an inactive account,
     const row = sqlite.prepare('SELECT * FROM messages').get();
     assert.equal(row.account_pubkey, input.account);
     assert.equal(row.content, input.rumor.content);
-    assert.deepEqual(JSON.parse(row.source_relays), ['wss://relay.psstpsst.chat/']);
+    assert.deepEqual(JSON.parse(row.source_relays), ['wss://relay.outlink.invalid/']);
     assert.equal(sqlite.prepare('SELECT count(*) AS n FROM processed_gift_wraps').get().n, 1);
     assert.equal((await receive(sqlite, input, { type: 'id', data: { id: input.event.id, p: input.account } })).status, 'suppress');
     assert.equal(sqlite.prepare('SELECT count(*) AS n FROM messages').get().n, 1);
@@ -194,7 +194,7 @@ test('ID delivery uses fixed authenticated HTTP before the same receiver', async
     const result = await receive(sqlite, input, { type: 'id', data: { id: input.event.id, p: input.account } }, {
       http(url, method, headers, body) {
         requests++;
-        assert.equal(url, `https://relay.psstpsst.chat/v1/events/${input.event.id}`);
+        assert.equal(url, `https://relay.outlink.invalid/v1/events/${input.event.id}`);
         assert.equal(method, 'GET');
         assert.equal(body, null);
         const auth = JSON.parse(Buffer.from(headers.Authorization.slice(6), 'base64').toString('utf8'));
@@ -273,7 +273,7 @@ test('shipping Swift bridge executes the same processor in JavaScriptCore', { sk
   await writeFile(join(nativeDirectory, 'processor.js'), processor);
   await writeFile(join(nativeDirectory, 'bootstrap.js'), bootstrap);
   const input = fixture();
-  const sqlite = await database(input, {}, join(nativeDirectory, 'psstpsst.db'));
+  const sqlite = await database(input, {}, join(nativeDirectory, 'outlink.db'));
   const version = journal.entries.at(-1).when;
   sqlite.exec(`CREATE TABLE __drizzle_migrations (created_at INTEGER); INSERT INTO __drizzle_migrations VALUES (${version});`);
   try {

@@ -67,7 +67,7 @@ import Users from 'lucide-react-native/icons/users';
 
 /**
  * Another user's profile. Minimal, messenger-first identity card: centered
- * avatar, compact public identifiers, PsstPsst-styled {@link ProfileAction}
+ * avatar, compact public identifiers, Outlink-styled {@link ProfileAction}
  * buttons, then grouped rows. "Edit" sets a local petname synced via NIP-51.
  * Own profile uses {@link ProfileView}.
  */

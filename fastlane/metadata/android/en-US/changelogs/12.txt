@@ -1,4 +1,4 @@
-PsstPsst 26.10.5
+Outlink 26.10.5
 
 - Added brief feedback for common actions.
 - Reduced unnecessary Android permissions.

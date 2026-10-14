@@ -27,7 +27,7 @@ export function ChromeBackdrop({
     IS_ELECTRON && scrollbarOcclusion
       ? {
           dataSet: {
-            psstpsstScrollbarOcclusion: scrollbarOcclusion,
+            outlinkScrollbarOcclusion: scrollbarOcclusion,
           },
         }
       : {};

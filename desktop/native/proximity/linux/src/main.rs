@@ -1,6 +1,6 @@
 #[cfg(not(target_os = "linux"))]
 fn main() {
-    eprintln!("psstpsst-proximity-linux can only run on Linux");
+    eprintln!("outlink-proximity-linux can only run on Linux");
 }
 
 #[cfg(target_os = "linux")]
@@ -439,14 +439,14 @@ mod linux {
                         );
                         if !powered {
                             eprintln!(
-                                "[psstpsst-proximity] Bluetooth powered off; restarting the helper is required"
+                                "[outlink-proximity] Bluetooth powered off; restarting the helper is required"
                             );
                             std::process::exit(2);
                         }
                     }
                 }
                 eprintln!(
-                    "[psstpsst-proximity] Bluetooth adapter event stream ended; restarting the helper is required"
+                    "[outlink-proximity] Bluetooth adapter event stream ended; restarting the helper is required"
                 );
                 std::process::exit(2);
             }));
@@ -656,7 +656,7 @@ mod linux {
                                 }
                                 result = writer.closed() => {
                                     if let Err(error) = result {
-                                        eprintln!("[psstpsst-proximity] notification session failed: {error}");
+                                        eprintln!("[outlink-proximity] notification session failed: {error}");
                                     }
                                     break;
                                 }
@@ -920,7 +920,7 @@ mod linux {
         let result = activate_remote_inner(&shared, &device, generation).await;
         shared.connecting.lock().await.remove(&address);
         if let Err(error) = result {
-            eprintln!("[psstpsst-proximity] unable to activate {address}: {error:#}");
+            eprintln!("[outlink-proximity] unable to activate {address}: {error:#}");
             let _ = device.disconnect().await;
             let endpoint_id = format!("c:{address}");
             let connection_generation = shared.connection_generation(&endpoint_id).await;
@@ -1213,7 +1213,7 @@ mod linux {
 #[tokio::main]
 async fn main() {
     if let Err(error) = linux::run().await {
-        eprintln!("[psstpsst-proximity] fatal error: {error:#}");
+        eprintln!("[outlink-proximity] fatal error: {error:#}");
         std::process::exit(1);
     }
 }

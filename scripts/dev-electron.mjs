@@ -93,7 +93,7 @@ function track(name, child) {
       const exitedImmediately = name === 'Electron' && Date.now() - startedAt < 2_000;
       if (exitedImmediately) {
         console.error(
-          `Electron exited immediately; another PsstPsst instance may already be running (${code})`,
+          `Electron exited immediately; another Outlink instance may already be running (${code})`,
         );
         exitCode = 1;
       } else if (code !== 0 || signal) {
@@ -134,7 +134,7 @@ try {
     'Electron',
     spawn(electronBinary, [electronMain], {
       cwd: projectRoot,
-      env: { ...process.env, PSSTPSST_RENDERER_URL: rendererUrl },
+      env: { ...process.env, OUTLINK_RENDERER_URL: rendererUrl },
       stdio: 'inherit',
     }),
   );

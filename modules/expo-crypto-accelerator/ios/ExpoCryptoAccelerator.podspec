@@ -1,10 +1,10 @@
 Pod::Spec.new do |s|
   s.name           = 'ExpoCryptoAccelerator'
   s.version        = '0.1.0'
-  s.summary        = 'Native cryptographic acceleration for PsstPsst'
-  s.description    = 'Accelerated NIP-44 conversation key derivation and BIP-340 Schnorr verification for PsstPsst.'
-  s.author         = 'psstpsst'
-  s.homepage       = 'https://github.com/codytseng/psstpsst'
+  s.summary        = 'Native cryptographic acceleration for Outlink'
+  s.description    = 'Accelerated NIP-44 conversation key derivation and BIP-340 Schnorr verification for Outlink.'
+  s.author         = 'outlink'
+  s.homepage       = 'https://github.com/hsoc/outlink'
   s.license        = 'MIT'
   s.platforms      = { :ios => '16.4' }
   s.swift_version  = '5.0'

@@ -1,13 +1,13 @@
-PsstPsst NIP-4E Profile
+Outlink NIP-4E Profile
 =======================
 
 `draft` `optional`
 
-This document specifies PsstPsst's profile of the draft
+This document specifies Outlink's profile of the draft
 [NIP-4E proposal](https://github.com/nostr-protocol/nips/pull/1647). It separates
 the Nostr identity key from the key used for NIP-44 encryption and synchronizes
 the encryption key between devices. Its use in message envelopes is specified
-in [PsstPsst NIP-17 Extensions](./nip17-extensions.md).
+in [Outlink NIP-17 Extensions](./nip17-extensions.md).
 
 | Event | Purpose |
 | --- | --- |
@@ -44,7 +44,7 @@ Clients MAY materialize the winning seal-or-announcement evidence per peer
 identity. Once materialized, every local account reads that row directly; public
 announcement lookup is needed only to populate a missing row, explicitly
 refresh it, migrate an existing announcement cache, or run a bounded freshness
-check. PsstPsst performs that check in the background when a conversation opens
+check. Outlink performs that check in the background when a conversation opens
 and queries relays only when the locally recorded fetch time is at least one day
 old. The same peer-deduplicated background task independently refreshes DM-relay
 metadata. A completed miss is timestamped alongside an existing seal-derived
@@ -118,7 +118,7 @@ public key from `P`, decrypts the content, derives the transferred public key,
 and accepts the key only when that public key equals the current kind `10044`
 `n` value. Undecryptable and non-matching responses are ignored.
 
-The identity `p` tag is emitted by PsstPsst for account inbox routing. Receivers
+The identity `p` tag is emitted by Outlink for account inbox routing. Receivers
 MUST require the requester client `p` tag and MAY accept a response without the
 identity `p` tag.
 

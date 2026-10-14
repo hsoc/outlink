@@ -9,7 +9,7 @@ const item: PendingAttachment = {
   accountPubkey: 'account',
   tempId: 'upload',
   conversationKey: 'peer',
-  localUri: 'psstpsst-file://documents/clip.mov',
+  localUri: 'outlink-file://documents/clip.mov',
   localName: 'clip.mov',
   mime: 'video/quicktime',
   status: 'uploading',

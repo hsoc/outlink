@@ -4,9 +4,9 @@ import { DISCOVERY_RELAYS } from '@/lib/nostr/relay-url';
 
 const SELF = 'self-pubkey';
 const PRIVATE_SET_D_TAGS = [
-  'psstpsst-muted',
-  'psstpsst-contacts',
-  'psstpsst-blocked',
+  'outlink-muted',
+  'outlink-contacts',
+  'outlink-blocked',
 ];
 
 type ReplRow = {
@@ -148,17 +148,17 @@ jest.mock('../../relay/relay-router', () => {
 // The domain reconcilers are mocked wholesale; the d-tag constants must mirror
 // the real modules (they define the routing contract).
 jest.mock('../../conversation/conversation-prefs.service', () => ({
-  MUTED_D: 'psstpsst-muted',
+  MUTED_D: 'outlink-muted',
   applyMutedEvent: jest.fn((...args: unknown[]) => mockApplyMutedEvent(...args)),
 }));
 
 jest.mock('../../contact/contact.service', () => ({
-  CONTACTS_D: 'psstpsst-contacts',
+  CONTACTS_D: 'outlink-contacts',
   applyContactsEvent: jest.fn((...args: unknown[]) => mockApplyContactsEvent(...args)),
 }));
 
 jest.mock('../../dm/block.service', () => ({
-  BLOCKED_D: 'psstpsst-blocked',
+  BLOCKED_D: 'outlink-blocked',
   applyBlockedEvent: jest.fn((...args: unknown[]) => mockApplyBlockedEvent(...args)),
 }));
 
@@ -401,10 +401,10 @@ describe('selfEventStream', () => {
   it('routes private sets and public lists to their reconcilers', async () => {
     await startStream();
 
-    const muted = makeEvent(30000, 100, [['d', 'psstpsst-muted']]);
-    const contacts = makeEvent(30000, 100, [['d', 'psstpsst-contacts']]);
-    const blocked = makeEvent(30000, 100, [['d', 'psstpsst-blocked']]);
-    const savedGroups = makeEvent(30078, 100, [['d', 'psstpsst-saved-groups']]);
+    const muted = makeEvent(30000, 100, [['d', 'outlink-muted']]);
+    const contacts = makeEvent(30000, 100, [['d', 'outlink-contacts']]);
+    const blocked = makeEvent(30000, 100, [['d', 'outlink-blocked']]);
+    const savedGroups = makeEvent(30078, 100, [['d', 'outlink-saved-groups']]);
     const emoji = makeEvent(10030, 100);
     const media = makeEvent(10063, 100);
     for (const event of [muted, contacts, blocked, savedGroups, emoji, media]) {
@@ -416,7 +416,7 @@ describe('selfEventStream', () => {
     expect(mockApplyContactsEvent).toHaveBeenCalledWith(SELF, contacts, fakeSigner);
     expect(mockApplyBlockedEvent).toHaveBeenCalledWith(SELF, blocked, fakeSigner);
     expect(mockApplyContactsEvent).toHaveBeenCalledTimes(1);
-    expect(mockReplStore.has(JSON.stringify([SELF, 30078, 'psstpsst-saved-groups']))).toBe(false);
+    expect(mockReplStore.has(JSON.stringify([SELF, 30078, 'outlink-saved-groups']))).toBe(false);
     expect(mockApplyUserEmojiListEvent).toHaveBeenCalledWith(SELF, emoji);
     expect(mockApplyMediaServersEvent).toHaveBeenCalledWith(SELF, media);
   });
@@ -546,7 +546,7 @@ describe('selfEventStream', () => {
     });
     await startStream();
 
-    deliver('self.write', makeEvent(30000, 100, [['d', 'psstpsst-muted']]));
+    deliver('self.write', makeEvent(30000, 100, [['d', 'outlink-muted']]));
     deliver('self.write', makeEvent(10063, 100));
     await flush();
 

@@ -5,7 +5,7 @@ import UIKit
 @MainActor
 final class PushRegistration {
   static let shared = PushRegistration()
-  static let tokenChanged = Notification.Name("PsstPsstPushTokenChanged")
+  static let tokenChanged = Notification.Name("OutlinkPushTokenChanged")
   private var token: String?
   private var pending: [Promise] = []
   private var timeout: DispatchWorkItem?
@@ -16,7 +16,7 @@ final class PushRegistration {
     pending.append(promise)
     if pending.count == 1 {
       let deadline = DispatchWorkItem { [weak self] in
-        self?.fail(NSError(domain: "PsstPsstPush", code: 1, userInfo: [
+        self?.fail(NSError(domain: "OutlinkPush", code: 1, userInfo: [
           NSLocalizedDescriptionKey: "APNs registration timed out",
         ]))
       }
@@ -50,7 +50,7 @@ final class PushRegistration {
   func unregister() {
     enabled = false
     token = nil
-    fail(NSError(domain: "PsstPsstPush", code: 2, userInfo: [
+    fail(NSError(domain: "OutlinkPush", code: 2, userInfo: [
       NSLocalizedDescriptionKey: "APNs registration cancelled",
     ]))
     UIApplication.shared.unregisterForRemoteNotifications()

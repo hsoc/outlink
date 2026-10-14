@@ -2,7 +2,7 @@ import { electronFileSystemAdapter as files } from '../file-system';
 import { electronImageCacheAdapter as cache } from '../image-cache';
 
 jest.mock('../file-system', () => ({ electronFileSystemAdapter: {
-  cacheDirectoryUri: jest.fn(async () => 'psstpsst-file://cache/'),
+  cacheDirectoryUri: jest.fn(async () => 'outlink-file://cache/'),
   stat: jest.fn(async () => ({ exists: false })),
   makeDirectory: jest.fn(async () => {}),
   downloadFile: jest.fn(async () => {}),
@@ -15,7 +15,7 @@ afterEach(() => jest.clearAllMocks());
 it('does not request a URL when checking local files', async () => {
   expect(await cache.getCachedUri('https://example.com/sticker.svg')).toBeNull();
   expect(files.downloadFile).not.toHaveBeenCalled();
-  expect(files.stat).toHaveBeenCalledWith(expect.stringMatching(/^psstpsst-file:\/\/cache\/remote-images\/[a-f0-9]+\.svg$/));
+  expect(files.stat).toHaveBeenCalledWith(expect.stringMatching(/^outlink-file:\/\/cache\/remote-images\/[a-f0-9]+\.svg$/));
 });
 
 it('publishes only complete downloads', async () => {

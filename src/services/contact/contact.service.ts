@@ -17,17 +17,17 @@ import {
 } from '../relay/replaceable-events.service';
 import type { Signer } from '../signer/signer.interface';
 
-/** NIP-51 follow set (kind 30000) reserved for PsstPsst's private contacts and saved-group list.
+/** NIP-51 follow set (kind 30000) reserved for Outlink's private contacts and saved-group list.
  * A private self-only list lives on our own outbox (`ownMetaRelays` = write ∪
  * discovery) — never a peer's relays. */
 const KIND_FOLLOW_SET = 30000;
 const KIND_NOSTR_CONTACT_LIST = 3;
 /** d-tag of the private contact set. */
-export const CONTACTS_D = 'psstpsst-contacts';
-const CONTACTS_TITLE = 'PsstPsst Contacts';
+export const CONTACTS_D = 'outlink-contacts';
+const CONTACTS_TITLE = 'Outlink Contacts';
 
 const LEGACY_SAVED_GROUPS_KIND = 30078;
-const LEGACY_SAVED_GROUPS_D = 'psstpsst-saved-groups';
+const LEGACY_SAVED_GROUPS_D = 'outlink-saved-groups';
 
 /** Only local legacy rows trigger migration; this coordinate is never fetched. */
 async function hasLegacySavedGroups(accountPubkey: string, tx: Database = db): Promise<boolean> {
@@ -142,7 +142,7 @@ export async function isContact(accountPubkey: string, pubkey: string): Promise<
 
 /** Fetch the account's latest public NIP-02 contact list (kind 3) and return
  * valid, deduped p-tag members as import candidates. This is only a seed source
- * for PsstPsst's private contact list; importing remains an explicit user choice.
+ * for Outlink's private contact list; importing remains an explicit user choice.
  * Goes through the shared replaceable-events cache (24h TTL), so repeat visits
  * within the window cost zero network. */
 export async function fetchNostrFollowContactCandidates(
@@ -191,7 +191,7 @@ export async function fetchNostrFollowContactCandidates(
 }
 
 /** Import a user-selected subset of public kind-3 follows into the private
- * PsstPsst contacts table. Additive only: existing contacts and petnames are left
+ * Outlink contacts table. Additive only: existing contacts and petnames are left
  * untouched, and the private synced set is re-published best-effort afterwards. */
 export async function importNostrFollowContacts(
   accountPubkey: string,

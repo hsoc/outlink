@@ -52,14 +52,14 @@ export class FileService {
   }
 
   directoryUri(kind: 'documents' | 'cache'): string {
-    return `psstpsst-file://${kind}/`;
+    return `outlink-file://${kind}/`;
   }
 
   toUri(nativePath: string): string {
     for (const [kind, root] of Object.entries(this.roots)) {
       const relative = path.relative(root, nativePath);
       if (relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))) {
-        return `psstpsst-file://${kind}/${encodePath(relative)}`;
+        return `outlink-file://${kind}/${encodePath(relative)}`;
       }
     }
     throw new Error('Path is outside application storage');
@@ -67,7 +67,7 @@ export class FileService {
 
   resolve(uri: string): string {
     const parsed = new URL(uri);
-    if (parsed.protocol !== 'psstpsst-file:') throw new Error('Unsupported file URI');
+    if (parsed.protocol !== 'outlink-file:') throw new Error('Unsupported file URI');
     if (parsed.hostname !== 'documents' && parsed.hostname !== 'cache') {
       throw new Error('Unknown file root');
     }

@@ -55,15 +55,15 @@ it('propagates clipboard failures for pending attachments', async () => {
 });
 
 it('copies a cached remote image without another download', async () => {
-  jest.mocked(platform.imageCache.getCachedUri).mockResolvedValue('psstpsst-file://cache/photo');
+  jest.mocked(platform.imageCache.getCachedUri).mockResolvedValue('outlink-file://cache/photo');
   await copyImageUri('https://media.example/photo');
   expect(platform.imageCache.download).not.toHaveBeenCalled();
-  expect(platform.clipboard.copyAttachment).toHaveBeenCalledWith('psstpsst-file://cache/photo', expect.anything());
+  expect(platform.clipboard.copyAttachment).toHaveBeenCalledWith('outlink-file://cache/photo', expect.anything());
 });
 
 it('downloads remote images through the platform cache after explicit copy', async () => {
   jest.mocked(platform.imageCache.getCachedUri).mockResolvedValue(null);
-  jest.mocked(platform.imageCache.download).mockResolvedValue('psstpsst-file://cache/photo');
+  jest.mocked(platform.imageCache.download).mockResolvedValue('outlink-file://cache/photo');
   await copyImageUri('https://media.example/photo');
   expect(platform.imageCache.download).toHaveBeenCalledWith('https://media.example/photo');
 });

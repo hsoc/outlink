@@ -6,7 +6,7 @@ import { platform } from '@/platform';
 import { removeWalletPin } from './wallet-pin.service';
 
 export function nwcSecretKey(accountPubkey: string, walletId: string): string {
-  return `psstpsst.nwc.${accountPubkey.slice(0, 16)}.${walletId}`;
+  return `outlink.nwc.${accountPubkey.slice(0, 16)}.${walletId}`;
 }
 
 /** Delete every NWC credential owned by an account before its wallet rows are

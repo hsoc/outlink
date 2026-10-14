@@ -1,4 +1,4 @@
-PsstPsst dependency license notices
+Outlink dependency license notices
 
 Cross-platform non-development npm dependency closure, plus the shipped Electron runtime.
 Includes optional packages and build utilities; not an exact binary inventory.

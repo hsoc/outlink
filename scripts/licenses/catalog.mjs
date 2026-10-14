@@ -88,7 +88,7 @@ export function serializeNotices(packages, texts) {
     ].join('\n');
   });
   const used = [...new Set(packages.flatMap((pkg) => pkg.licenseFiles.map((file) => file.sha256)))];
-  return 'PsstPsst dependency license notices\n\n' +
+  return 'Outlink dependency license notices\n\n' +
     'Cross-platform non-development npm dependency closure, plus the shipped Electron runtime.\n' +
     'Includes optional packages and build utilities; not an exact binary inventory.\n' +
     separator + descriptions.join(separator) + separator +

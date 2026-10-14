@@ -8,7 +8,7 @@ import { fetchAndDecryptAttachment, getCachedAttachmentUri } from './file-attach
 /** Outcome of a save-to-library attempt, so the UI can pick the right message. */
 export type SaveResult = 'saved' | 'cancelled' | 'denied' | 'failed';
 
-const MEDIA_SAVE_DIR_NAME = 'psstpsst-media-save';
+const MEDIA_SAVE_DIR_NAME = 'outlink-media-save';
 let stagedCaptureSequence = 0;
 
 async function mediaSaveDir(): Promise<string> {
@@ -102,7 +102,7 @@ export async function saveAttachment(
   try {
     uri = (await getCachedAttachmentUri(meta)) ?? (await fetchAndDecryptAttachment(meta, opts));
     const saved = await platform.fileSaver.save(uri, {
-      suggestedName: meta.name || 'psstpsst-file',
+      suggestedName: meta.name || 'outlink-file',
       mimeType: meta.mime,
     });
     return saved ? 'saved' : 'cancelled';
@@ -122,7 +122,7 @@ export async function saveLocalAttachment(input: {
   }
   try {
     const saved = await platform.fileSaver.save(input.uri, {
-      suggestedName: input.name || 'psstpsst-file',
+      suggestedName: input.name || 'outlink-file',
       mimeType: input.mime,
     });
     return saved ? 'saved' : 'cancelled';
@@ -133,7 +133,7 @@ export async function saveLocalAttachment(input: {
 
 /** Explicitly save a direct URL to the system photo library. Ordinary media is
  * otherwise owned by expo-image / expo-video / expo-audio caches and never
- * promoted into PsstPsst's persistent attachment store. MediaLibrary requires a
+ * promoted into Outlink's persistent attachment store. MediaLibrary requires a
  * local URI, so this action uses an OS-evictable temp file and removes it after
  * the library has imported the asset. */
 export async function saveRemoteMediaToLibrary(media: EmbeddedMedia): Promise<SaveResult> {

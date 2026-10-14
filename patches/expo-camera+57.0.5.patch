@@ -41,7 +41,7 @@ index 944fbf8..d2aa3b5 100644
 -  add(barcodeDependencyConfiguration, "com.google.android.gms:play-services-code-scanner:16.1.0")
 -  add(barcodeDependencyConfiguration, "com.google.mlkit:barcode-scanning:17.3.0")
 -  add(barcodeDependencyConfiguration, "androidx.camera:camera-mlkit-vision:${camerax_version}")
-+  // PsstPsst uses the offline ZXing-C++ reader instead of Google's barcode SDKs.
++  // Outlink uses the offline ZXing-C++ reader instead of Google's barcode SDKs.
 +  implementation "io.github.zxing-cpp:android:3.0.2"
 +
 +  androidTestImplementation "androidx.test:runner:1.6.2"

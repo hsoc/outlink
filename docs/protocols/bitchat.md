@@ -124,7 +124,7 @@ Remote identity pins are not persisted by this implementation.
 ## Private sessions
 
 Noise is `Noise_XX_25519_ChaChaPoly_SHA256` with an **empty prologue** and empty
-handshake payloads. Outlink Nearby's `PsstPsst Nearby/1` prologue would be
+handshake payloads. Outlink Nearby's `Outlink Nearby/1` prologue would be
 incompatible and is never used here. Directed handshake packets (`0x10`) carry
 XX messages of 32, 96, and 64 bytes. For simultaneous initiations the smaller
 peer ID retains the initiator role. A handshake expires after 15 seconds.

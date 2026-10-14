@@ -1,4 +1,4 @@
-PsstPsst 26.9.1
+Outlink 26.9.1
 
 - Pay Lightning requests with any compatible wallet app, without connecting one first.
 - More reliable message delivery after network interruptions.

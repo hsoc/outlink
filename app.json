@@ -1,16 +1,15 @@
 {
   "expo": {
-    "name": "PsstPsst",
-    "slug": "psstpsst",
+    "name": "Outlink",
+    "slug": "outlink",
     "version": "26.10.5",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
-    "scheme": "psstpsst",
+    "scheme": "outlink",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "appleTeamId": "V8288WZJ27",
       "icon": "./assets/images/icon.png",
-      "bundleIdentifier": "chat.psstpsst.app",
+      "bundleIdentifier": "io.github.hsoc.outlink",
       "buildNumber": "12",
       "supportsTablet": true
     },
@@ -39,7 +38,7 @@
         "android.permission.READ_MEDIA_AUDIO",
         "android.permission.READ_MEDIA_VISUAL_USER_SELECTED"
       ],
-      "package": "chat.psstpsst.app"
+      "package": "io.github.hsoc.outlink"
     },
     "web": {
       "output": "single",

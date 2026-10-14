@@ -7,9 +7,10 @@ primary connection path; full identifiers from other providers remain supported.
 Bare nicknames do not trigger a naming-service lookup. The implementation below
 is dormant reference code, not a current product flow.
 
-PsstPsst uses the NIP-05 naming service at `https://psstpsst.chat`. Lookup uses
+No naming service is deployed. The retained client uses the reserved placeholder
+`https://outlink.invalid`; it must be configured before restoring registration. Lookup uses
 `GET /.well-known/nostr.json`; registration is a service-specific HTTP API, not
-a PsstPsst messaging protocol.
+an Outlink messaging protocol.
 
 Names are 5–30 characters of lowercase letters, digits, `.`, `_`, and `-`, and
 must start and end with a letter or digit. Matching is case-insensitive and the

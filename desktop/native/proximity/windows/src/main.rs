@@ -1,6 +1,6 @@
 #[cfg(not(target_os = "windows"))]
 fn main() {
-    eprintln!("psstpsst-proximity-windows can only run on Windows");
+    eprintln!("outlink-proximity-windows can only run on Windows");
 }
 
 #[cfg(target_os = "windows")]
@@ -611,7 +611,7 @@ mod windows_runtime {
                         }
                         .await;
                         if let Err(error) = result {
-                            eprintln!("[psstpsst-proximity] profile read failed: {error:#}");
+                            eprintln!("[outlink-proximity] profile read failed: {error:#}");
                         }
                         let _ = deferral.Complete();
                     });
@@ -649,7 +649,7 @@ mod windows_runtime {
                         }
                         .await;
                         if let Err(error) = result {
-                            eprintln!("[psstpsst-proximity] mailbox write failed: {error:#}");
+                            eprintln!("[outlink-proximity] mailbox write failed: {error:#}");
                         }
                         let _ = deferral.Complete();
                     });
@@ -671,7 +671,7 @@ mod windows_runtime {
                         handle.spawn(async move {
                             if let Err(error) = refresh_subscribers(&shared, &mailbox).await {
                                 eprintln!(
-                                    "[psstpsst-proximity] subscriber refresh failed: {error:#}"
+                                    "[outlink-proximity] subscriber refresh failed: {error:#}"
                                 );
                             }
                         });
@@ -705,7 +705,7 @@ mod windows_runtime {
                 {
                     let error = arguments.Error().ok();
                     eprintln!(
-                        "[psstpsst-proximity] GATT advertising stopped: status={status:?} error={error:?}"
+                        "[outlink-proximity] GATT advertising stopped: status={status:?} error={error:?}"
                     );
                     Some(Err(format!(
                         "Windows GATT advertising failed: status={status:?} error={error:?}"
@@ -763,7 +763,7 @@ mod windows_runtime {
                     && let Ok(operation) = peripheral.profile.NotifyValueAsync(&buffer)
                     && let Err(error) = operation.await
                 {
-                    eprintln!("[psstpsst-proximity] profile notification failed: {error:#}");
+                    eprintln!("[outlink-proximity] profile notification failed: {error:#}");
                 }
             }
         }
@@ -829,7 +829,7 @@ mod windows_runtime {
                         && let Ok(error) = arguments.Error()
                         && error != windows::Devices::Bluetooth::BluetoothError::Success
                     {
-                        eprintln!("[psstpsst-proximity] BLE scan stopped with error: {error:?}");
+                        eprintln!("[outlink-proximity] BLE scan stopped with error: {error:?}");
                     }
                     Ok(())
                 }))?;
@@ -1102,7 +1102,7 @@ mod windows_runtime {
         let result = activate_remote_inner(&shared, address, generation).await;
         shared.connecting.lock().await.remove(&address);
         if let Err(error) = result {
-            eprintln!("[psstpsst-proximity] unable to activate {address}: {error:#}");
+            eprintln!("[outlink-proximity] unable to activate {address}: {error:#}");
             let endpoint_id = format!("c:{address}");
             let connection_generation = shared.connection_generation(&endpoint_id).await;
             shared.emitter.event(
@@ -1519,11 +1519,11 @@ async fn main() {
     use windows::Win32::System::WinRT::{RO_INIT_MULTITHREADED, RoInitialize};
 
     if let Err(error) = unsafe { RoInitialize(RO_INIT_MULTITHREADED) } {
-        eprintln!("[psstpsst-proximity] WinRT initialization failed: {error}");
+        eprintln!("[outlink-proximity] WinRT initialization failed: {error}");
         std::process::exit(1);
     }
     if let Err(error) = windows_runtime::run().await {
-        eprintln!("[psstpsst-proximity] fatal error: {error:#}");
+        eprintln!("[outlink-proximity] fatal error: {error:#}");
         std::process::exit(1);
     }
 }

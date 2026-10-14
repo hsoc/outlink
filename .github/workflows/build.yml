@@ -35,7 +35,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  RELEASE_REPOSITORY: codytseng/psstpsst
+  RELEASE_REPOSITORY: hsoc/outlink
   EXPO_PUBLIC_APP_ENV: production
 
 jobs:
@@ -64,6 +64,7 @@ jobs:
         run: bash scripts/build-android-reproducible.sh --check-image
       - name: Verify third-party notices
         run: |
+          npm run test:branding
           npm run licenses:check
           npm run licenses:test
       - name: Validate signing configuration
@@ -175,9 +176,9 @@ jobs:
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
         run: |
           if [[ -n "$CSC_LINK" ]]; then
-            codesign --verify --deep --strict --verbose=2 release/mac-arm64/PsstPsst.app
-            spctl --assess --type execute --verbose=2 release/mac-arm64/PsstPsst.app
-            xcrun stapler validate release/mac-arm64/PsstPsst.app
+            codesign --verify --deep --strict --verbose=2 release/mac-arm64/Outlink.app
+            spctl --assess --type execute --verbose=2 release/mac-arm64/Outlink.app
+            xcrun stapler validate release/mac-arm64/Outlink.app
           fi
 
       - name: Upload packages
@@ -254,7 +255,7 @@ jobs:
         run: |
           node scripts/release-signing.mjs sign-android \
             release/fdroid-build/app-release.apk \
-            release/PsstPsst-android.apk
+            release/Outlink-android.apk
 
       - name: Upload APK
         if: needs.validate-version.outputs.apk == 'true'
@@ -275,7 +276,7 @@ jobs:
         run: |
           node scripts/release-signing.mjs sign-android-bundle \
             release/fdroid-build/app-release.aab \
-            release/PsstPsst-android.aab
+            release/Outlink-android.aab
 
       - name: Upload AAB
         if: needs.validate-version.outputs.aab == 'true'
@@ -284,7 +285,7 @@ jobs:
           name: android-aab
           if-no-files-found: error
           retention-days: 14
-          path: release/PsstPsst-android.aab
+          path: release/Outlink-android.aab
 
       - name: Audit F-Droid signature compatibility (non-blocking)
         id: fdroid_audit
@@ -305,7 +306,7 @@ jobs:
             --requirement scripts/fdroid-reproducibility-requirements.txt
           node scripts/verify-fdroid-reproducibility.mjs \
             release/fdroid-build/app-release.apk \
-            release/PsstPsst-android.apk
+            release/Outlink-android.apk
 
       - name: Report F-Droid audit failure
         if: always() && steps.fdroid_audit.outcome == 'failure'
@@ -364,7 +365,7 @@ jobs:
             fi
             gh release edit "$GITHUB_REF_NAME" \
               --repo "$RELEASE_REPOSITORY" \
-              --title "PsstPsst $version" \
+              --title "Outlink $version" \
               --notes-file "$notes_file"
           else
             gh release create "$GITHUB_REF_NAME" \
@@ -372,7 +373,7 @@ jobs:
               --draft \
               --verify-tag \
               --notes-file "$notes_file" \
-              --title "PsstPsst $version"
+              --title "Outlink $version"
           fi
 
           gh release upload "$GITHUB_REF_NAME" release-assets/* \

@@ -1,6 +1,6 @@
 {
   "welcome": {
-    "title": "PsstPsst",
+    "title": "Outlink",
     "subtitle": "Merkeziyetsiz, uçtan uca şifreli mesajlaşma",
     "choose_title": "Bir hesap seç",
     "login_nsec": "Özel anahtarla giriş yap",
@@ -26,7 +26,7 @@
     },
     "nostr_connect": {
       "title": "Nostr Connect",
-      "subtitle": "Bu kodu imzalayıcınla tara veya bu cihazda bir imzalayıcı açmak için dokun. İmzalayıcı onaylayınca PsstPsst giriş yapar.",
+      "subtitle": "Bu kodu imzalayıcınla tara veya bu cihazda bir imzalayıcı açmak için dokun. İmzalayıcı onaylayınca Outlink giriş yapar.",
       "copy": "Linki kopyala",
       "copied": "Kopyalandı",
       "waiting": "İmzalayıcın bekleniyor…",
@@ -37,7 +37,7 @@
   },
   "generate": {
     "title": "Yeni hesap",
-    "subtitle": "PsstPsst senin için yeni bir hesap oluşturdu.",
+    "subtitle": "Outlink senin için yeni bir hesap oluşturdu.",
     "warning": "Aşağıdaki özel anahtarı yedekle. Buna sahip olan herkes mesajlarını okuyabilir ve seni taklit edebilir.",
     "copy": "Kopyala",
     "copied": "Kopyalandı",
@@ -87,7 +87,7 @@
     "qr_save": "Kaydet",
     "qr_saved": "Fotoğraflarına kaydedildi.",
     "qr_save_failed": "Kaydedilemedi. Tekrar dene.",
-    "qr_save_permission": "PsstPsst'in kartı kaydetmek için fotoğraflara erişmesi gerekiyor."
+    "qr_save_permission": "Outlink'in kartı kaydetmek için fotoğraflara erişmesi gerekiyor."
   },
   "report": {
     "title": "Kullanıcıyı bildir",
@@ -121,14 +121,14 @@
     "url_confirm": "Bu görseli kullan",
     "image_url_placeholder": "https://…",
     "save": "Kaydet",
-    "photo_permission": "PsstPsst'in fotoğrafını ayarlamak için fotoğraflara erişmesi gerekiyor.",
-    "camera_permission": "PsstPsst'in fotoğraf çekmek için kameraya erişmesi gerekiyor.",
+    "photo_permission": "Outlink'in fotoğrafını ayarlamak için fotoğraflara erişmesi gerekiyor.",
+    "camera_permission": "Outlink'in fotoğraf çekmek için kameraya erişmesi gerekiyor.",
     "upload_failed": "Görsel yüklenemedi. Tekrar dene.",
     "save_failed": "Profilin kaydedilemedi. Tekrar dene."
   },
   "nip05": {
     "title": "Kişisel tanımlayıcı",
-    "subtitle": "psstpsst.chat üzerinde kişisel bir tanımlayıcı al, böylece başkaları seni açık anahtarın olmadan bulabilsin.",
+    "subtitle": "outlink.invalid üzerinde kişisel bir tanımlayıcı al, böylece başkaları seni açık anahtarın olmadan bulabilsin.",
     "name_label": "Ad",
     "name_placeholder": "ad",
     "name_hint": "5-30 karakter: harfler, rakamlar, noktalar, kısa çizgiler ve alt çizgiler. Harf veya rakamla başlayıp bitmelidir.",
@@ -145,7 +145,7 @@
     "change": "Tanımlayıcıyı değiştir",
     "claim_failed": "Tanımlayıcı alınamadı. Tekrar dene.",
     "skip": "Şimdilik atla",
-    "profile_entry": "psstpsst.chat tanımlayıcısı al",
+    "profile_entry": "outlink.invalid tanımlayıcısı al",
     "profile_switch": "{{address}} olarak değiştir"
   },
   "conversations": {
@@ -299,7 +299,7 @@
     "sent": "Gönderildi",
     "enter_conversation": "Sohbeti aç",
     "send_failed": "Her şey gönderilemedi. Yeniden paylaşmayı dene.",
-    "receive_failed_title": "PsstPsst ile paylaşılamıyor",
+    "receive_failed_title": "Outlink ile paylaşılamıyor",
     "receive_failed": "Paylaşılan içerik artık kullanılamıyor. Yeniden paylaşmayı dene.",
     "stage_failed": "Paylaşılan dosyalar hazırlanamadı. Tekrar dene.",
     "too_many_items": "Bir seferde en fazla 10 öğe paylaş.",
@@ -528,10 +528,10 @@
     "unavailable": "Bu kişiye mesaj gönderilemiyor",
     "unavailable_title": "Bu kişiye mesaj gönderilemiyor",
     "unavailable_summary": {
-      "checking": "PsstPsst bu kişinin şu anda mesaj alıp alamadığını kontrol ediyor.",
+      "checking": "Outlink bu kişinin şu anda mesaj alıp alamadığını kontrol ediyor.",
       "missingRelays": "Bu kişinin mesaj aldığı relay'ler bulunamadı.",
-      "missingEncryptionKey": "Bu kişinin uygulaması PsstPsst'in kullandığı şifreli mesajlaşma protokolünü desteklemiyor olabilir.",
-      "unknown": "PsstPsst bu kişinin mesaj alabildiğini doğrulayamadı."
+      "missingEncryptionKey": "Bu kişinin uygulaması Outlink'in kullandığı şifreli mesajlaşma protokolünü desteklemiyor olabilir.",
+      "unknown": "Outlink bu kişinin mesaj alabildiğini doğrulayamadı."
     },
     "check_relays": "Mesaj relay'leri",
     "check_key": "Şifreleme açık anahtarı",
@@ -564,16 +564,16 @@
     "background_service_message": "Yeni mesajlar bekleniyor",
     "new_message": "Yeni mesaj",
     "new_messages": "{{count}} yeni mesaj",
-    "open_to_view_message": "Mesajı görmek için PsstPsst'i aç",
-    "delivery_note_ios": "Arka plan bildirimleri relay.psstpsst.chat kullanılarak APNs üzerinden iletilir.",
+    "open_to_view_message": "Mesajı görmek için Outlink'i aç",
+    "delivery_note_ios": "Arka plan bildirimleri relay.outlink.invalid kullanılarak APNs üzerinden iletilir.",
     "required_relay_note": "iOS bildirimlerini etkinleştirmek için mesaj aktarıcılarınıza {{relay}} ekleyin.",
     "relay_settings_action": "Ayarlara git",
-    "delivery_note_android": "Android mesaj bağlantısını arka planda etkin tutabilir, ancak sistem veya cihaz üreticisi bunu durdurabilir. Daha güvenilir bildirimler için sistem ayarlarında PsstPsst'in arka planda çalışmasına izin ver ve pil optimizasyonundan hariç tut. Seçenekler cihaza göre değişir.",
-    "delivery_note_desktop": "Bildirimler PsstPsst sistem tepsisinde çalışmaya devam ederken gelir. Uygulamadan tamamen çıkmak arka plan kontrollerini durdurur.",
+    "delivery_note_android": "Android mesaj bağlantısını arka planda etkin tutabilir, ancak sistem veya cihaz üreticisi bunu durdurabilir. Daha güvenilir bildirimler için sistem ayarlarında Outlink'in arka planda çalışmasına izin ver ve pil optimizasyonundan hariç tut. Seçenekler cihaza göre değişir.",
+    "delivery_note_desktop": "Bildirimler Outlink sistem tepsisinde çalışmaya devam ederken gelir. Uygulamadan tamamen çıkmak arka plan kontrollerini durdurur.",
     "privacy_note": "Bu bilgiler varsayılan olarak gizlidir. Gösterirsen bu cihazın bildirim geçmişinde kalabilirler.",
-    "system_permission_note": "Sistem ayarlarında da PsstPsst bildirimlerine izin ver. Uygulama, sistem bildirimlerinin açık olup olmadığını kontrol edemez.",
+    "system_permission_note": "Sistem ayarlarında da Outlink bildirimlerine izin ver. Uygulama, sistem bildirimlerinin açık olup olmadığını kontrol edemez.",
     "permission_denied_title": "Bildirimler kapalı",
-    "permission_denied_message": "Yeni mesaj bildirimleri almak için sistem ayarlarında PsstPsst bildirimlerine izin ver.",
+    "permission_denied_message": "Yeni mesaj bildirimleri almak için sistem ayarlarında Outlink bildirimlerine izin ver.",
     "unavailable_title": "Bildirimler kullanılamıyor",
     "unavailable_message": "Bu masaüstü ortamı sistem bildirimlerini desteklemiyor.",
     "open_settings": "Ayarlar'ı aç",
@@ -596,7 +596,7 @@
     "dm_relays": "Mesaj relay'leri",
     "media_servers": "Medya sunucuları",
     "blocked_users": "Engellenen kullanıcılar",
-    "about": "PsstPsst hakkında",
+    "about": "Outlink hakkında",
     "security": "Güvenlik",
     "export_nsec": "Özel anahtarı kopyala",
     "export_nsec_title": "Özel anahtar kopyalansın mı?",
@@ -618,13 +618,13 @@
     "not_now": "Şimdi değil",
     "downloading": "{{version}} sürümü indiriliyor…",
     "download_failed_title": "İndirme başarısız",
-    "download_failed_message": "Güncelleme indirilemedi. PsstPsst'i bir sonraki açışınızda tekrar deneyin.",
+    "download_failed_message": "Güncelleme indirilemedi. Outlink'i bir sonraki açışınızda tekrar deneyin.",
     "ready_title": "Yüklemeye hazır",
-    "ready_message": "{{version}} sürümü indirildi. Şimdi yüklemek için PsstPsst yeniden başlatılsın mı?",
+    "ready_message": "{{version}} sürümü indirildi. Şimdi yüklemek için Outlink yeniden başlatılsın mı?",
     "restart_and_install": "Yeniden başlat ve yükle",
     "later": "Daha sonra",
     "install_failed_title": "Yükleme başlatılamadı",
-    "install_failed_message": "PsstPsst yükleyiciyi yeniden başlatamadı. Uygulamayı bir sonraki açışınızda tekrar deneyin."
+    "install_failed_message": "Outlink yükleyiciyi yeniden başlatamadı. Uygulamayı bir sonraki açışınızda tekrar deneyin."
   },
   "legal": {
     "privacy_policy": "Gizlilik politikası",
@@ -773,7 +773,7 @@
   "secure_storage": {
     "setup_title": "Uygulamanı koru",
     "setup_hint": "Bu sistem anahtarlarını tek başına güvenle saklayamaz. Şifrelemek için bir uygulama parolası oluştur.",
-    "unlock_title": "PsstPsst'in kilidini aç",
+    "unlock_title": "Outlink'in kilidini aç",
     "unlock_hint": "Anahtarlarının ve hesabının kilidini açmak için uygulama parolanı gir.",
     "password": "Uygulama parolası",
     "confirm_password": "Uygulama parolasını doğrula",
@@ -820,7 +820,7 @@
     "description_placeholder": "Bu ne için?",
     "direction": "Yön",
     "empty_title": "Lightning ödemeleri",
-    "empty_hint": "Bir cüzdan uygulamasıyla ödeme yap veya PsstPsst'te ödeme ve ödeme isteği için bir cüzdan bağla.",
+    "empty_hint": "Bir cüzdan uygulamasıyla ödeme yap veya Outlink'te ödeme ve ödeme isteği için bir cüzdan bağla.",
     "expires": "Sona erer",
     "expires_at": "Sona erer",
     "expires_in": "Sona ermesine",

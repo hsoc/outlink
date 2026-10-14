@@ -150,13 +150,13 @@ it.each(['light', 'dark'] as const)('prefills only the message-relay input witho
   mockScheme = scheme;
   activeMode = 'dm';
   await act(async () => {
-    renderer = create(<RelaySettingsScreen initialDmRelay="wss://relay.psstpsst.chat/" />);
+    renderer = create(<RelaySettingsScreen initialDmRelay="wss://relay.outlink.invalid/" />);
   });
-  expect(activePanel().findByType(AppInput).props.value).toBe('wss://relay.psstpsst.chat/');
+  expect(activePanel().findByType(AppInput).props.value).toBe('wss://relay.outlink.invalid/');
   expect(activePanel().findByType(SortableUrlList).props.value).toEqual(['wss://dm.example/']);
   expect(saveAndPublishDmRelays).not.toHaveBeenCalled();
   await selectTab('write');
   expect(activePanel().findByType(AppInput).props.value).toBe('');
   await selectTab('dm');
-  expect(activePanel().findByType(AppInput).props.value).toBe('wss://relay.psstpsst.chat/');
+  expect(activePanel().findByType(AppInput).props.value).toBe('wss://relay.outlink.invalid/');
 });

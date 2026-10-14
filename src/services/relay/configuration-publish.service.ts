@@ -222,7 +222,7 @@ export async function getPendingConfiguration(accountPubkey: string, kind: numbe
 export async function canApplyConfigurationEvent(
   accountPubkey: string, kind: number, dTag: string, event: Event, tx: Database = db,
 ): Promise<boolean> {
-  if (kind === 30000 && (dTag === 'psstpsst-muted' || dTag === 'psstpsst-blocked')) {
+  if (kind === 30000 && (dTag === 'outlink-muted' || dTag === 'outlink-blocked')) {
     const [state] = await tx.select({ dirty: privateListSyncState.dirty }).from(privateListSyncState)
       .where(and(eq(privateListSyncState.accountPubkey, accountPubkey), eq(privateListSyncState.dTag, dTag)))
       .limit(1);
@@ -368,13 +368,13 @@ export class ConfigurationPublisher {
       failure = error instanceof Error ? error.message : String(error);
     }
     if (!current()) return;
-    if (row.kind === 30000 && ['psstpsst-contacts', 'psstpsst-muted', 'psstpsst-blocked'].includes(row.dTag)) {
+    if (row.kind === 30000 && ['outlink-contacts', 'outlink-muted', 'outlink-blocked'].includes(row.dTag)) {
       // This list can always be rebuilt from local plaintext. Retire a failed
       // delivery; the next edit creates a new event instead of retrying ciphertext.
       await db.transaction(async (tx) => {
         if ((await readPending(row, tx))?.eventId !== row.eventId) return;
         await tx.delete(configurationOutbox).where(exact(row));
-        if (row.dTag === 'psstpsst-contacts') {
+        if (row.dTag === 'outlink-contacts') {
           await tx.update(contactSyncState).set({ dirty: true }).where(and(
             eq(contactSyncState.accountPubkey, row.accountPubkey),
             eq(contactSyncState.eventId, row.eventId),

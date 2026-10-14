@@ -38,7 +38,7 @@ export function prepareBrandArtworkUri(): Promise<string> {
   return preparedArtworkUri;
 }
 
-/** The shared PsstPsst atmosphere artwork, rendered as non-semantic decoration. */
+/** The shared Outlink atmosphere artwork, rendered as non-semantic decoration. */
 export function BrandArtworkImage({ contentPosition = 'center', style }: Props) {
   return (
     <Image

@@ -1,6 +1,6 @@
 # Third-party notices
 
-PsstPsst is licensed under MIT. Third-party code retains its
+Outlink is licensed under MIT. Third-party code retains its
 respective license and copyright notices. See the license files and source
 headers accompanying each dependency, including vendored code.
 
@@ -33,7 +33,7 @@ for the precise scope, known native inventory gaps, and update commands.
 
 Solar Icons Set by [480 Design](https://www.figma.com/community/file/1166831539721848736)
 is used under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
-PsstPsst adjusts the icons' display size and color. The React Native wrapper is
+Outlink adjusts the icons' display size and color. The React Native wrapper is
 Copyright (c) 2024 Hakim Saoudi and uses MIT. Its license does not replace the
 icon artwork's attribution terms. The About screen credits the original artist.
 

@@ -16,7 +16,7 @@ type Props = {
 
 /**
  * A single profile action: a circular white (`elevated`) `IconButton` over a
- * caption label — floats on the grouped profile page. Reuses PsstPsst's own
+ * caption label — floats on the grouped profile page. Reuses Outlink's own
  * button language rather than a foreign capsule/tile style. Drop several into a
  * centered row to form the action strip on profile screens (DESIGN §8).
  */

@@ -5,7 +5,7 @@ import { sqliteTable, text, integer, primaryKey, index } from 'drizzle-orm/sqlit
  * contact survives deleting its conversation, and a contact can be added before
  * any message is exchanged. The local table is the UI source of truth; it is
  * synced privately across the user's own devices via a NIP-51 follow set
- * (kind 30000, `d=psstpsst-contacts`) whose entries are NIP-44-encrypted to self.
+ * (kind 30000, `d=outlink-contacts`) whose entries are NIP-44-encrypted to self.
  */
 export const contacts = sqliteTable(
   'contacts',

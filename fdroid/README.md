@@ -1,21 +1,17 @@
 # F-Droid submission preparation
 
-`metadata/chat.psstpsst.app.yml` is a disabled submission draft for the official
+`metadata/io.github.hsoc.outlink.yml` is a disabled submission draft for the official
 F-Droid repository. It is not a self-hosted repository configuration or proof
 that the application meets F-Droid's inclusion requirements. Copy the completed
 file into a fork of https://gitlab.com/fdroid/fdroiddata for validation and review.
 
-## Previous release inputs
+## Release inputs
 
-The signing key and reproducibility investigation are based on the public
-`v0.2.2` release (version code `4`), commit
-`06bcb7204216e100aae7a5bd704a6057150d0041`. Its `AllowedAPKSigningKeys` matches
-the certificate reported by `apksigner verify --print-certs` on the published
-`PsstPsst-0.2.2-android.apk`.
+No signing certificate or APK reproducibility result is established for Outlink.
+Configure the new application signing key and verify the fork build before
+enabling or submitting this recipe. Previous upstream release evidence does not
+verify this application identity.
 
-The [upstream Android build log](https://github.com/codytseng/psstpsst/actions/runs/35362574131/job/105657242487)
-records Node.js `22.23.2`, npm `10.9.8`, Temurin `17.0.20+1`, Android API `36`,
-Build Tools `36.0.0`, NDK `27.1.12297006`, and CMake `3.22.1`.
 The recipe uses Node.js `24.15.0` and its bundled npm `11.12.1` to match the
 maintainer's local development environment. These differ from the published
 release's Node/npm versions, so APK reproducibility must be verified with this
@@ -155,12 +151,12 @@ signing path must be built and verified before submission.
 4. Review the narrow scanner exceptions and dependency licenses with the
    packagers. Existing FCM/ML Kit checks remain only a subset of this review.
 5. Remove `disable` in the validation copy, then run `fdroid readmeta`,
-   `fdroid lint chat.psstpsst.app`, `fdroid rewritemeta chat.psstpsst.app`, and
-   `fdroid build --server chat.psstpsst.app:12` in the configured fdroiddata
+   `fdroid lint io.github.hsoc.outlink`, `fdroid rewritemeta io.github.hsoc.outlink`, and
+   `fdroid build --server io.github.hsoc.outlink:12` in the configured fdroiddata
    checkout. Compare the rebuilt APK with the published APK using F-Droid's
    reproducible-build verification.
 6. Enable automatic updates only after the first verified build, using
-   `AutoUpdateMode: Version`. Test `fdroid checkupdates chat.psstpsst.app`;
+   `AutoUpdateMode: Version`. Test `fdroid checkupdates io.github.hsoc.outlink`;
    version name and code are read from `app.json` at release tags because the
    Android project is generated rather than committed.
 

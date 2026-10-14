@@ -4,7 +4,7 @@ import Foundation
 /** A foreground-only lock rejects stale lifecycle preferences without blocking suspension. */
 enum SharedNotificationContext {
   private static let presenceLock = NotificationPresenceLock()
-  private static var group: String? { Bundle.main.object(forInfoDictionaryKey: "PsstPsstAppGroup") as? String }
+  private static var group: String? { Bundle.main.object(forInfoDictionaryKey: "OutlinkAppGroup") as? String }
   private static var defaults: UserDefaults? { group.flatMap(UserDefaults.init(suiteName:)) }
   private static var lockPath: String? {
     group.flatMap { FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: $0) }?
@@ -29,7 +29,7 @@ enum SharedNotificationContext {
     } else { defaults?.removeObject(forKey: "activeConversation") }
   }
 
-  static var databaseChanged: String { "\(group ?? "chat.psstpsst").database-changed" }
+  static var databaseChanged: String { "\(group ?? "io.github.hsoc.outlink").database-changed" }
 
   static func publishDatabaseChanged() {
     CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(),

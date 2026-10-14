@@ -15,7 +15,7 @@ type PinRecord = {
 };
 
 function walletPinKey(accountPubkey: string): string {
-  return `psstpsst.wallet.pin.${accountPubkey}`;
+  return `outlink.wallet.pin.${accountPubkey}`;
 }
 
 export async function walletAuthenticationMode(

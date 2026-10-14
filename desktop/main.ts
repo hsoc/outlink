@@ -76,7 +76,7 @@ protocol.registerSchemesAsPrivileged([
     privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true },
   },
   {
-    scheme: 'psstpsst-file',
+    scheme: 'outlink-file',
     privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true },
   },
 ]);
@@ -132,7 +132,7 @@ const TITLEBAR_OVERLAY_HEIGHT = process.platform === 'darwin' ? 28 : 40;
 const TRAFFIC_LIGHT_POSITION = { x: 12, y: 8 } as const;
 
 function resolveDevelopmentRendererOrigin(): string | null {
-  const value = process.env.PSSTPSST_RENDERER_URL;
+  const value = process.env.OUTLINK_RENDERER_URL;
   if (!value) return null;
   const url = new URL(value);
   if (
@@ -876,7 +876,7 @@ function registerIpcHandlers(): void {
     return services().files.saveFile(
       event.sender,
       safeUri,
-      decodeURIComponent(safeUri.split('/').pop() ?? 'psstpsst-media'),
+      decodeURIComponent(safeUri.split('/').pop() ?? 'outlink-media'),
     );
   });
   handle(IPC.dialogShareFile, async (event, uri, name) => {
@@ -1037,7 +1037,7 @@ function registerIpcHandlers(): void {
 }
 
 async function registerProtocols(): Promise<void> {
-  protocol.handle('psstpsst-file', async (request) => {
+  protocol.handle('outlink-file', async (request) => {
     if (request.method === 'OPTIONS') {
       return localFileResponse(request, new Response(null, { status: 204 }),
         isTrustedRendererLocation, DEVELOPMENT_RENDERER_ORIGIN ?? 'app://renderer');
@@ -1064,7 +1064,7 @@ async function registerProtocols(): Promise<void> {
     const headers = new Headers(response.headers);
     headers.set(
       'Content-Security-Policy',
-      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' psstpsst-file: data: blob: https:; media-src 'self' psstpsst-file: blob: https:; connect-src 'self' data: blob: https: wss: http://localhost:* ws://localhost:*; font-src 'self' data:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'",
+      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' outlink-file: data: blob: https:; media-src 'self' outlink-file: blob: https:; connect-src 'self' data: blob: https: wss: http://localhost:* ws://localhost:*; font-src 'self' data:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'",
     );
     return new Response(response.body, { status: response.status, headers });
   });
@@ -1109,7 +1109,7 @@ function createWindow(): BrowserWindow {
       webSecurity: true,
       backgroundThrottling: false,
       additionalArguments: [
-        `--psstpsst-proximity-available=${proximityService?.isAvailable() ? '1' : '0'}`,
+        `--outlink-proximity-available=${proximityService?.isAvailable() ? '1' : '0'}`,
       ],
     },
   });
@@ -1261,7 +1261,7 @@ async function start(): Promise<void> {
   fileService = new FileService(userDataPath);
   await fileService.initialize();
   clipboardSnapshots = new ClipboardSnapshots(
-    fileService.resolve(`${fileService.directoryUri('cache')}psstpsst-clipboard/`),
+    fileService.resolve(`${fileService.directoryUri('cache')}outlink-clipboard/`),
     readClipboardFilePaths,
   );
   await clipboardSnapshots.start();
@@ -1272,9 +1272,9 @@ async function start(): Promise<void> {
   );
   await proximityService.initialize();
   noiseService = new NoiseService();
-  process.env.PSSTPSST_PROXIMITY_AVAILABLE = proximityService.isAvailable() ? '1' : '0';
+  process.env.OUTLINK_PROXIMITY_AVAILABLE = proximityService.isAvailable() ? '1' : '0';
   databaseService = new DatabaseService(
-    path.join(userDataPath, 'psstpsst.db'),
+    path.join(userDataPath, 'outlink.db'),
     (owner) => owner.send(IPC.databaseChanged, {}),
     (id) => webContents.fromId(id) ?? null,
   );
@@ -1316,7 +1316,7 @@ async function start(): Promise<void> {
   });
   registerIpcHandlers();
   await registerProtocols();
-  const trayAssetName = process.platform === 'darwin' ? 'psstpsstTemplate.png' : 'psstpsst.png';
+  const trayAssetName = process.platform === 'darwin' ? 'outlinkTemplate.png' : 'outlink.png';
   const trayAssetPath = app.isPackaged
     ? path.join(process.resourcesPath, 'tray', trayAssetName)
     : path.join(__dirname, '../../assets/images/tray', trayAssetName);

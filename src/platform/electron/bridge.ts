@@ -247,12 +247,12 @@ export type ElectronBridge = {
 
 declare global {
   interface Window {
-    psstpsstDesktop?: ElectronBridge;
+    outlinkDesktop?: ElectronBridge;
   }
 }
 
 export function getElectronBridge(): ElectronBridge {
-  const bridge = window.psstpsstDesktop;
+  const bridge = window.outlinkDesktop;
   if (!bridge) throw new Error('The Electron preload bridge is unavailable');
   return bridge;
 }

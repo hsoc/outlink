@@ -5,7 +5,7 @@ import { NIP05_SERVICE_BASE_URL, NIP05_SERVICE_DOMAIN } from '@/lib/nostr/nip05'
 import type { Signer } from '../signer/signer.interface';
 
 /**
- * Client for the app's own NIP-05 naming service (`psstpsst.chat`). Names are
+ * Client for the app's own NIP-05 naming service (`outlink.invalid`). Names are
  * claimed and renamed with NIP-98 (kind 27235) authorization events signed by
  * the account key; the bound pubkey always equals the event signer, so a name
  * can never be claimed for someone else's key. Lookup is the public

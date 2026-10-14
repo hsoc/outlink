@@ -58,7 +58,7 @@ private final class JSONEmitter: @unchecked Sendable {
   }
 
   func log(_ message: String) {
-    FileHandle.standardError.write(Data("[psstpsst-proximity] \(message)\n".utf8))
+    FileHandle.standardError.write(Data("[outlink-proximity] \(message)\n".utf8))
   }
 
   private func write(_ object: [String: Any]) {

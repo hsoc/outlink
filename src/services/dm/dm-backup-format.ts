@@ -3,7 +3,7 @@ import { getEventHash, validateEvent } from 'nostr-tools';
 import type { Rumor } from '@/db/schema/types';
 import { normalizeProximityDisplayName } from '@/services/proximity/proximity-display-name';
 
-export const CHAT_ARCHIVE_FORMAT = 'psstpsst-chat-archive';
+export const CHAT_ARCHIVE_FORMAT = 'outlink-chat-archive';
 export const CHAT_ARCHIVE_VERSION = 2;
 
 export const ARCHIVE_MANIFEST = 'manifest.json';

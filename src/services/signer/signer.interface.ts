@@ -5,7 +5,7 @@ import type { Event, EventTemplate } from 'nostr-tools';
  *   - NsecSigner   — local privkey from secure store
  *   - Nip46Signer  — remote bunker (Phase 2)
  *
- * PsstPsst services never reach inside; they only call these methods.
+ * Outlink services never reach inside; they only call these methods.
  * The DM encryption privkey is NOT a Signer — only the identity privkey is.
  */
 export interface Signer {

@@ -91,7 +91,7 @@ describe('checkNip05NameAvailability', () => {
 
     await expect(checkNip05NameAvailability('alice')).resolves.toBe(availability);
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://psstpsst.chat/api/names/alice/availability',
+      'https://outlink.invalid/api/names/alice/availability',
       expect.objectContaining({ method: 'GET' }),
     );
   });
@@ -116,7 +116,7 @@ describe('lookupNip05Name', () => {
     fetchMock.mockResolvedValue(jsonResponse(200, { names: { alice: PUBKEY } }));
     await expect(lookupNip05Name('alice')).resolves.toBe(PUBKEY);
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://psstpsst.chat/.well-known/nostr.json?name=alice',
+      'https://outlink.invalid/.well-known/nostr.json?name=alice',
       expect.objectContaining({ method: 'GET' }),
     );
   });
@@ -145,7 +145,7 @@ describe('lookupNip05NameByPubkey', () => {
     fetchMock.mockResolvedValue(jsonResponse(200, { names: { Alice: PUBKEY } }));
     await expect(lookupNip05NameByPubkey(PUBKEY)).resolves.toBe('alice');
     expect(fetchMock).toHaveBeenCalledWith(
-      `https://psstpsst.chat/.well-known/nostr.json?pubkey=${PUBKEY}`,
+      `https://outlink.invalid/.well-known/nostr.json?pubkey=${PUBKEY}`,
       expect.objectContaining({ method: 'GET' }),
     );
   });
@@ -185,7 +185,7 @@ describe('upsertNip05Name', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe('https://psstpsst.chat/api/names/alice');
+    expect(url).toBe('https://outlink.invalid/api/names/alice');
     expect(init?.method).toBe('PUT');
     expect(init?.body).toBeUndefined();
     expect(init?.headers).not.toHaveProperty('Content-Type');
@@ -194,7 +194,7 @@ describe('upsertNip05Name', () => {
     expect(event.kind).toBe(27235);
     expect(event.pubkey).toBe(PUBKEY);
     expect(event.tags).toEqual([
-      ['u', 'https://psstpsst.chat/api/names/alice'],
+      ['u', 'https://outlink.invalid/api/names/alice'],
       ['method', 'PUT'],
     ]);
   });
@@ -214,9 +214,9 @@ describe('upsertNip05Name', () => {
     });
 
     expect(fetchMock.mock.calls.map(([url, init]) => [url, init?.method])).toEqual([
-      ['https://psstpsst.chat/api/names/alice', 'PUT'],
-      ['https://psstpsst.chat/api/names/bob45', 'PUT'],
-      ['https://psstpsst.chat/api/names/bob45', 'PUT'],
+      ['https://outlink.invalid/api/names/alice', 'PUT'],
+      ['https://outlink.invalid/api/names/bob45', 'PUT'],
+      ['https://outlink.invalid/api/names/bob45', 'PUT'],
     ]);
   });
 
@@ -260,11 +260,11 @@ describe('deleteNip05Name', () => {
     await expect(deleteNip05Name({ signer, name: 'alice' })).resolves.toBeUndefined();
 
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe('https://psstpsst.chat/api/names/alice');
+    expect(url).toBe('https://outlink.invalid/api/names/alice');
     expect(init?.method).toBe('DELETE');
     const event = decodeAuthEvent(init!);
     expect(event.kind).toBe(27235);
-    expect(event.tags).toContainEqual(['u', 'https://psstpsst.chat/api/names/alice']);
+    expect(event.tags).toContainEqual(['u', 'https://outlink.invalid/api/names/alice']);
     expect(event.tags).toContainEqual(['method', 'DELETE']);
   });
 

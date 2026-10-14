@@ -5,6 +5,6 @@
     "appDelegateSubscribers": ["LocalNotificationsAppDelegateSubscriber"]
   },
   "android": {
-    "modules": ["chat.psstpsst.app.localnotifications.ExpoLocalNotificationsModule"]
+    "modules": ["io.github.hsoc.outlink.localnotifications.ExpoLocalNotificationsModule"]
   }
 }

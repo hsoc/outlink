@@ -12,7 +12,7 @@ export async function buildNotificationExtension(output = resolve(root, 'ios-not
     outfile: output,
     bundle: true,
     format: 'iife',
-    globalName: 'PsstPsstNotification',
+    globalName: 'OutlinkNotification',
     platform: 'browser',
     target: 'safari16.4',
     minify: true,

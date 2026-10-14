@@ -9,7 +9,7 @@ module.exports = function withLocalNotifications(config, { icon }) {
     const projectRoot = mod.modRequest.projectRoot;
     await Promise.all(Object.entries({ mdpi: 24, hdpi: 36, xhdpi: 48, xxhdpi: 72, xxxhdpi: 96 }).map(async ([density, size]) => {
       const { source } = await generateImageAsync(
-        { projectRoot, cacheType: 'psstpsst-notification' },
+        { projectRoot, cacheType: 'outlink-notification' },
         { src: icon, width: size, height: size, resizeMode: 'cover', backgroundColor: 'transparent' },
       );
       const directory = join(mod.modRequest.platformProjectRoot, 'app/src/main/res', `drawable-${density}`);

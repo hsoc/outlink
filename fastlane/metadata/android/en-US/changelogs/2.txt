@@ -1,4 +1,4 @@
-First public release of PsstPsst.
+First public release of Outlink.
 
 - End-to-end encrypted, one-to-one messaging over Nostr
 - Nearby messaging over Bluetooth without internet access

@@ -3,12 +3,12 @@
 <plist version="1.0">
 <dict>
   <key>CFBundleIdentifier</key>
-  <string>chat.psstpsst.app.proximity</string>
+  <string>io.github.hsoc.outlink.proximity</string>
   <key>CFBundleName</key>
-  <string>PsstPsst Proximity</string>
+  <string>Outlink Proximity</string>
   <key>CFBundleVersion</key>
   <string>1</string>
   <key>NSBluetoothAlwaysUsageDescription</key>
-  <string>Allow PsstPsst to discover and communicate with nearby PsstPsst users.</string>
+  <string>Allow Outlink to discover and communicate with nearby Outlink users.</string>
 </dict>
 </plist>

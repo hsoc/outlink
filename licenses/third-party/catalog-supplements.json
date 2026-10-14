@@ -1,9 +1,9 @@
 [
   {
-    "id": "psstpsst",
-    "name": "PsstPsst",
+    "id": "outlink",
+    "name": "Outlink",
     "license": "MIT",
-    "repository": "https://github.com/codytseng/psstpsst",
+    "repository": "https://github.com/hsoc/outlink",
     "files": [
       "LICENSE"
     ]

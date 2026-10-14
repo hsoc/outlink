@@ -25,7 +25,7 @@ jest.mock('@/services/files/blossom.service', () => ({
 
 const fs = jest.mocked(platform.fileSystem);
 const upload = jest.mocked(uploadPublicImage);
-const stagedUri = 'psstpsst-file://cache/custom-emoji-test-id';
+const stagedUri = 'outlink-file://cache/custom-emoji-test-id';
 const options = {
   accountPubkey: 'account',
   shortcode: 'test',
@@ -37,7 +37,7 @@ const options = {
 describe('custom emoji image upload', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    fs.cacheDirectoryUri.mockResolvedValue('psstpsst-file://cache/');
+    fs.cacheDirectoryUri.mockResolvedValue('outlink-file://cache/');
     fs.copy.mockResolvedValue(undefined);
     fs.delete.mockResolvedValue(undefined);
     jest.mocked(platform.deviceCrypto.randomUUID).mockResolvedValue('test-id');
@@ -92,7 +92,7 @@ describe('custom emoji image upload', () => {
   });
 
   it.each([
-    ['psstpsst-file://cache/existing.png', 'psstpsst-file://cache/existing.png'],
+    ['outlink-file://cache/existing.png', 'outlink-file://cache/existing.png'],
     ['/tmp/native.png', 'file:///tmp/native.png'],
     ['file:///tmp/native.png', 'file:///tmp/native.png'],
   ])('keeps existing file %s under its original owner', async (fileUri, expectedUri) => {

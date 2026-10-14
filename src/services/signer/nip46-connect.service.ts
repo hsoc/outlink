@@ -22,7 +22,7 @@ import {
  * to. The user can override this via the screen's advanced setting. */
 export const NIP46_DEFAULT_RELAYS = ['wss://relay.damus.io/', 'wss://nos.lol/'];
 
-const APP_NAME = 'PsstPsst';
+const APP_NAME = 'Outlink';
 
 function openAuthUrl(url: string): void {
   void platform.urlOpener.openExternalUrl(url).catch((error) => {

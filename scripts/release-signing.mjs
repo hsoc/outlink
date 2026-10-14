@@ -33,7 +33,7 @@ function withAndroidKeystore(env, action) {
   if (!keystore.length || keystore.toString('base64') !== encoded) {
     throw new Error('ANDROID_KEYSTORE_BASE64 must contain a valid Base64-encoded keystore.');
   }
-  const temporary = mkdtempSync(join(tmpdir(), 'psstpsst-signing-'));
+  const temporary = mkdtempSync(join(tmpdir(), 'outlink-signing-'));
   try {
     const keyPath = join(temporary, 'release.keystore');
     writeFileSync(keyPath, keystore, { mode: 0o600 });

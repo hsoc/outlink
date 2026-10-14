@@ -20,7 +20,7 @@ modules and removes their background-processing capability. APNs handles
 background delivery, while opening the app resumes normal relay sync.
 
 The iOS toggle is unavailable until the current account's saved message relays
-include `wss://relay.psstpsst.chat/`. Removing the relay preserves an enabled
+include `wss://relay.outlink.invalid/`. Removing the relay preserves an enabled
 preference while disabling the control. Inline guidance opens message-relay
 settings with the required address prefilled; adding and saving remain explicit.
 
@@ -35,12 +35,12 @@ The adapter reads the signed APNs environment using
 [`expo-application`](https://docs.expo.dev/versions/v57.0.0/sdk/application/).
 Store installations without an embedded profile use production APNs; unknown
 or unconfigured topic/environment combinations fail before token acquisition.
-Development `chat.psstpsst.app.dev` uses sandbox and production
-`chat.psstpsst.app` uses production. Production APNs for the `.dev` topic is not
+Development `io.github.hsoc.outlink.dev` uses sandbox and production
+`io.github.hsoc.outlink` uses production. Production APNs for the `.dev` topic is not
 configured by the relay. JavaScript environment flags do not select APNs.
 
 Account-configured root `wss://` inbox relays are discovered using NIP-11. Relays
-must advertise NIP-98 and `psstpsst.push.version: 1`. PUT/DELETE use the account
+must advertise NIP-98 and `outlink.push.version: 1`. PUT/DELETE use the account
 identity signer, exact URL/method, exact body SHA-256, standard Base64, a fresh
 mutation nonce, and empty 204 success. Requests time out after 12 seconds;
 transient failures have three bounded retries with backoff and jitter.
@@ -56,7 +56,7 @@ recreating account rows during cleanup.
 
 ## Receiving while the app is stopped
 
-1. iOS starts `PsstPsstNotificationService`, independently of the main app.
+1. iOS starts `OutlinkNotificationService`, independently of the main app.
 2. A fresh JavaScriptCore context installs asynchronous native database,
    Keychain, network and crypto primitives, then loads the compiled shared
    TypeScript processor. React Native and Expo are excluded from this bundle.
@@ -64,13 +64,13 @@ recreating account rows during cleanup.
    performs an indexed account-scoped processed-ID lookup. A completed event
    skips signing, HTTP, decryption, persistence and notification evaluation.
 4. Inline events continue directly. ID references fetch the complete event from
-   `https://relay.psstpsst.chat/v1/events/{event_id}` with account-signed NIP-98
+   `https://relay.outlink.invalid/v1/events/{event_id}` with account-signed NIP-98
    GET authorization. No request body or redirect is allowed. The returned ID
    must match; a second processed lookup absorbs concurrent WebSocket delivery.
 5. `DmService.receiveGiftWrap` receives explicit account, keys, source relays,
    presence, active-conversation and cancellation context. It invokes the same
    receiver used by live subscriptions, history and recovery. APNs always records
-   `wss://relay.psstpsst.chat/` as its source.
+   `wss://relay.outlink.invalid/` as its source.
 6. Common intake verifies the outer event, recipient, signed seal, author binding
    and canonical rumor ID, tries retained encryption keys, applies blocking and
    direct/group admission, then maintains messages and conversation read models
@@ -110,8 +110,8 @@ matching App Group and Keychain access groups. Rebuild the native application;
 JavaScript-only updates cannot add the extension or shared-storage capabilities.
 
 Enable Push Notifications on the main App IDs, register each notification App
-Group, and provision both extension IDs (`chat.psstpsst.app.notifications` and
-`chat.psstpsst.app.dev.notifications`). The extension requires Apple's approved
+Group, and provision both extension IDs (`io.github.hsoc.outlink.notifications` and
+`io.github.hsoc.outlink.dev.notifications`). The extension requires Apple's approved
 [`com.apple.developer.usernotifications.filtering`](https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.developer.usernotifications.filtering)
 capability for reliable local alert suppression. Its entitlement declaration is
 **temporarily disabled while Apple approval is pending**, allowing signed-device

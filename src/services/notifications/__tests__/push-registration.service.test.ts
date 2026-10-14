@@ -35,7 +35,7 @@ jest.mock('../push-api', () => ({
 }));
 
 const device = { token: '0012abcd', environment: 'sandbox' as const };
-const origin = 'https://relay.psstpsst.chat';
+const origin = 'https://relay.outlink.invalid';
 let service: PushRegistrationService;
 beforeEach(() => {
   mockInternetPushEnabled = true;
@@ -48,7 +48,7 @@ beforeEach(() => {
   mockMutate.mockReset().mockResolvedValue(undefined);
   mockSupports.mockResolvedValue(true);
   mockAccounts.mockResolvedValue([{ pubkey: 'a' }, { pubkey: 'b' }]);
-  mockRelays.mockResolvedValue(['wss://relay.psstpsst.chat']);
+  mockRelays.mockResolvedValue(['wss://relay.outlink.invalid']);
   jest.spyOn(console, 'warn').mockImplementation(() => {});
   service = new PushRegistrationService();
 });
@@ -91,7 +91,7 @@ it('registers every account once, persists installation identity, and updates ro
 });
 
 it('does not register an unsupported relay or derive origins from paths and insecure URLs', async () => {
-  mockRelays.mockResolvedValue(['ws://insecure.example', 'wss://example.com/path', 'wss://relay.psstpsst.chat']);
+  mockRelays.mockResolvedValue(['ws://insecure.example', 'wss://example.com/path', 'wss://relay.outlink.invalid']);
   mockSupports.mockResolvedValue(false);
   service.setEnabled(true);
   await service.reconcile();
@@ -145,7 +145,7 @@ it('stops an in-flight token acquisition when the user disables notifications', 
 it('revokes removed relay membership without affecting another account', async () => {
   service.setEnabled(true);
   await service.reconcile();
-  mockRelays.mockImplementation(async (pubkey: string) => pubkey === 'a' ? [] : ['wss://relay.psstpsst.chat']);
+  mockRelays.mockImplementation(async (pubkey: string) => pubkey === 'a' ? [] : ['wss://relay.outlink.invalid']);
   mockMutate.mockClear();
   await service.reconcile();
   expect(mockMutate.mock.calls).toEqual([[expect.objectContaining({ accountPubkey: 'a' }), origin, 'installation', null]]);

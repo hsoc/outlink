@@ -1,6 +1,6 @@
 # Implementation Notes
 
-This directory records PsstPsst-specific implementation behavior. It may name
+This directory records Outlink-specific implementation behavior. It may name
 services, persistence structures, queues, platform adapters, UI flows, retry
 policy, and tests. Interoperable event and wire formats belong in
 [`../protocols/`](../protocols/).

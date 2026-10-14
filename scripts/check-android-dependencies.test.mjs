@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 const script = new URL('./check-android-dependencies.mjs', import.meta.url);
 
 test('the release dependency guard detects direct and transitive remote push and ML Kit SDKs', () => {
-  const directory = mkdtempSync(join(tmpdir(), 'psstpsst-dependency-test-'));
+  const directory = mkdtempSync(join(tmpdir(), 'outlink-dependency-test-'));
   const report = join(directory, 'dependencies.txt');
   const check = (body) => {
     writeFileSync(report, body);

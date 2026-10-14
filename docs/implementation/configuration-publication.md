@@ -110,7 +110,7 @@ ordinary launches use normal synchronization and remote key reconciliation.
 
 ## Muted group snapshot migration
 
-The private `kind 30000`, `d = psstpsst-muted` snapshot uses `p` for direct
+The private `kind 30000`, `d = outlink-muted` snapshot uses `p` for direct
 counterparty pubkeys and `h` for raw group ids. Reconciliation hashes `h` into
 the local conversation key. On discovering legacy `g` tags, resolve their hashed
 conversation keys against the account's conversations, convert them to `h`,
@@ -127,7 +127,7 @@ relay failure retires the pending event for regeneration on the next edit.
 
 ## Contacts and saved groups
 
-Both domains share `kind 30000`, `d = psstpsst-contacts`: encrypted `p` tags
+Both domains share `kind 30000`, `d = outlink-contacts`: encrypted `p` tags
 carry contact pubkeys and optional petnames, and encrypted `h` tags carry raw
 saved group ids. Local edits commit with the same durable revision and return
 before crypto begins. One background job per account coalesces queued edits,
@@ -140,7 +140,7 @@ pending publication, and the cached event watermark.
 
 Personal-config sync schedules migration independently of other refreshes and
 reconciliation. Existing local `kind 30078`,
-`d = psstpsst-saved-groups` cache/outbox rows trigger migration of the local
+`d = outlink-saved-groups` cache/outbox rows trigger migration of the local
 `saved_groups` read model. Reconcile locally cached contacts first, preserving
 local saved membership while those legacy rows remain. The new complete list
 is signed and durably queued; deleting the old cache and outbox rows commits
@@ -156,7 +156,7 @@ failed migration cannot prevent unrelated configurations from syncing.
 ## Block and mute synchronization
 
 `private_list_sync_state` holds account/list revisions, dirty flags, and the
-last signed event id for `psstpsst-blocked` and `psstpsst-muted`. Each local
+last signed event id for `outlink-blocked` and `outlink-muted`. Each local
 edit commits its plaintext and dirty revision atomically, then queues a
 background attempt. Block/unblock also updates the ingestion mirror immediately
 after the transaction; crypto never delays the local action.

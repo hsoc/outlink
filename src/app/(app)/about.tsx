@@ -19,20 +19,13 @@ import { DirectionalChevron as ChevronRight } from '@/components/common/Directio
 import { ListGroup } from '@/components/common/ListGroup';
 import { ListRow } from '@/components/common/ListRow';
 import { ScreenHeader, useScreenHeaderClearance } from '@/components/common/ScreenHeader';
-import { useProfile } from '@/hooks/use-profile';
 import { useScrolled } from '@/hooks/use-scrolled';
 import { useDirectionalIconStyle } from '@/i18n/direction';
-import { resolveName } from '@/lib/nostr/display-name';
-import { abbreviateNpub } from '@/lib/nostr/format';
-import { npubToPubkey } from '@/lib/nostr/keys';
 import { platform } from '@/platform';
 import { mediaViewer } from '@/stores/media-viewer.store';
 import { radius, spacing, useThemeColors } from '@/theme';
 
-const SOURCE_CODE_URL = 'https://github.com/codytseng/psstpsst';
-// The author's public identity, so users can open a direct message from About.
-const AUTHOR_NPUB = 'npub1syjmjy0dp62dhccq3g97fr87tngvpvzey08llyt6ul58m2zqpzps9wf6wl';
-const AUTHOR_PUBKEY = npubToPubkey(AUTHOR_NPUB);
+const SOURCE_CODE_URL = 'https://github.com/hsoc/outlink';
 const ABOUT_ARTWORK_HEIGHT = 192;
 const ABOUT_BRAND_MARK_SIZE = 64;
 
@@ -54,11 +47,6 @@ export default function AboutSettings() {
   const { scrolled, scrollProps } = useScrolled();
   const version = Constants.expoConfig?.version;
   const [openingArtwork, setOpeningArtwork] = useState(false);
-
-  // Resolved from relays when unknown; the abbreviated npub is the fallback.
-  const authorProfile = useProfile(AUTHOR_PUBKEY);
-  const authorName = resolveName(authorProfile);
-  const authorNpubAbbreviated = abbreviateNpub(AUTHOR_NPUB);
 
   async function openArtwork() {
     if (openingArtwork) return;
@@ -121,7 +109,7 @@ export default function AboutSettings() {
                 <AppBrandMark size={ABOUT_BRAND_MARK_SIZE} tone="overlay" />
                 <View style={{ alignItems: 'center', gap: spacing.xs }}>
                   <AppText variant="title" weight="semibold" style={{ color: c.onOverlay }}>
-                    PsstPsst
+                    Outlink
                   </AppText>
                   {version ? (
                     <AppText variant="caption" style={{ color: c.onOverlay }}>
@@ -136,19 +124,13 @@ export default function AboutSettings() {
 
         <ListGroup>
           <ListRow
-            title={t('about.author')}
-            value={authorName ?? authorNpubAbbreviated}
-            trailing={chevron}
-            onPress={() => router.push(`/chat/${encodeURIComponent(AUTHOR_PUBKEY)}`)}
-          />
-          <ListRow
             title={t('about.source_code')}
-            value="codytseng/psstpsst"
+            value="hsoc/outlink"
             trailing={externalLink}
             onPress={() => openUrl(SOURCE_CODE_URL)}
           />
           <ListRow title={t('about.license')} value="MIT" trailing={chevron}
-            onPress={() => router.push({ pathname: '/open-source-project', params: { id: 'psstpsst' } })} />
+            onPress={() => router.push({ pathname: '/open-source-project', params: { id: 'outlink' } })} />
           <ListRow
             title={t('about.open_source')}
             trailing={chevron}

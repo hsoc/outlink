@@ -65,18 +65,18 @@ jest.mock('../../account/account.service', () => ({
 // The domain reconcilers are mocked wholesale; the d-tag constants must mirror
 // the real modules (they define the sync contract).
 jest.mock('../../conversation/conversation-prefs.service', () => ({
-  MUTED_D: 'psstpsst-muted',
+  MUTED_D: 'outlink-muted',
   applyMutedEvent: jest.fn((...args: unknown[]) => mockApplyMutedEvent(...args)),
 }));
 
 jest.mock('../../contact/contact.service', () => ({
-  CONTACTS_D: 'psstpsst-contacts',
+  CONTACTS_D: 'outlink-contacts',
   migrateLocalSavedGroups: jest.fn((...args: unknown[]) => mockMigrateLocalSavedGroups(...args)),
   applyContactsEvent: jest.fn((...args: unknown[]) => mockApplyContactsEvent(...args)),
 }));
 
 jest.mock('../../dm/block.service', () => ({
-  BLOCKED_D: 'psstpsst-blocked',
+  BLOCKED_D: 'outlink-blocked',
   applyBlockedEvent: jest.fn((...args: unknown[]) => mockApplyBlockedEvent(...args)),
 }));
 
@@ -90,9 +90,9 @@ jest.mock('../../emoji/custom-emoji.service', () => ({
 }));
 
 const ALL_D_TAGS = [
-  'psstpsst-muted',
-  'psstpsst-contacts',
-  'psstpsst-blocked',
+  'outlink-muted',
+  'outlink-contacts',
+  'outlink-blocked',
 ];
 
 function mockRowKey(pubkey: string, kind: number, dTag: string): string {
@@ -190,8 +190,8 @@ describe('syncPersonalConfigs', () => {
 
   it('refreshes every personal-config key in one multi-filter REQ and dispatches reconciles', async () => {
     const service = loadService();
-    const muted = makeEvent('self', 30000, 100, 'psstpsst-muted');
-    const contacts = makeEvent('self', 30000, 100, 'psstpsst-contacts');
+    const muted = makeEvent('self', 30000, 100, 'outlink-muted');
+    const contacts = makeEvent('self', 30000, 100, 'outlink-contacts');
     const media = makeEvent('self', 10063, 100);
     mockQuery.mockResolvedValue([muted, contacts, media]);
 
@@ -208,7 +208,7 @@ describe('syncPersonalConfigs', () => {
     ]);
 
     // Received events are persisted; missed keys get a negative-cache mark.
-    expect(getRow('self', 30000, 'psstpsst-muted')?.event?.id).toBe(muted.id);
+    expect(getRow('self', 30000, 'outlink-muted')?.event?.id).toBe(muted.id);
     expect(getRow('self', 10063)?.event?.id).toBe(media.id);
     expect(getRow('self', 10030)?.event).toBeNull();
 
@@ -225,14 +225,14 @@ describe('syncPersonalConfigs', () => {
     const service = loadService();
     const emojiList = makeEvent('self', 10030, 100);
     const media = makeEvent('self', 10063, 100);
-    const muted = makeEvent('self', 30000, 100, 'psstpsst-muted');
-    const contacts = makeEvent('self', 30000, 100, 'psstpsst-contacts');
-    const blocked = makeEvent('self', 30000, 100, 'psstpsst-blocked');
+    const muted = makeEvent('self', 30000, 100, 'outlink-muted');
+    const contacts = makeEvent('self', 30000, 100, 'outlink-contacts');
+    const blocked = makeEvent('self', 30000, 100, 'outlink-blocked');
     seedFresh(emojiList);
     seedFresh(media);
-    seedFresh(muted, 'psstpsst-muted');
-    seedFresh(contacts, 'psstpsst-contacts');
-    seedFresh(blocked, 'psstpsst-blocked');
+    seedFresh(muted, 'outlink-muted');
+    seedFresh(contacts, 'outlink-contacts');
+    seedFresh(blocked, 'outlink-blocked');
 
     await service.syncPersonalConfigs('self');
     await jest.runAllTimersAsync();

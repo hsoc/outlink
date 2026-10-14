@@ -3,24 +3,24 @@ import { electronFileSaverAdapter } from '../file-saver';
 
 describe('Electron file-saver adapter', () => {
   afterEach(() => {
-    delete window.psstpsstDesktop;
+    delete window.outlinkDesktop;
   });
 
   it('always uses Save As with the original filename', async () => {
     const saveFile = jest.fn().mockResolvedValue(true);
-    window.psstpsstDesktop = {
+    window.outlinkDesktop = {
       dialogs: { saveFile } as unknown as ElectronBridge['dialogs'],
     } as ElectronBridge;
 
     await expect(
-      electronFileSaverAdapter.save('psstpsst-file://attachments/hash.bin', {
+      electronFileSaverAdapter.save('outlink-file://attachments/hash.bin', {
         suggestedName: 'recording.mp3',
         mimeType: 'audio/mpeg',
       }),
     ).resolves.toBe(true);
 
     expect(saveFile).toHaveBeenCalledWith(
-      'psstpsst-file://attachments/hash.bin',
+      'outlink-file://attachments/hash.bin',
       'recording.mp3',
     );
   });

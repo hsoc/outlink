@@ -40,7 +40,7 @@ describe('media library saves', () => {
     jest.clearAllMocks();
     mockRequestWritePermission.mockResolvedValue(true);
     mockSaveToLibrary.mockResolvedValue(true);
-    mockCacheDirectoryUri.mockResolvedValue('psstpsst-file://cache/');
+    mockCacheDirectoryUri.mockResolvedValue('outlink-file://cache/');
     mockMakeDirectory.mockResolvedValue(undefined);
     mockWriteBytes.mockResolvedValue(undefined);
     mockDelete.mockResolvedValue(undefined);
@@ -52,7 +52,7 @@ describe('media library saves', () => {
   });
 
   it('saves local files without staging them', async () => {
-    const uri = 'psstpsst-file://cache/photo.png';
+    const uri = 'outlink-file://cache/photo.png';
 
     await expect(saveUriToLibrary(uri)).resolves.toBe('saved');
 
@@ -81,12 +81,12 @@ describe('media library saves', () => {
     await expect(saveUriToLibrary('data:image/png;base64,AQID')).resolves.toBe('saved');
 
     expect(mockMakeDirectory).toHaveBeenCalledWith(
-      'psstpsst-file://cache/psstpsst-media-save/',
+      'outlink-file://cache/outlink-media-save/',
       { intermediates: true, idempotent: true },
     );
     const stagedUri = mockWriteBytes.mock.calls[0][0];
     expect(stagedUri).toMatch(
-      /^psstpsst-file:\/\/cache\/psstpsst-media-save\/captured-\d+-\d+\.png$/,
+      /^outlink-file:\/\/cache\/outlink-media-save\/captured-\d+-\d+\.png$/,
     );
     expect(mockWriteBytes.mock.calls[0][1]).toEqual(bytes);
     expect(mockSaveToLibrary).toHaveBeenCalledWith(stagedUri);
@@ -110,7 +110,7 @@ describe('media library saves', () => {
   it('treats a cancelled desktop media destination as cancellation', async () => {
     mockSaveToLibrary.mockResolvedValue(false);
 
-    await expect(saveUriToLibrary('psstpsst-file://cache/photo.png')).resolves.toBe(
+    await expect(saveUriToLibrary('outlink-file://cache/photo.png')).resolves.toBe(
       'cancelled',
     );
   });
@@ -118,13 +118,13 @@ describe('media library saves', () => {
   it('exports non-media files with their original name and MIME type', async () => {
     await expect(
       saveLocalAttachment({
-        uri: 'psstpsst-file://attachments/hash.bin',
+        uri: 'outlink-file://attachments/hash.bin',
         name: 'report.pdf',
         mime: 'application/pdf',
       }),
     ).resolves.toBe('saved');
 
-    expect(mockSaveFile).toHaveBeenCalledWith('psstpsst-file://attachments/hash.bin', {
+    expect(mockSaveFile).toHaveBeenCalledWith('outlink-file://attachments/hash.bin', {
       suggestedName: 'report.pdf',
       mimeType: 'application/pdf',
     });
@@ -134,14 +134,14 @@ describe('media library saves', () => {
   it('saves pending images to the media library', async () => {
     await expect(
       saveLocalAttachment({
-        uri: 'psstpsst-file://attachments/photo.jpg',
+        uri: 'outlink-file://attachments/photo.jpg',
         name: 'photo.jpg',
         mime: 'image/jpeg',
       }),
     ).resolves.toBe('saved');
 
     expect(mockSaveToLibrary).toHaveBeenCalledWith(
-      'psstpsst-file://attachments/photo.jpg',
+      'outlink-file://attachments/photo.jpg',
     );
     expect(mockSaveFile).not.toHaveBeenCalled();
   });

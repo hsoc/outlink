@@ -25,7 +25,7 @@ async function readPreviewDimensions(localUri: string, mime: string): Promise<Me
 async function incomingShareDir(): Promise<string> {
   const base = await platform.fileSystem.cacheDirectoryUri();
   if (!base) throw new Error("FileSystem.cacheDirectory unavailable");
-  return `${base}psstpsst-incoming-share/`;
+  return `${base}outlink-incoming-share/`;
 }
 
 /**

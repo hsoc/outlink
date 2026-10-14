@@ -17,7 +17,7 @@ test('macOS signing preserves distinct fingerprints for certificates with the sa
     info: { getWorkspaceRoot: async () => process.cwd() },
   };
   const options = {
-    app: '/tmp/PsstPsst.app',
+    app: '/tmp/Outlink.app',
     platform: 'darwin',
     type: 'distribution',
     keychain: '/tmp/signing.keychain',

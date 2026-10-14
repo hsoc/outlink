@@ -1,6 +1,6 @@
 Decentralized, end-to-end encrypted messaging. No phone number required.
 
-PsstPsst is a free, open-source messenger for Android, iOS, and desktop. Your cryptographic keys are your account: get started without a phone number or email address, and exchange encrypted messages over Nostr or nearby Bluetooth.
+Outlink is a free, open-source messenger for Android, iOS, and desktop. Your cryptographic keys are your account: get started without a phone number or email address, and exchange encrypted messages over Nostr or nearby Bluetooth.
 
 Private conversations
 Send end-to-end encrypted one-to-one messages, photos, videos, files, and voice messages. Keep conversations flowing with replies, reactions, and forwarding.
@@ -9,7 +9,7 @@ Your keys, your account
 Create an identity without a central account provider. Use an optional Nostr name to make it easier for people to find you.
 
 Stay close, even offline
-Exchange messages and files with compatible PsstPsst peers over Bluetooth Low Energy, without internet access.
+Exchange messages and files with compatible Outlink peers over Bluetooth Low Energy, without internet access.
 
 Connect your wallet
 Connect a non-custodial Lightning wallet through Nostr Wallet Connect.
@@ -23,9 +23,9 @@ Before you start
 - Android background notifications use a foreground service and are subject to battery restrictions. Delivery is best-effort.
 - Back up your identity key and use key transfer and chat-history export/import when moving devices. An identity-key backup alone does not guarantee recovery of encrypted chat history.
 
-PsstPsst is released under the MIT License. Source code, protocol documentation, and the security review status are available in the public repository.
+Outlink is released under the MIT License. Source code, protocol documentation, and the security review status are available in the public repository.
 
-Website: https://psstpsst.chat
-Privacy policy: https://psstpsst.chat/privacy/
-Source code: https://github.com/codytseng/psstpsst
-Security: https://github.com/codytseng/psstpsst/blob/master/SECURITY.md
+Website: https://github.com/hsoc/outlink
+Privacy policy: https://github.com/hsoc/outlink/blob/master/docs/PRIVACY.md
+Source code: https://github.com/hsoc/outlink
+Security: https://github.com/hsoc/outlink/blob/master/SECURITY.md

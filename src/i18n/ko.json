@@ -1,6 +1,6 @@
 {
   "welcome": {
-    "title": "PsstPsst",
+    "title": "Outlink",
     "subtitle": "탈중앙화된 종단간 암호화 메시징",
     "choose_title": "계정 선택",
     "login_nsec": "개인 키로 로그인",
@@ -26,7 +26,7 @@
     },
     "nostr_connect": {
       "title": "Nostr Connect",
-      "subtitle": "서명자로 이 코드를 스캔하거나 탭하여 이 기기에서 서명자를 여세요. 서명자가 승인하면 PsstPsst에 로그인됩니다.",
+      "subtitle": "서명자로 이 코드를 스캔하거나 탭하여 이 기기에서 서명자를 여세요. 서명자가 승인하면 Outlink에 로그인됩니다.",
       "copy": "링크 복사",
       "copied": "복사됨",
       "waiting": "서명자를 기다리는 중…",
@@ -37,7 +37,7 @@
   },
   "generate": {
     "title": "새 계정",
-    "subtitle": "PsstPsst가 새 계정을 만들었습니다.",
+    "subtitle": "Outlink가 새 계정을 만들었습니다.",
     "warning": "아래 개인 키를 백업하세요. 이 키를 가진 사람은 누구나 메시지를 읽고 사용자를 사칭할 수 있습니다.",
     "copy": "복사",
     "copied": "복사됨",
@@ -87,7 +87,7 @@
     "qr_save": "저장",
     "qr_saved": "사진에 저장했습니다.",
     "qr_save_failed": "저장할 수 없습니다. 다시 시도하세요.",
-    "qr_save_permission": "카드를 저장하려면 PsstPsst에 사진 접근 권한이 필요합니다."
+    "qr_save_permission": "카드를 저장하려면 Outlink에 사진 접근 권한이 필요합니다."
   },
   "report": {
     "title": "사용자 신고",
@@ -121,14 +121,14 @@
     "url_confirm": "이 이미지 사용",
     "image_url_placeholder": "https://…",
     "save": "저장",
-    "photo_permission": "사진을 설정하려면 PsstPsst에 사진 접근 권한이 필요합니다.",
-    "camera_permission": "사진을 촬영하려면 PsstPsst에 카메라 접근 권한이 필요합니다.",
+    "photo_permission": "사진을 설정하려면 Outlink에 사진 접근 권한이 필요합니다.",
+    "camera_permission": "사진을 촬영하려면 Outlink에 카메라 접근 권한이 필요합니다.",
     "upload_failed": "이미지 업로드에 실패했습니다. 다시 시도하세요.",
     "save_failed": "프로필을 저장할 수 없습니다. 다시 시도하세요."
   },
   "nip05": {
     "title": "개인 식별자",
-    "subtitle": "psstpsst.chat에서 개인 식별자를 등록하면 공개 키 없이도 다른 사람이 나를 찾을 수 있습니다.",
+    "subtitle": "outlink.invalid에서 개인 식별자를 등록하면 공개 키 없이도 다른 사람이 나를 찾을 수 있습니다.",
     "name_label": "이름",
     "name_placeholder": "이름",
     "name_hint": "5~30자: 영문, 숫자, 마침표, 하이픈, 밑줄. 영문 또는 숫자로 시작하고 끝나야 합니다.",
@@ -145,7 +145,7 @@
     "change": "개인 식별자 변경",
     "claim_failed": "개인 식별자를 등록할 수 없습니다. 다시 시도하세요.",
     "skip": "나중에 하기",
-    "profile_entry": "psstpsst.chat 개인 식별자 만들기",
+    "profile_entry": "outlink.invalid 개인 식별자 만들기",
     "profile_switch": "{{address}}로 전환"
   },
   "conversations": {
@@ -299,7 +299,7 @@
     "sent": "전송됨",
     "enter_conversation": "대화 열기",
     "send_failed": "모두 전송할 수 없습니다. 다시 공유하세요.",
-    "receive_failed_title": "PsstPsst에 공유할 수 없음",
+    "receive_failed_title": "Outlink에 공유할 수 없음",
     "receive_failed": "공유된 콘텐츠를 더 이상 사용할 수 없습니다. 다시 공유하세요.",
     "stage_failed": "공유 파일을 준비할 수 없습니다. 다시 시도하세요.",
     "too_many_items": "한 번에 최대 10개 항목을 공유하세요.",
@@ -528,10 +528,10 @@
     "unavailable": "이 연락처에 메시지를 보낼 수 없음",
     "unavailable_title": "이 연락처에 메시지를 보낼 수 없음",
     "unavailable_summary": {
-      "checking": "PsstPsst가 이 연락처가 지금 메시지를 받을 수 있는지 확인하고 있습니다.",
+      "checking": "Outlink가 이 연락처가 지금 메시지를 받을 수 있는지 확인하고 있습니다.",
       "missingRelays": "이 연락처가 메시지를 수신하는 릴레이를 찾을 수 없습니다.",
-      "missingEncryptionKey": "이 연락처의 앱이 PsstPsst에서 사용하는 암호화 메시지 프로토콜을 지원하지 않을 수 있습니다.",
-      "unknown": "PsstPsst가 이 연락처의 메시지 수신 가능 여부를 확인할 수 없습니다."
+      "missingEncryptionKey": "이 연락처의 앱이 Outlink에서 사용하는 암호화 메시지 프로토콜을 지원하지 않을 수 있습니다.",
+      "unknown": "Outlink가 이 연락처의 메시지 수신 가능 여부를 확인할 수 없습니다."
     },
     "check_relays": "메시지 릴레이",
     "check_key": "암호화 공개 키",
@@ -564,16 +564,16 @@
     "background_service_message": "새 메시지를 기다리는 중",
     "new_message": "새 메시지",
     "new_messages": "새 메시지 {{count}}개",
-    "open_to_view_message": "메시지를 보려면 PsstPsst를 여세요",
-    "delivery_note_ios": "백그라운드 알림은 relay.psstpsst.chat을 사용하여 APNs로 전달됩니다.",
+    "open_to_view_message": "메시지를 보려면 Outlink를 여세요",
+    "delivery_note_ios": "백그라운드 알림은 relay.outlink.invalid을 사용하여 APNs로 전달됩니다.",
     "required_relay_note": "iOS 알림을 활성화하려면 메시지 릴레이에 {{relay}}를 추가하세요.",
     "relay_settings_action": "설정으로 이동",
-    "delivery_note_android": "Android는 메시지 연결을 백그라운드에서 유지할 수 있지만 시스템이나 기기 제조사가 중지할 수 있습니다. 알림을 더 안정적으로 받으려면 시스템 설정에서 PsstPsst의 백그라운드 실행을 허용하고 배터리 최적화에서 제외하세요. 설정 항목은 기기마다 다릅니다.",
-    "delivery_note_desktop": "PsstPsst가 시스템 트레이에서 실행 중인 동안 알림을 받을 수 있습니다. 앱을 완전히 종료하면 백그라운드 확인도 중지됩니다.",
+    "delivery_note_android": "Android는 메시지 연결을 백그라운드에서 유지할 수 있지만 시스템이나 기기 제조사가 중지할 수 있습니다. 알림을 더 안정적으로 받으려면 시스템 설정에서 Outlink의 백그라운드 실행을 허용하고 배터리 최적화에서 제외하세요. 설정 항목은 기기마다 다릅니다.",
+    "delivery_note_desktop": "Outlink가 시스템 트레이에서 실행 중인 동안 알림을 받을 수 있습니다. 앱을 완전히 종료하면 백그라운드 확인도 중지됩니다.",
     "privacy_note": "이 정보는 기본적으로 숨겨집니다. 표시하면 이 기기의 알림 기록에 남을 수 있습니다.",
-    "system_permission_note": "시스템 설정에서도 PsstPsst 알림을 허용하세요. 앱에서는 시스템 알림이 켜져 있는지 확인할 수 없습니다.",
+    "system_permission_note": "시스템 설정에서도 Outlink 알림을 허용하세요. 앱에서는 시스템 알림이 켜져 있는지 확인할 수 없습니다.",
     "permission_denied_title": "알림이 꺼져 있음",
-    "permission_denied_message": "새 메시지 알림을 받으려면 시스템 설정에서 PsstPsst 알림을 허용하세요.",
+    "permission_denied_message": "새 메시지 알림을 받으려면 시스템 설정에서 Outlink 알림을 허용하세요.",
     "unavailable_title": "알림을 사용할 수 없음",
     "unavailable_message": "이 데스크톱 환경은 시스템 알림을 지원하지 않습니다.",
     "open_settings": "설정 열기",
@@ -596,7 +596,7 @@
     "dm_relays": "메시지 릴레이",
     "media_servers": "미디어 서버",
     "blocked_users": "차단된 사용자",
-    "about": "PsstPsst 정보",
+    "about": "Outlink 정보",
     "security": "보안",
     "export_nsec": "개인 키 복사",
     "export_nsec_title": "개인 키를 복사할까요?",
@@ -618,13 +618,13 @@
     "not_now": "나중에",
     "downloading": "버전 {{version}} 다운로드 중…",
     "download_failed_title": "다운로드 실패",
-    "download_failed_message": "업데이트를 다운로드할 수 없습니다. 다음에 PsstPsst를 열 때 다시 시도하세요.",
+    "download_failed_message": "업데이트를 다운로드할 수 없습니다. 다음에 Outlink를 열 때 다시 시도하세요.",
     "ready_title": "설치 준비 완료",
-    "ready_message": "버전 {{version}}을 다운로드했습니다. PsstPsst를 다시 시작하고 지금 설치할까요?",
+    "ready_message": "버전 {{version}}을 다운로드했습니다. Outlink를 다시 시작하고 지금 설치할까요?",
     "restart_and_install": "다시 시작하고 설치",
     "later": "나중에",
     "install_failed_title": "설치를 시작할 수 없습니다",
-    "install_failed_message": "PsstPsst가 설치 프로그램을 다시 시작할 수 없습니다. 다음에 앱을 열 때 다시 시도하세요."
+    "install_failed_message": "Outlink가 설치 프로그램을 다시 시작할 수 없습니다. 다음에 앱을 열 때 다시 시도하세요."
   },
   "legal": {
     "privacy_policy": "개인정보 처리방침",
@@ -773,7 +773,7 @@
   "secure_storage": {
     "setup_title": "앱 보호",
     "setup_hint": "이 시스템만으로는 키를 안전하게 저장할 수 없습니다. 키를 암호화할 앱 비밀번호를 만드세요.",
-    "unlock_title": "PsstPsst 잠금 해제",
+    "unlock_title": "Outlink 잠금 해제",
     "unlock_hint": "키와 계정의 잠금을 해제하려면 앱 비밀번호를 입력하세요.",
     "password": "앱 비밀번호",
     "confirm_password": "앱 비밀번호 확인",
@@ -820,7 +820,7 @@
     "description_placeholder": "어디에 사용하나요?",
     "direction": "방향",
     "empty_title": "Lightning 결제",
-    "empty_hint": "지갑 앱으로 결제하거나 PsstPsst에서 결제와 결제 요청에 사용할 지갑을 연결하세요.",
+    "empty_hint": "지갑 앱으로 결제하거나 Outlink에서 결제와 결제 요청에 사용할 지갑을 연결하세요.",
     "expires": "만료",
     "expires_at": "만료",
     "expires_in": "남은 시간",

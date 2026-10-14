@@ -2,7 +2,7 @@ import { platform } from '@/platform';
 
 import { extFromName, mimeToExt } from './attachment-store';
 
-const DIR_NAME = 'psstpsst-pending-uploads';
+const DIR_NAME = 'outlink-pending-uploads';
 
 async function pendingDir(): Promise<string> {
   const base = await platform.fileSystem.documentDirectoryUri();

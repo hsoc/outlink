@@ -1,6 +1,6 @@
 {
   "welcome": {
-    "title": "PsstPsst",
+    "title": "Outlink",
     "subtitle": "Decentralizált, végpontok között titkosított üzenetküldés",
     "choose_title": "Válassz fiókot",
     "login_nsec": "Bejelentkezés privát kulccsal",
@@ -26,7 +26,7 @@
     },
     "nostr_connect": {
       "title": "Nostr Connect",
-      "subtitle": "Olvasd be ezt a kódot az aláíróddal, vagy koppints rá egy aláíró megnyitásához ezen az eszközön. A PsstPsst bejelentkezik, amint az aláíró jóváhagyja.",
+      "subtitle": "Olvasd be ezt a kódot az aláíróddal, vagy koppints rá egy aláíró megnyitásához ezen az eszközön. A Outlink bejelentkezik, amint az aláíró jóváhagyja.",
       "copy": "Hivatkozás másolása",
       "copied": "Másolva",
       "waiting": "Várakozás az aláíróra…",
@@ -37,7 +37,7 @@
   },
   "generate": {
     "title": "Új fiók",
-    "subtitle": "A PsstPsst létrehozott neked egy új fiókot.",
+    "subtitle": "A Outlink létrehozott neked egy új fiókot.",
     "warning": "Készíts biztonsági másolatot az alábbi privát kulcsról. Aki hozzáfér, elolvashatja az üzeneteidet, és megszemélyesíthet téged.",
     "copy": "Másolás",
     "copied": "Másolva",
@@ -87,7 +87,7 @@
     "qr_save": "Mentés",
     "qr_saved": "Mentve a fényképek közé.",
     "qr_save_failed": "Nem sikerült menteni. Próbáld újra.",
-    "qr_save_permission": "A PsstPsstnek fénykép-hozzáférésre van szüksége a kártya mentéséhez."
+    "qr_save_permission": "A Outlinknek fénykép-hozzáférésre van szüksége a kártya mentéséhez."
   },
   "report": {
     "title": "Felhasználó jelentése",
@@ -121,14 +121,14 @@
     "url_confirm": "Kép használata",
     "image_url_placeholder": "https://…",
     "save": "Mentés",
-    "photo_permission": "A PsstPsstnek fénykép-hozzáférésre van szüksége a fényképed beállításához.",
-    "camera_permission": "A PsstPsstnek kamera-hozzáférésre van szüksége fénykép készítéséhez.",
+    "photo_permission": "A Outlinknek fénykép-hozzáférésre van szüksége a fényképed beállításához.",
+    "camera_permission": "A Outlinknek kamera-hozzáférésre van szüksége fénykép készítéséhez.",
     "upload_failed": "A kép feltöltése sikertelen. Próbáld újra.",
     "save_failed": "Nem sikerült menteni a profilodat. Próbáld újra."
   },
   "nip05": {
     "title": "Személyes azonosító",
-    "subtitle": "Foglalj le egy személyes azonosítót a psstpsst.chat szolgáltatásban, hogy mások a nyilvános kulcsod nélkül is megtaláljanak.",
+    "subtitle": "Foglalj le egy személyes azonosítót a outlink.invalid szolgáltatásban, hogy mások a nyilvános kulcsod nélkül is megtaláljanak.",
     "name_label": "Név",
     "name_placeholder": "név",
     "name_hint": "5-30 karakter: betűk, számok, pontok, kötőjelek és aláhúzások. Betűvel vagy számmal kezdődjön és végződjön.",
@@ -145,7 +145,7 @@
     "change": "Azonosító módosítása",
     "claim_failed": "Az azonosítót nem sikerült lefoglalni. Próbáld újra.",
     "skip": "Kihagyom most",
-    "profile_entry": "psstpsst.chat azonosító igénylése",
+    "profile_entry": "outlink.invalid azonosító igénylése",
     "profile_switch": "Váltás erre: {{address}}"
   },
   "conversations": {
@@ -299,7 +299,7 @@
     "sent": "Elküldve",
     "enter_conversation": "Beszélgetés megnyitása",
     "send_failed": "Nem sikerült mindent elküldeni. Próbáld újra megosztani.",
-    "receive_failed_title": "Nem osztható meg a PsstPssttel",
+    "receive_failed_title": "Nem osztható meg a Outlinktel",
     "receive_failed": "A megosztott tartalom már nem érhető el. Próbáld újra megosztani.",
     "stage_failed": "Nem sikerült előkészíteni a megosztott fájlokat. Próbáld újra.",
     "too_many_items": "Egyszerre legfeljebb 10 elemet oszthatsz meg.",
@@ -528,10 +528,10 @@
     "unavailable": "Ennek a névjegynek nem küldhető üzenet",
     "unavailable_title": "Ennek a névjegynek nem küldhető üzenet",
     "unavailable_summary": {
-      "checking": "A PsstPsst ellenőrzi, hogy ez a névjegy tud-e most üzeneteket fogadni.",
+      "checking": "A Outlink ellenőrzi, hogy ez a névjegy tud-e most üzeneteket fogadni.",
       "missingRelays": "Nem találhatók azok a relayek, ahol ez a névjegy üzeneteket fogad.",
-      "missingEncryptionKey": "Lehetséges, hogy a névjegy alkalmazása nem támogatja a PsstPsst által használt titkosított üzenetküldési protokollt.",
-      "unknown": "A PsstPsst nem tudta megerősíteni, hogy ez a névjegy tud üzeneteket fogadni."
+      "missingEncryptionKey": "Lehetséges, hogy a névjegy alkalmazása nem támogatja a Outlink által használt titkosított üzenetküldési protokollt.",
+      "unknown": "A Outlink nem tudta megerősíteni, hogy ez a névjegy tud üzeneteket fogadni."
     },
     "check_relays": "Üzenet-relayek",
     "check_key": "Titkosítási nyilvános kulcs",
@@ -564,16 +564,16 @@
     "background_service_message": "Új üzenetek figyelése",
     "new_message": "Új üzenet",
     "new_messages": "{{count}} új üzenet",
-    "open_to_view_message": "Nyisd meg a PsstPsst alkalmazást az üzenet megtekintéséhez",
-    "delivery_note_ios": "A háttérbeli értesítések az APNs-en keresztül érkeznek a relay.psstpsst.chat használatával.",
+    "open_to_view_message": "Nyisd meg a Outlink alkalmazást az üzenet megtekintéséhez",
+    "delivery_note_ios": "A háttérbeli értesítések az APNs-en keresztül érkeznek a relay.outlink.invalid használatával.",
     "required_relay_note": "Az iOS-értesítések engedélyezéséhez add hozzá a {{relay}} címet az üzenetközvetítőkhöz.",
     "relay_settings_action": "Ugrás a beállításokhoz",
-    "delivery_note_android": "Az Android aktívan tarthatja az üzenetkapcsolatot a háttérben, de a rendszer vagy az eszköz gyártója leállíthatja. A megbízhatóbb értesítésekhez engedélyezd a PsstPsst háttérbeli futását, és vedd ki az akkumulátor-optimalizálás alól a rendszerbeállításokban. A lehetőségek eszközönként eltérnek.",
-    "delivery_note_desktop": "Az értesítések addig érkeznek, amíg a PsstPsst fut a rendszertálcán. Az alkalmazás teljes bezárása leállítja a háttérbeli ellenőrzést.",
+    "delivery_note_android": "Az Android aktívan tarthatja az üzenetkapcsolatot a háttérben, de a rendszer vagy az eszköz gyártója leállíthatja. A megbízhatóbb értesítésekhez engedélyezd a Outlink háttérbeli futását, és vedd ki az akkumulátor-optimalizálás alól a rendszerbeállításokban. A lehetőségek eszközönként eltérnek.",
+    "delivery_note_desktop": "Az értesítések addig érkeznek, amíg a Outlink fut a rendszertálcán. Az alkalmazás teljes bezárása leállítja a háttérbeli ellenőrzést.",
     "privacy_note": "Ezek az adatok alapértelmezés szerint rejtve vannak. Ha megjeleníted őket, megmaradhatnak az eszköz értesítési előzményeiben.",
-    "system_permission_note": "A rendszerbeállításokban is engedélyezd a PsstPsst értesítéseit. Az alkalmazás nem tudja ellenőrizni, hogy a rendszer értesítései be vannak-e kapcsolva.",
+    "system_permission_note": "A rendszerbeállításokban is engedélyezd a Outlink értesítéseit. Az alkalmazás nem tudja ellenőrizni, hogy a rendszer értesítései be vannak-e kapcsolva.",
     "permission_denied_title": "Az értesítések ki vannak kapcsolva",
-    "permission_denied_message": "Az új üzenetekről szóló értesítésekhez engedélyezd a PsstPsst értesítéseit a rendszerbeállításokban.",
+    "permission_denied_message": "Az új üzenetekről szóló értesítésekhez engedélyezd a Outlink értesítéseit a rendszerbeállításokban.",
     "unavailable_title": "Az értesítések nem érhetők el",
     "unavailable_message": "Ez az asztali környezet nem támogatja a rendszerértesítéseket.",
     "open_settings": "Beállítások megnyitása",
@@ -596,7 +596,7 @@
     "dm_relays": "Üzenet-relayek",
     "media_servers": "Médiaszerverek",
     "blocked_users": "Letiltott felhasználók",
-    "about": "A PsstPsst névjegye",
+    "about": "A Outlink névjegye",
     "security": "Biztonság",
     "export_nsec": "Privát kulcs másolása",
     "export_nsec_title": "Másolod a privát kulcsot?",
@@ -618,13 +618,13 @@
     "not_now": "Most nem",
     "downloading": "A(z) {{version}} verzió letöltése…",
     "download_failed_title": "A letöltés sikertelen",
-    "download_failed_message": "A frissítés nem tölthető le. Próbáld újra a PsstPsst következő megnyitásakor.",
+    "download_failed_message": "A frissítés nem tölthető le. Próbáld újra a Outlink következő megnyitásakor.",
     "ready_title": "Telepítésre kész",
-    "ready_message": "A(z) {{version}} verzió letöltődött. Újraindítod a PsstPsst alkalmazást a telepítéshez?",
+    "ready_message": "A(z) {{version}} verzió letöltődött. Újraindítod a Outlink alkalmazást a telepítéshez?",
     "restart_and_install": "Újraindítás és telepítés",
     "later": "Később",
     "install_failed_title": "A telepítés nem indítható el",
-    "install_failed_message": "A PsstPsst nem tudta újraindítani a telepítőt. Próbáld újra az alkalmazás következő megnyitásakor."
+    "install_failed_message": "A Outlink nem tudta újraindítani a telepítőt. Próbáld újra az alkalmazás következő megnyitásakor."
   },
   "legal": {
     "privacy_policy": "Adatvédelmi szabályzat",
@@ -773,7 +773,7 @@
   "secure_storage": {
     "setup_title": "Az alkalmazás védelme",
     "setup_hint": "Ez a rendszer önmagában nem tudja biztonságosan tárolni a kulcsaidat. Hozz létre egy alkalmazásjelszót a titkosításukhoz.",
-    "unlock_title": "A PsstPsst feloldása",
+    "unlock_title": "A Outlink feloldása",
     "unlock_hint": "Add meg az alkalmazásjelszavadat a kulcsok és a fiók feloldásához.",
     "password": "Alkalmazásjelszó",
     "confirm_password": "Alkalmazásjelszó megerősítése",
@@ -820,7 +820,7 @@
     "description_placeholder": "Mire szolgál?",
     "direction": "Irány",
     "empty_title": "Lightning-fizetések",
-    "empty_hint": "Fizess egy tárcaalkalmazással, vagy kapcsolj tárcát a PsstPsstben történő fizetéshez és fizetési kérelmekhez.",
+    "empty_hint": "Fizess egy tárcaalkalmazással, vagy kapcsolj tárcát a Outlinkben történő fizetéshez és fizetési kérelmekhez.",
     "expires": "Lejárat",
     "expires_at": "Lejárat",
     "expires_in": "Lejár ennyi idő múlva:",

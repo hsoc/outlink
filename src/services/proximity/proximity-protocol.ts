@@ -281,7 +281,7 @@ function expectLength(value: Uint8Array, length: number, field: string): Uint8Ar
   return value;
 }
 
-const NOISE_BINDING_LABEL = textEncoder.encode('PsstPsst Nearby Noise Binding/1');
+const NOISE_BINDING_LABEL = textEncoder.encode('Outlink Nearby Noise Binding/1');
 
 export function noiseBindingMessage(
   publicKey: Uint8Array,

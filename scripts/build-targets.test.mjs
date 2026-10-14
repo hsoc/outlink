@@ -82,7 +82,7 @@ test('invalid inputs fail before allocating build runners', () => {
 });
 
 test('CLI writes reusable GitHub outputs for an Android-only selection', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'psstpsst-build-targets-'));
+  const dir = mkdtempSync(join(tmpdir(), 'outlink-build-targets-'));
   try {
     const eventPath = join(dir, 'event.json');
     const outputPath = join(dir, 'output');

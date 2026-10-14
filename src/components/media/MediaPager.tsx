@@ -362,7 +362,7 @@ function MediaPagerContent({
         ) : (
           <FlatList<MediaPageItem>
             ref={listRef}
-            {...(IS_ELECTRON ? { dataSet: { psstpsstScrollbarHidden: 'true' } } : {})}
+            {...(IS_ELECTRON ? { dataSet: { outlinkScrollbarHidden: 'true' } } : {})}
             data={pages}
             horizontal
             pagingEnabled

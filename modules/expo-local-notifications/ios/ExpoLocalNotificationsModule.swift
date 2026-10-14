@@ -13,7 +13,7 @@ public final class ExpoLocalNotificationsModule: Module {
     Constants([
       "sharedKeychainGroup": SharedNotificationStorage.keychainGroup as Any,
       "notificationProcessorVersion": Bundle.main.builtInPlugInsURL.map {
-        FileManager.default.fileExists(atPath: $0.appendingPathComponent("PsstPsstNotificationService.appex").path) ? 1 : 0
+        FileManager.default.fileExists(atPath: $0.appendingPathComponent("OutlinkNotificationService.appex").path) ? 1 : 0
       } ?? 0,
     ])
     AsyncFunction("sharedDatabaseDirectoryAsync") { (legacyDirectory: String) throws -> String in
@@ -28,7 +28,7 @@ public final class ExpoLocalNotificationsModule: Module {
           DispatchQueue.main.async { module.sendEvent("onSharedDatabaseChanged", [:]) }
         }, SharedNotificationContext.databaseChanged as CFString, nil, .deliverImmediately)
       self.pushObserver = NotificationCenter.default.addObserver(
-        forName: Notification.Name("PsstPsstPushTokenChanged"), object: nil, queue: .main
+        forName: Notification.Name("OutlinkPushTokenChanged"), object: nil, queue: .main
       ) { [weak self] _ in self?.sendEvent("onPushTokenChanged", [:]) }
     }
     OnDestroy {

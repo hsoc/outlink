@@ -1,7 +1,7 @@
-# PsstPsst Protocols
+# Outlink Protocols
 
 This directory contains the wire specifications needed to interoperate with
-PsstPsst. Documents here define events, byte formats, validation rules, and
+Outlink. Documents here define events, byte formats, validation rules, and
 peer-to-peer exchanges. They do not describe database schemas, service classes,
 UI behavior, background scheduling, retry workers, or platform adapters.
 

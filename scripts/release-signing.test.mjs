@@ -58,7 +58,7 @@ for (const platform of ['android', 'macos']) {
 }
 
 test('invalid Base64 produces no distributable APK', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'psstpsst-invalid-signing-'));
+  const dir = mkdtempSync(join(tmpdir(), 'outlink-invalid-signing-'));
   try {
     const input = join(dir, 'input.apk');
     const output = join(dir, 'output.apk');
@@ -83,7 +83,7 @@ test('AAB signing requires credentials and keeps passwords out of arguments', ()
 });
 
 test('invalid Base64 produces no distributable AAB', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'psstpsst-invalid-bundle-signing-'));
+  const dir = mkdtempSync(join(tmpdir(), 'outlink-invalid-bundle-signing-'));
   try {
     const input = join(dir, 'input.aab');
     const output = join(dir, 'output.aab');
@@ -105,7 +105,7 @@ const hasJdk = ['jar', 'jarsigner', 'keytool'].every((name) =>
 test('real AAB archive signing verifies the configured key and rejects signed input and wrong passwords', {
   skip: !hasJdk,
 }, () => {
-  const dir = mkdtempSync(join(tmpdir(), 'psstpsst-aab-signing-test-'));
+  const dir = mkdtempSync(join(tmpdir(), 'outlink-aab-signing-test-'));
   const env = { ...process.env, ...credentials.android };
   const command = (name, args) => {
     const result = spawnSync(jdkTool(name), args, { env, encoding: 'utf8' });
@@ -152,7 +152,7 @@ const androidJar = sdk && join(sdk, 'platforms', 'android-36', 'android.jar');
 test('real APK signing replaces the previous signer and rejects a wrong password', {
   skip: !sdk || !existsSync(join(buildTools, 'apksigner')) || !existsSync(androidJar),
 }, () => {
-  const dir = mkdtempSync(join(tmpdir(), 'psstpsst-apk-signing-test-'));
+  const dir = mkdtempSync(join(tmpdir(), 'outlink-apk-signing-test-'));
   const command = (executable, args, env = process.env) => {
     const result = spawnSync(executable, args, { env, encoding: 'utf8' });
     assert.equal(result.status, 0, result.stderr || result.error?.message);
@@ -160,7 +160,7 @@ test('real APK signing replaces the previous signer and rejects a wrong password
   };
   try {
     const manifest = join(dir, 'AndroidManifest.xml');
-    writeFileSync(manifest, '<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="chat.psstpsst.signingtest" android:versionCode="1"><uses-sdk android:minSdkVersion="24"/><application/></manifest>');
+    writeFileSync(manifest, '<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="chat.outlink.signingtest" android:versionCode="1"><uses-sdk android:minSdkVersion="24"/><application/></manifest>');
     const input = join(dir, 'input.apk');
     const initial = join(dir, 'initial.apk');
     const output = join(dir, 'output.apk');

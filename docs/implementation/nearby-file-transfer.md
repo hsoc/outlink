@@ -3,7 +3,7 @@
 The interoperable offer and record exchange are specified in
 [`../protocols/nearby-file-transfer.md`](../protocols/nearby-file-transfer.md).
 
-Before a file rumor enters the message outbox, PsstPsst persists the managed
+Before a file rumor enters the message outbox, Outlink persists the managed
 plaintext, the encrypted Blossom spool, the upload targets and retry state, and
 the complete rumor. Uploads retry independently. The spool may be removed after
 one target confirms the exact ciphertext; reconstruction is allowed only from

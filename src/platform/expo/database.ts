@@ -14,7 +14,7 @@ export const SQLITE_BUSY_TIMEOUT_MS = 5_000;
 
 const sqlitePromise = (async () => {
   const directory = await loadLocalNotifications()?.sharedDatabaseDirectoryAsync?.(defaultDatabaseDirectory);
-  return openDatabaseAsync('psstpsst.db', { enableChangeListener: true }, directory);
+  return openDatabaseAsync('outlink.db', { enableChangeListener: true }, directory);
 })().then(
   async (sqlite) => {
     // WAL lets readers continue while a writer commits. `busy_timeout` covers
@@ -98,7 +98,7 @@ function transactionExecutor(sqlite: SQLiteDatabase): SqliteExecutor {
   return {
     execute: (sql, params, method) => executeOn(sqlite, sql, params, method),
     async transaction(task) {
-      const savepoint = `psstpsst_nested_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+      const savepoint = `outlink_nested_${Date.now()}_${Math.random().toString(16).slice(2)}`;
       await sqlite.execAsync(`SAVEPOINT ${savepoint}`);
       try {
         const value = await task(transactionExecutor(sqlite));

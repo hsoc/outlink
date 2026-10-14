@@ -420,7 +420,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "psstpsst-proximity"
+name = "outlink-proximity"
 version = "1.0.0"
 dependencies = [
  "anyhow",

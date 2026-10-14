@@ -73,7 +73,7 @@ describe('AppButton layout', () => {
     act(() => {
       renderer = create(
         <AppButton
-          label="Switch to a-very-long-name@psstpsst.chat"
+          label="Switch to a-very-long-name@outlink.invalid"
           variant="accentText"
           labelNumberOfLines={1}
           labelEllipsizeMode="tail"

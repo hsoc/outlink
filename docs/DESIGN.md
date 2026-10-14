@@ -1,6 +1,6 @@
-# PsstPsst Design System
+# Outlink Design System
 
-> The visual and interaction charter for PsstPsst. Read this file before any UI
+> The visual and interaction charter for Outlink. Read this file before any UI
 > change. Keep it about durable conventions; component implementation belongs
 > in code and system mechanisms belong in [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
@@ -10,7 +10,7 @@ defines how those tokens and components are used.
 
 ## 1. Personality
 
-PsstPsst is calm, professional, private, and content-first.
+Outlink is calm, professional, private, and content-first.
 
 - Prefer restraint over decoration.
 - Let messages and people dominate the screen; chrome stays quiet.
@@ -422,7 +422,7 @@ Electron suppresses Chromium focus outlines across all controls; keyboard
 shortcuts remain supported, but visible keyboard-focus navigation is not a
 product interaction convention.
 The Electron tray opens the app on primary activation. Secondary activation
-opens its `Show PsstPsst` and `Quit` context menu; Linux follows the host tray's
+opens its `Show Outlink` and `Quit` context menu; Linux follows the host tray's
 activation conventions.
 The onboarding artwork may extend behind Electron's title bar. In that mode the
 title bar stays draggable, native window controls remain clear, and the product

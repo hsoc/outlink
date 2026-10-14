@@ -2,7 +2,7 @@ import type { Rumor } from '@/db/schema/types';
 
 import { pickTagValue } from './tags';
 
-/** PsstPsst's authenticated, non-indexed millisecond ordering tag for private rumors. */
+/** Outlink's authenticated, non-indexed millisecond ordering tag for private rumors. */
 export const MESSAGE_ORDER_TAG = 'ms';
 export const MAX_RUMOR_FUTURE_SKEW_MS = 10 * 60 * 1000;
 

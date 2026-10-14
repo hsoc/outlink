@@ -41,7 +41,7 @@ import {
 } from './proximity-protocol';
 import { parseNearbyFileOffer, type NearbyFileOffer } from './proximity-file-offer';
 
-const PARTIAL_DIR = 'psstpsst-nearby-partials';
+const PARTIAL_DIR = 'outlink-nearby-partials';
 const DEFAULT_CHUNK_SIZE = 16 * 1024;
 const DEFAULT_WINDOW = 1;
 const TRANSFER_TIMEOUT_MS = 15_000;

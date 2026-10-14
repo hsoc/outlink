@@ -206,7 +206,7 @@ export default function NotificationsSettings() {
                 <ListRow
                   icon={<ServerSquare size={22} color={c.text} />}
                   title={t('notifications.relay_settings_action')}
-                  subtitle={t('notifications.required_relay_note', { relay: 'relay.psstpsst.chat' })}
+                  subtitle={t('notifications.required_relay_note', { relay: 'relay.outlink.invalid' })}
                   subtitleTone="danger"
                   subtitleMultiline
                   trailing={<DirectionalChevron size={18} color={c.textMuted} />}

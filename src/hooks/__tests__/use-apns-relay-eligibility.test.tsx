@@ -10,7 +10,7 @@ const mockWhere = jest.fn(() => ({}));
 jest.mock('@/db/client', () => ({ db: { select: () => ({ from: () => ({ where: mockWhere }) }) } }));
 jest.mock('@/db/use-live-query', () => ({ useLiveQuery: () => mockQuery }));
 jest.mock('@/lib/platform', () => ({ get IS_IOS() { return mockIos; } }));
-jest.mock('@/services/notifications/push-api', () => ({ APNS_RELAY_URL: 'wss://relay.psstpsst.chat/' }));
+jest.mock('@/services/notifications/push-api', () => ({ APNS_RELAY_URL: 'wss://relay.outlink.invalid/' }));
 jest.mock('@/stores/active-account.store', () => ({
   useActiveAccount: (select: (state: { activePubkey: string | null }) => unknown) => select({ activePubkey: mockPubkey }),
 }));
@@ -33,19 +33,19 @@ async function render() { await act(async () => { renderer = create(<Harness />)
 it('disables during loading and follows saved relay removal and restoration', async () => {
   await render();
   expect(result).toEqual({ eligible: false, resolved: false });
-  mockQuery = { isResolved: true, data: [{ relayUrl: 'wss://relay.psstpsst.chat' }], error: undefined };
+  mockQuery = { isResolved: true, data: [{ relayUrl: 'wss://relay.outlink.invalid' }], error: undefined };
   await act(async () => { renderer.update(<Harness />); });
   expect(result.eligible).toBe(true);
   mockQuery.data = [];
   await act(async () => { renderer.update(<Harness />); });
   expect(result).toEqual({ eligible: false, resolved: true });
-  mockQuery.data = [{ relayUrl: 'wss://relay.psstpsst.chat/' }];
+  mockQuery.data = [{ relayUrl: 'wss://relay.outlink.invalid/' }];
   await act(async () => { renderer.update(<Harness />); });
   expect(result.eligible).toBe(true);
 });
 
 it('rejects retained results during an account change', async () => {
-  mockQuery = { isResolved: true, data: [{ relayUrl: 'wss://relay.psstpsst.chat' }], error: undefined };
+  mockQuery = { isResolved: true, data: [{ relayUrl: 'wss://relay.outlink.invalid' }], error: undefined };
   await render();
   mockPubkey = 'other';
   mockQuery.isResolved = false;

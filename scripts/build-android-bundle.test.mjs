@@ -7,7 +7,7 @@ import { buildAndroidBundle } from './build-android-bundle.mjs';
 
 for (const exitCode of [0, 1]) {
   test(`bundle build restores APK signing configuration after Gradle exits with ${exitCode}`, () => {
-    const dir = mkdtempSync(join(tmpdir(), 'psstpsst-bundle-build-'));
+    const dir = mkdtempSync(join(tmpdir(), 'outlink-bundle-build-'));
     try {
       const gradlePath = join(dir, 'app', 'build.gradle');
       const original = 'android {\n  buildTypes {\n    debug {\n      signingConfig signingConfigs.debug\n    }\n    release {\n      signingConfig signingConfigs.debug\n    }\n  }\n}\n';
@@ -40,7 +40,7 @@ exit ${exitCode}
 }
 
 test('unexpected native signing configuration is left untouched', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'psstpsst-bundle-config-'));
+  const dir = mkdtempSync(join(tmpdir(), 'outlink-bundle-config-'));
   try {
     mkdirSync(join(dir, 'app'));
     const gradlePath = join(dir, 'app', 'build.gradle');

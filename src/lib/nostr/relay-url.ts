@@ -37,7 +37,6 @@ export function normalizeRelayUrls(urls: readonly string[]): string[] {
 
 /** Inbox defaults used when an account has no locally persisted DM relays. */
 export const DEFAULT_DM_RELAYS = [
-  'wss://relay.psstpsst.chat/',
   'wss://nos.lol/',
   'wss://nip17.com/',
   'wss://relay.ditto.pub/',

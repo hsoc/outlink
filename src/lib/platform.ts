@@ -6,9 +6,9 @@ export const IS_IOS = Platform.OS === 'ios';
 export const IS_ELECTRON =
   Platform.OS === 'web' &&
   typeof window !== 'undefined' &&
-  typeof window.psstpsstDesktop !== 'undefined';
+  typeof window.outlinkDesktop !== 'undefined';
 export const DESKTOP_OS = IS_ELECTRON
-  ? window.psstpsstDesktop?.system.platform
+  ? window.outlinkDesktop?.system.platform
   : undefined;
 
 /** Shared pushed-screen keyboard avoidance policy. */

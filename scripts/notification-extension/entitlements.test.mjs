@@ -15,7 +15,7 @@ const projectRoot = fileURLToPath(new URL('../../', import.meta.url));
 for (const { id } of Object.values(identities)) {
   test(`${id}: removes unused background modes while preserving remote notifications`, async () => {
     const config = {
-      name: 'PsstPsst', slug: 'psstpsst',
+      name: 'Outlink', slug: 'outlink',
       ios: {
         bundleIdentifier: id,
         infoPlist: {
@@ -42,7 +42,7 @@ for (const { id } of Object.values(identities)) {
   ]) {
     test(`${id}: preserves private Keychain storage with ${scenario}`, async () => {
       let config = {
-        name: 'PsstPsst', slug: 'psstpsst',
+        name: 'Outlink', slug: 'outlink',
         ios: { bundleIdentifier: id, entitlements: { 'keychain-access-groups': existingGroups } },
       };
       for (let pass = 0; pass < 2; pass++) {

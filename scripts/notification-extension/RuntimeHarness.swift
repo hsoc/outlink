@@ -10,7 +10,7 @@ struct RuntimeHarness {
     var keys = fixture["keys"] as! [String: String]
     let semaphore = DispatchSemaphore(value: 0)
     let runtime = NotificationRuntime(
-      databaseLocation: { (directory.appendingPathComponent("psstpsst.db").path, fixture["schemaVersion"] as! NSNumber) },
+      databaseLocation: { (directory.appendingPathComponent("outlink.db").path, fixture["schemaVersion"] as! NSNumber) },
       scriptLoader: { try String(contentsOf: directory.appendingPathComponent("\($0).js"), encoding: .utf8) },
       credentialAccess: { method, args in
         let key = args[0] as! String

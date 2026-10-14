@@ -1,5 +1,5 @@
 {
   "platforms": ["apple", "android"],
   "apple": { "modules": ["ExpoProximityModule"] },
-  "android": { "modules": ["chat.psstpsst.app.proximity.ExpoProximityModule"] }
+  "android": { "modules": ["io.github.hsoc.outlink.proximity.ExpoProximityModule"] }
 }

@@ -32,7 +32,7 @@ public final class ExpoProximityModule: Module {
   private var bitchatMode = false
   private var serviceUUID: CBUUID { bitchatMode ? CBUUID(string: "F47B5E2D-4A9E-4C5A-9B3F-8E1D2C3A4B5C") : nearbyServiceUUID }
   private var mailboxUUID: CBUUID { bitchatMode ? CBUUID(string: "A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D") : nearbyMailboxUUID }
-  private let bluetoothQueue = DispatchQueue(label: "chat.psstpsst.app.proximity.bluetooth")
+  private let bluetoothQueue = DispatchQueue(label: "io.github.hsoc.outlink.proximity.bluetooth")
   private lazy var bluetoothDelegate = ExpoProximityBluetoothDelegate(owner: self)
   private var central: CBCentralManager?
   private var peripheralManager: CBPeripheralManager?

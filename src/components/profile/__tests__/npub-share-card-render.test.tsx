@@ -33,7 +33,7 @@ describe('NpubShareCard export layout', () => {
         <NpubShareCard
           npub="npub1abcdefghijklmnopqrstuvwxyz"
           name="Cody"
-          nip05="cody@psstpsst.chat"
+          nip05="cody@outlink.invalid"
         />,
       );
     });

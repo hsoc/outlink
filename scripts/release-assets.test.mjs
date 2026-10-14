@@ -16,24 +16,24 @@ test('public release assets use stable version-independent names', () => {
   for (const name of RELEASE_ASSET_NAMES) assert.doesNotMatch(name, /\d+\.\d+\.\d+/);
 
   const workflow = readFileSync(new URL('.github/workflows/build.yml', root), 'utf8');
-  assert.match(workflow, /release\/PsstPsst-android\.apk/);
-  assert.match(workflow, /release\/PsstPsst-android\.aab/);
-  assert.ok(RELEASE_ASSET_NAMES.includes('PsstPsst-android.aab'));
+  assert.match(workflow, /release\/Outlink-android\.apk/);
+  assert.match(workflow, /release\/Outlink-android\.aab/);
+  assert.ok(RELEASE_ASSET_NAMES.includes('Outlink-android.aab'));
   assert.match(workflow, /name: android-aab/);
   assert.match(workflow, /node scripts\/release-assets\.mjs release-assets/);
-  assert.doesNotMatch(workflow, /PsstPsst-\$\{version\}/);
+  assert.doesNotMatch(workflow, /Outlink-\$\{version\}/);
 
   const zapstore = readFileSync(new URL('zapstore.yaml', root), 'utf8');
   const zapstoreMatch = zapstore.split('\n').find((line) => line.startsWith('match: '));
-  assert.equal(zapstoreMatch, 'match: ^PsstPsst-android\\.apk$');
+  assert.equal(zapstoreMatch, 'match: ^Outlink-android\\.apk$');
   const apkPattern = new RegExp(zapstoreMatch.slice('match: '.length));
-  assert.ok(apkPattern.test('PsstPsst-android.apk'));
-  assert.ok(!apkPattern.test('PsstPsst-0.2.3-android.apk'));
-  assert.ok(!apkPattern.test('PsstPsst-preview-android.apk'));
+  assert.ok(apkPattern.test('Outlink-android.apk'));
+  assert.ok(!apkPattern.test('Outlink-0.2.3-android.apk'));
+  assert.ok(!apkPattern.test('Outlink-preview-android.apk'));
 
-  const fdroid = readFileSync(new URL('fdroid/metadata/chat.psstpsst.app.yml', root), 'utf8');
-  assert.match(fdroid, /^Binaries: .+\/releases\/download\/v%v\/PsstPsst-android\.apk$/m);
-  assert.doesNotMatch(fdroid, /PsstPsst-%v-android\.apk/);
+  const fdroid = readFileSync(new URL('fdroid/metadata/io.github.hsoc.outlink.yml', root), 'utf8');
+  assert.match(fdroid, /^Binaries: .+\/releases\/download\/v%v\/Outlink-android\.apk$/m);
+  assert.doesNotMatch(fdroid, /Outlink-%v-android\.apk/);
 });
 
 test('F-Droid auditing cannot block the normal APK release', () => {
@@ -50,7 +50,7 @@ test('F-Droid auditing cannot block the normal APK release', () => {
 });
 
 test('release validation reports only missing assets', () => {
-  const directory = mkdtempSync(join(tmpdir(), 'psstpsst-release-assets-'));
+  const directory = mkdtempSync(join(tmpdir(), 'outlink-release-assets-'));
   try {
     for (const name of RELEASE_ASSET_NAMES.slice(1)) writeFileSync(join(directory, name), 'fixture');
     assert.deepEqual(findMissingReleaseAssets(directory), [RELEASE_ASSET_NAMES[0]]);

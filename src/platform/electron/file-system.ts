@@ -7,7 +7,7 @@ let uploadSequence = 0;
 let remoteRequestSequence = 0;
 
 function isManagedUri(uri: string): boolean {
-  return uri.startsWith('psstpsst-file://');
+  return uri.startsWith('outlink-file://');
 }
 
 async function readRendererBytes(uri: string): Promise<Uint8Array> {

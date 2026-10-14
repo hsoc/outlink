@@ -1,4 +1,4 @@
-# Building and releasing PsstPsst
+# Building and releasing Outlink
 
 This guide covers the `Build Apps` workflow in
 [`build.yml`](../.github/workflows/build.yml), Android distribution through
@@ -9,9 +9,9 @@ or upload iOS apps, submit to Google Play or F-Droid, or publish Nostr events to
 
 ## Development and production identities
 
-`EXPO_PUBLIC_APP_ENV=development` selects **PsstPsst Dev**, application ID
-`chat.psstpsst.app.dev`, and URL scheme `psstpsst-dev`. Production uses
-**PsstPsst**, `chat.psstpsst.app`, and `psstpsst`. Missing or unknown environment
+`EXPO_PUBLIC_APP_ENV=development` selects **Outlink Dev**, application ID
+`io.github.hsoc.outlink.dev`, and URL scheme `outlink-dev`. Production uses
+**Outlink**, `io.github.hsoc.outlink`, and `outlink`. Missing or unknown environment
 values select production. The identities are defined in
 `config/app-identities.json`; `app.json` retains production version metadata.
 
@@ -32,7 +32,7 @@ does not migrate the old installation's data.
 Electron development uses its own user-data directory and single-instance lock,
 registers only its development URL scheme, and disables release-feed updates.
 On macOS, the development launcher creates and ad-hoc signs a cached
-`desktop/.dev-runtime/PsstPsst Dev.app` host so OS permissions use the development
+`desktop/.dev-runtime/Outlink Dev.app` host so OS permissions use the development
 bundle ID. It rebuilds this copy when Electron or the identity changes.
 
 `electron:package` and `electron:package:signed` explicitly select production;
@@ -60,7 +60,7 @@ development packages must not be uploaded to the production update feed.
 
 Before making the repository public or publishing its first release:
 
-1. Create the canonical `codytseng/psstpsst` repository. Confirm the repository
+1. Create the canonical `hsoc/outlink` repository. Confirm the repository
    links, `RELEASE_REPOSITORY` in the build workflow, and desktop update feed
    all point to it. Point the local Git remote at the new repository before
    pushing; do not publish a tag from the old repository.
@@ -70,7 +70,7 @@ Before making the repository public or publishing its first release:
    does not remove it from earlier commits.
 3. Enable GitHub private vulnerability reporting and verify that the reporting
    link in [SECURITY.md](../SECURITY.md) works. Review that policy and
-   the [website privacy policy](https://psstpsst.chat/privacy/) against the
+   the [website privacy policy](https://github.com/hsoc/outlink/blob/master/docs/PRIVACY.md) against the
    release's actual behavior. Maintain the privacy policy on the website only.
 4. Require the quality and third-party notices workflows for pull requests in
    the repository's branch rules. Verify they pass on the release commit and
@@ -117,13 +117,13 @@ targets plus APK and AAB, ignoring manual input selections.
 | Push a matching `v*` tag with complete credentials | Builds the configured Android and desktop targets and creates or updates a draft GitHub Release |
 
 Manual runs only upload Actions artifacts, retained for 14 days. Tag publishing
-runs only in `codytseng/psstpsst`, waits for all six builds, and requires all
+runs only in `hsoc/outlink`, waits for all six builds, and requires all
 installers, the signed AAB, and desktop update metadata. Publish the draft manually after testing.
 Re-runs may replace draft assets but refuse to modify a published release.
 
 Android release builds run in the pinned F-Droid buildserver image through
 `scripts/build-android-reproducible.sh`. The script copies the checkout to
-`/home/vagrant/build/chat.psstpsst.app`, fixes Node.js/npm and the Android native
+`/home/vagrant/build/io.github.hsoc.outlink`, fixes Node.js/npm and the Android native
 toolchain, sets `SOURCE_DATE_EPOCH` from the release commit, and builds every Expo
 Android module from source. Selected signed Android packages are built unsigned
 inside the container and signed on the GitHub runner. CI sets `ANDROID_BUILD_APK`
@@ -165,7 +165,7 @@ checksum-pinned verifier dependency and compare the unsigned and signed APKs:
 python3 -m pip install --no-deps --only-binary=:all: --require-hashes \
   --requirement scripts/fdroid-reproducibility-requirements.txt
 node scripts/verify-fdroid-reproducibility.mjs \
-  release/fdroid-build/app-release.apk release/PsstPsst-android.apk
+  release/fdroid-build/app-release.apk release/Outlink-android.apk
 ```
 
 ## Add GitHub configuration
@@ -175,7 +175,7 @@ New repository secret**. Use the exact names below. These are repository
 secrets, not Actions variables. Do not commit private keys or passwords.
 
 Alternatively, authenticate `gh` and use `gh secret set NAME --repo
-codytseng/psstpsst` to enter a value interactively. For encoded certificate files,
+hsoc/outlink` to enter a value interactively. For encoded certificate files,
 redirect the file into `gh secret set` as shown below. The release job uses
 GitHub's automatic `GITHUB_TOKEN`; no personal GitHub token or Expo token is
 needed by this workflow.
@@ -209,7 +209,7 @@ or Developer ID Installer certificate is not the certificate for this app.
    ```bash
    umask 077
    node -e 'process.stdout.write(require("node:fs").readFileSync("developer-id.p12").toString("base64"))' > developer-id.p12.base64
-   gh secret set MAC_CSC_LINK --repo codytseng/psstpsst < developer-id.p12.base64
+   gh secret set MAC_CSC_LINK --repo hsoc/outlink < developer-id.p12.base64
    ```
 
 5. Add the other four secrets using the table above. Keep a secure backup of
@@ -292,20 +292,20 @@ npm run electron:package:signed -- --mac --arm64 --config.mac.notarize=false
 
 Signing alone does not provide Apple's notarization ticket for distribution.
 Both commands disable GitHub publishing. The output is
-`release/PsstPsst-mac-arm64.dmg` and `.zip`, with the application at
-`release/mac-arm64/PsstPsst.app`.
+`release/Outlink-mac-arm64.dmg` and `.zip`, with the application at
+`release/mac-arm64/Outlink.app`.
 
 **4. Verify the result.** Verify the signature for either build:
 
 ```bash
-codesign --verify --deep --strict --verbose=2 release/mac-arm64/PsstPsst.app
+codesign --verify --deep --strict --verbose=2 release/mac-arm64/Outlink.app
 ```
 
 For a notarized build, also check Gatekeeper acceptance and the stapled ticket:
 
 ```bash
-spctl --assess --type execute --verbose=2 release/mac-arm64/PsstPsst.app
-xcrun stapler validate release/mac-arm64/PsstPsst.app
+spctl --assess --type execute --verbose=2 release/mac-arm64/Outlink.app
+xcrun stapler validate release/mac-arm64/Outlink.app
 ```
 
 **Troubleshooting duplicate certificate names.** If `codesign` reports
@@ -342,24 +342,24 @@ The command prompts for the password and certificate details:
 ```bash
 umask 077
 keytool -genkeypair -v -storetype PKCS12 \
-  -keystore psstpsst-release.keystore -alias psstpsst \
+  -keystore outlink-release.keystore -alias outlink \
   -keyalg RSA -keysize 4096 -validity 10000
-node -e 'process.stdout.write(require("node:fs").readFileSync("psstpsst-release.keystore").toString("base64"))' > psstpsst-release.keystore.base64
-gh secret set ANDROID_KEYSTORE_BASE64 --repo codytseng/psstpsst < psstpsst-release.keystore.base64
+node -e 'process.stdout.write(require("node:fs").readFileSync("outlink-release.keystore").toString("base64"))' > outlink-release.keystore.base64
+gh secret set ANDROID_KEYSTORE_BASE64 --repo hsoc/outlink < outlink-release.keystore.base64
 ```
 
 | Repository secret | Value |
 | --- | --- |
 | `ANDROID_KEYSTORE_BASE64` | Base64 contents of the complete `.keystore`, `.jks`, or `.p12` file |
 | `ANDROID_KEYSTORE_PASSWORD` | Password protecting the keystore |
-| `ANDROID_KEY_ALIAS` | Alias of the private key; `psstpsst` in the example |
+| `ANDROID_KEY_ALIAS` | Alias of the private key; `outlink` in the example |
 | `ANDROID_KEY_PASSWORD` | Password protecting that key; use the store password for the PKCS12 example |
 
 All four values must be nonempty. CI installs Android Build Tools 36.0.0,
 generates the native project from the checked-in Expo configuration, and runs
 Gradle's `:app:assembleRelease`. It then replaces the template's debug signature
 using `apksigner`, verifies the resulting APK, and uploads
-`PsstPsst-android.apk`. The decoded keystore exists only in a temporary
+`Outlink-android.apk`. The decoded keystore exists only in a temporary
 directory during signing and is removed afterward. Passwords are read from
 environment variables, not passed as literal command arguments.
 
@@ -378,7 +378,7 @@ npm run android:build
 node scripts/release-signing.mjs check android
 node scripts/release-signing.mjs sign-android \
   android/app/build/outputs/apk/release/app-release.apk \
-  release/PsstPsst-android.apk
+  release/Outlink-android.apk
 ```
 
 The SDK path above is the usual macOS location; use your SDK path on other
@@ -391,8 +391,8 @@ Record the certificate's public SHA-256 fingerprint and compare it with the
 fingerprint printed by the signing step:
 
 ```bash
-keytool -list -v -keystore /absolute/path/to/psstpsst-release.keystore -alias psstpsst
-"$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs release/PsstPsst-android.apk
+keytool -list -v -keystore /absolute/path/to/outlink-release.keystore -alias outlink
+"$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs release/Outlink-android.apk
 ```
 
 See Android's [signing guide](https://developer.android.com/studio/publish/app-signing)
@@ -400,11 +400,11 @@ and [apksigner reference](https://developer.android.com/tools/apksigner).
 
 ### Android: Google Play App Bundle
 
-CI runs that select AAB upload `PsstPsst-android.aab` as the `android-aab` Actions
+CI runs that select AAB upload `Outlink-android.aab` as the `android-aab` Actions
 artifact; tag runs also attach it to the draft GitHub Release. Download that file
 and upload it to a Google Play Console testing track before promoting it to
 production. APK distribution through GitHub, Zapstore, and F-Droid continues
-to use `PsstPsst-android.apk`. AAB files cannot be installed directly on a device.
+to use `Outlink-android.apk`. AAB files cannot be installed directly on a device.
 
 For a local build, load the same four `ANDROID_*` signing variables used for APK
 releases, install JDK 17 and the Android SDK, and run:
@@ -414,7 +414,7 @@ npm run android:prebuild
 npm run android:bundle
 node scripts/release-signing.mjs sign-android-bundle \
   android/app/build/outputs/bundle/release/app-release.aab \
-  release/PsstPsst-android.aab
+  release/Outlink-android.aab
 ```
 
 The bundle command temporarily disables the generated release debug signature
@@ -433,7 +433,7 @@ them. Signing the uploaded AAB with that key alone does not choose the certifica
 Google Play uses for delivered APKs. This workflow reuses the APK credentials for
 the upload signature; if a separate upload key is registered in Play Console,
 configure the AAB signing step with that key instead. Keep the production
-application ID `chat.psstpsst.app` and increase `expo.android.versionCode` for each
+application ID `io.github.hsoc.outlink` and increase `expo.android.versionCode` for each
 new upload; APK and AAB from the same release share the version code.
 
 See Android's [bundle build guide](https://developer.android.com/build/building-cmdline)
@@ -489,7 +489,7 @@ Leave release notes to the selected GitHub release rather than hard-coding
 the first version's changelog in `zapstore.yaml`.
 
 The disabled F-Droid submission draft lives in
-[`fdroid/metadata/chat.psstpsst.app.yml`](../fdroid/metadata/chat.psstpsst.app.yml).
+[`fdroid/metadata/io.github.hsoc.outlink.yml`](../fdroid/metadata/io.github.hsoc.outlink.yml).
 Complete the toolchain, release-commit, signing-fingerprint, and reproducibility
 steps in [`fdroid/README.md`](../fdroid/README.md) before submitting it. Local
 YAML validation does not establish F-Droid build or inclusion readiness.
@@ -500,7 +500,7 @@ version-specific URL without putting the version in the APK filename.
 
 For Zapstore, publish the signed APK as a public GitHub Release asset first.
 Install the official `zsp` publisher, then use `zsp publish --wizard`, selecting
-`https://github.com/codytseng/psstpsst` as the release source. Review the generated
+`https://github.com/hsoc/outlink` as the release source. Review the generated
 `zapstore.yaml` before adding it to version control. The first publish links the
 APK certificate to the developer's Nostr identity and requires access to the
 keystore. Nostr event signing is separate from Android APK signing. For future
@@ -580,7 +580,7 @@ with the app. Verify notifications in a signed build: first authorization, denia
 opening System Settings, and toggling OS permission while the settings screen is
 open. The in-app toggle must refresh when returning to the app.
 
-Packaged builds check the public `codytseng/psstpsst` GitHub Releases feed after
+Packaged builds check the public `hsoc/outlink` GitHub Releases feed after
 startup and when the window returns to the foreground, at most roughly once per
 24 hours. The last attempt time persists across restarts; manual checks in
 Me → Check for updates bypass this interval and can reopen declined update prompts.
@@ -654,8 +654,8 @@ and an App Store Connect app record. The macOS Developer ID `.p12` is not an iOS
 distribution identity. Xcode can manage iOS certificates and provisioning
 profiles through automatic signing.
 
-1. In `app.json`, set `expo.ios.appleTeamId` to your team's ID so the setting
-   survives regeneration. Keep `with-ios-signing` before target-creating plugins
+1. Set `APPLE_TEAM_ID` to your team's ID before prebuild and archive. The
+   dynamic Expo config applies it when regenerating native projects. Keep `with-ios-signing` before target-creating plugins
    in the plugins array: it applies the team after those plugins create extensions.
    Keep `expo.ios.bundleIdentifier` registered to that
    team. Increment `expo.ios.buildNumber` before each new uploaded build.
@@ -669,15 +669,15 @@ profiles through automatic signing.
    Prebuild installs pods. If dependency installation was skipped, run
    `npx pod-install` before opening the workspace. `--clean` replaces the generated
    directory: save durable changes in app config or plugins first.
-3. Select the **PsstPsst** scheme. For both the app and the
+3. Select the **Outlink** scheme. For both the app and the
    **expo-sharing-extension** target, choose the same team under **Signing &
    Capabilities** and enable automatic signing. With current config, register:
 
    | Item | Identifier |
    | --- | --- |
-   | Main application | `chat.psstpsst.app` |
-   | Share extension | `chat.psstpsst.app.expo-sharing-extension` |
-   | Shared App Group, enabled for both targets | `group.chat.psstpsst.app` |
+   | Main application | `io.github.hsoc.outlink` |
+   | Share extension | `io.github.hsoc.outlink.expo-sharing-extension` |
+   | Shared App Group, enabled for both targets | `group.io.github.hsoc.outlink` |
 
    If you change these defaults, update the Expo app/plugin configuration and
    the corresponding Apple identifiers together. Confirm generated entitlements

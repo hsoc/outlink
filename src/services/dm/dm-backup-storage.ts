@@ -1,12 +1,12 @@
 import { platform } from '@/platform';
 
-export const BACKUP_CACHE_DIRECTORY_NAME = 'psstpsst-chat-archives';
-const PERSISTED_ARCHIVE_DIRECTORY = 'psstpsst-chat-archives';
+export const BACKUP_CACHE_DIRECTORY_NAME = 'outlink-chat-archives';
+const PERSISTED_ARCHIVE_DIRECTORY = 'outlink-chat-archives';
 const ACCOUNT_PUBKEY_PATTERN = /^[0-9a-f]{64}$/;
 const MANAGED_ARCHIVE_PATTERN =
-  /^psstpsst-chat-history-\d{4}-\d{2}-\d{2}-\d{6}-[0-9a-f]{8}\.zip$/;
+  /^outlink-chat-history-\d{4}-\d{2}-\d{2}-\d{6}-[0-9a-f]{8}\.zip$/;
 const TEMP_ARCHIVE_PATTERN =
-  /^psstpsst-chat-history-\d{4}-\d{2}-\d{2}-\d{6}-[0-9a-f]{8}\.zip\.tmp$/;
+  /^outlink-chat-history-\d{4}-\d{2}-\d{2}-\d{6}-[0-9a-f]{8}\.zip\.tmp$/;
 
 export type BackupArchiveInfo = {
   accountPubkey: string;
@@ -45,7 +45,7 @@ async function archiveFilename(createdAt: Date): Promise<string> {
     .slice(0, 15);
   const uuid = await platform.deviceCrypto.randomUUID();
   const date = `${timestamp.slice(0, 4)}-${timestamp.slice(4, 6)}-${timestamp.slice(6)}`;
-  return `psstpsst-chat-history-${date}-${uuid.slice(0, 8)}.zip`;
+  return `outlink-chat-history-${date}-${uuid.slice(0, 8)}.zip`;
 }
 
 function archiveInfo(
@@ -148,7 +148,7 @@ export async function cleanupInterruptedBackupArtifacts(): Promise<void> {
   const workParentStat = await platform.fileSystem.stat(workParentUri);
   if (workParentStat.exists) await platform.fileSystem.delete(workParentUri);
 
-  const legacyCacheArchivePattern = /^psstpsst-chat-history-[0-9a-f-]{36}\.zip$/;
+  const legacyCacheArchivePattern = /^outlink-chat-history-[0-9a-f-]{36}\.zip$/;
   for (const entry of await platform.fileSystem.listDirectory(cacheBase)) {
     if (!entry.isDirectory && legacyCacheArchivePattern.test(entry.name)) {
       await platform.fileSystem.delete(entry.uri);
@@ -186,7 +186,7 @@ export async function shareAccountArchive(archive: BackupArchiveInfo): Promise<b
   if (!(await platform.sharing.isAvailable())) return false;
   await platform.sharing.share(fileUri, {
     mimeType: 'application/zip',
-    dialogTitle: 'PsstPsst chat archive',
+    dialogTitle: 'Outlink chat archive',
     uti: 'public.zip-archive',
   });
   return true;

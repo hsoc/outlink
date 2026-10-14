@@ -8,7 +8,7 @@ function sharedOptions(key: string): SecureStore.SecureStoreOptions | undefined 
   const accessGroup = loadLocalNotifications()?.sharedKeychainGroup;
   return accessGroup ? {
     accessGroup,
-    keychainService: 'psstpsst.notifications',
+    keychainService: 'outlink.notifications',
     keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
   } : undefined;
 }

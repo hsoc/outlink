@@ -23,7 +23,7 @@ import { attachmentName, attachmentPath } from './attachment-store';
 import { uploadEncryptedBlobToServer } from './blossom.service';
 import { sha256Hex } from './file-crypto';
 
-const SPOOL_DIR = 'psstpsst-nearby-spool';
+const SPOOL_DIR = 'outlink-nearby-spool';
 const RETRY_SECONDS = [15, 30, 60, 120, 300] as const;
 const WAIT_FOR_UPLOAD_MS = 60_000;
 const PREFERRED_UPLOAD_WAIT_MS = 15_000;

@@ -1,4 +1,4 @@
-PsstPsst 26.10.2
+Outlink 26.10.2
 
 - Added separate options to start a private chat or create a group.
 - Improved contact list scrolling and group warnings.

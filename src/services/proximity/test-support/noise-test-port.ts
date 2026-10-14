@@ -15,7 +15,7 @@ import {
 
 const crypto = wrapCrypto(pureJsCrypto);
 const protocolName = 'Noise_XX_25519_ChaChaPoly_SHA256';
-const prologue = new TextEncoder().encode('PsstPsst Nearby/1');
+const prologue = new TextEncoder().encode('Outlink Nearby/1');
 
 type HandshakeEntry = {
   role: NoiseRole;

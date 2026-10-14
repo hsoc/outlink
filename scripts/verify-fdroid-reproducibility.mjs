@@ -31,7 +31,7 @@ export function verifyFdroidReproducibility(unsignedApk, signedApk, env = proces
   if (!existsSync(unsigned)) throw new Error(`Unsigned APK does not exist: ${unsigned}`);
   if (!existsSync(signed)) throw new Error(`Signed APK does not exist: ${signed}`);
 
-  const temporary = mkdtempSync(join(tmpdir(), 'psstpsst-fdroid-verify-'));
+  const temporary = mkdtempSync(join(tmpdir(), 'outlink-fdroid-verify-'));
   try {
     const copied = join(temporary, 'signature-copied.apk');
     for (const [command, args] of verificationCommands(unsigned, signed, copied, env)) {

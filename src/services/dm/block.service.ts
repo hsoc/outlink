@@ -12,7 +12,7 @@ import type { Signer } from '../signer/signer.interface';
  * The account's block list: pubkeys whose incoming messages are dropped before
  * they ever hit the store (the check happens in `dm.service` ingestion, on the
  * hot path). Modeled as a **private NIP-51 follow set** (kind 30000,
- * `d=psstpsst-blocked`) — the same shape as the contact list — so the block list
+ * `d=outlink-blocked`) — the same shape as the contact list — so the block list
  * syncs across the user's own devices while staying NIP-44-encrypted to self.
  *
  * The local `blocked_users` table is the durable source of truth and feeds the
@@ -24,8 +24,8 @@ import type { Signer } from '../signer/signer.interface';
  */
 const KIND_FOLLOW_SET = 30000;
 /** d-tag of the private block set. */
-export const BLOCKED_D = 'psstpsst-blocked';
-const BLOCKED_TITLE = 'PsstPsst Blocked';
+export const BLOCKED_D = 'outlink-blocked';
+const BLOCKED_TITLE = 'Outlink Blocked';
 
 /** In-memory mirror of the block set, keyed by account, for synchronous hot-path
  * lookups during ingestion. Rebuilt on load/sync; mutated on block/unblock. */

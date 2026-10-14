@@ -3,11 +3,11 @@ plugins {
   id 'org.jetbrains.kotlin.android'
 }
 
-group = 'chat.psstpsst.app'
+group = 'io.github.hsoc.outlink'
 version = '0.1.0'
 
 android {
-  namespace 'chat.psstpsst.app.noise'
+  namespace 'io.github.hsoc.outlink.noise'
   compileSdk rootProject.ext.compileSdkVersion
 
   defaultConfig {

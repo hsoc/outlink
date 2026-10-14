@@ -18,8 +18,8 @@ describe('Electron native proximity protocol', () => {
         'bin',
         process.platform,
         process.platform === 'win32'
-          ? 'psstpsst-proximity.exe'
-          : 'psstpsst-proximity',
+          ? 'outlink-proximity.exe'
+          : 'outlink-proximity',
       ),
     );
   });
@@ -113,7 +113,7 @@ describe('Electron native proximity protocol', () => {
       .spyOn(console, 'error')
       .mockImplementation(() => undefined);
     const service = new ProximityService(
-      '/missing/psstpsst-proximity',
+      '/missing/outlink-proximity',
       jest.fn(),
     );
     await expect(service.initialize()).resolves.toBe(false);
@@ -122,7 +122,7 @@ describe('Electron native proximity protocol', () => {
     await expect(service.startScan(1_000)).resolves.toBeUndefined();
     await expect(service.send('c:missing', 'payload')).resolves.toBeUndefined();
     expect(consoleError).toHaveBeenCalledWith(
-      '[proximity-native] helper is missing: /missing/psstpsst-proximity',
+      '[proximity-native] helper is missing: /missing/outlink-proximity',
     );
     consoleError.mockRestore();
   });

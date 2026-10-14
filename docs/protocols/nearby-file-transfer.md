@@ -1,4 +1,4 @@
-PsstPsst Nearby File Transfer
+Outlink Nearby File Transfer
 =============================
 
 `draft` `optional`
