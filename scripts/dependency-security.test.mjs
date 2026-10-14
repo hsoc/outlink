@@ -7,6 +7,7 @@ import test from 'node:test';
 const require = createRequire(import.meta.url);
 const decode = require('decode-uri-component');
 const queryString = require('query-string');
+const shellQuote = require('shell-quote');
 const root = fileURLToPath(new URL('../', import.meta.url));
 
 // A missing patch must fail the test rather than hang the test runner or CI.
@@ -39,4 +40,12 @@ test('malformed percent-encoded URLs finish within a bounded time', () => {
     const runs = Array.from({ length: 10000 }, (_, index) => '%FF%41' + index).join('-');
     assert.equal(queryString.parse('q=' + runs).q, runs.replace(/%41/g, 'A'));
   `);
+});
+
+
+test('shell quoting rejects line terminators after a comment token', () => {
+  for (const terminator of ['\n', '\r', '\u2028', '\u2029']) {
+    assert.throws(() => shellQuote.quote([{ comment: 'safe comment' }, `${terminator}echo injected`]), TypeError);
+  }
+  assert.equal(shellQuote.quote(['hello world', 'literal;$value']), "'hello world' literal\\;\\$value");
 });

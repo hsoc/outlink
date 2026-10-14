@@ -1,6 +1,6 @@
 {
-  "reviewed": "2026-10-11",
-  "lockfileSha256": "f39abc9180e27fce2b69bfa4dbee66230a67f5c61114910bff1e892f44a7d76f",
+  "reviewed": "2026-10-14",
+  "lockfileSha256": "6aafd0d175ef49250b0f414c38c989ce5a36e8ccab781f5588490ffd8526757d",
   "scope": "All locked non-development npm packages on all platforms, plus the shipped Electron runtime. Includes build utilities; not an exact binary inventory.",
   "packages": [
     {
@@ -5334,9 +5334,9 @@
     },
     {
       "name": "electron",
-      "version": "43.4.0",
+      "version": "43.7.11",
       "license": "MIT",
-      "integrity": "sha512-3qxGF0CeQbiox5oWV1JlbWGQ1VerbmDhTFqW4sJ8h7uqTHniFYPObXJcDna0DMh32et0fFyKzz0YY8lJv3t5jg==",
+      "integrity": "sha512-wEzOBtconxs86zwFPKCn5OzwGpr/pTAIvNT70aoDYslKlUcc76NbKQr2pqH8IMqL2bnN1K0EfVTREDa6sEp6OQ==",
       "repository": "https://github.com/electron/electron",
       "licenseFiles": [
         {
@@ -10600,10 +10600,11 @@
     },
     {
       "name": "shell-quote",
-      "version": "1.9.0",
+      "version": "1.12.0",
       "license": "MIT",
-      "integrity": "sha512-Iov+JwFv/2HcTpcwNMKd8+IWNb8tboQJNQTkAY/LLVK7gGH9jy+LGkVqPxfekHl+yMmiqXszdGWXgkfml7hjqA==",
+      "integrity": "sha512-PcByqNyT/38F2kDNi006HAMRJaULuBzq/FOsw3qdZvX/GA9W/jamDaRskgHjubHiftXK5sIFxLNkvrXUwcof6Q==",
       "repository": "http://github.com/ljharb/shell-quote.git",
+      "homepage": "https://github.com/ljharb/shell-quote",
       "licenseFiles": [
         {
           "source": "LICENSE",

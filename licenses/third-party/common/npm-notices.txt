@@ -2840,7 +2840,7 @@ LICENSE
   Text: bed8d0ab3e6031817f775a641ff37313b0f5591bc8ba0ed79b978dafbd4231ce
 ========================================
 
-electron@43.4.0
+electron@43.7.11
 License: MIT
 Source: https://github.com/electron/electron
 LICENSE
@@ -5636,7 +5636,7 @@ license
   Text: 48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0
 ========================================
 
-shell-quote@1.9.0
+shell-quote@1.12.0
 License: MIT
 Source: http://github.com/ljharb/shell-quote.git
 LICENSE

@@ -1,7 +1,7 @@
 {
   "reviewed": "2026-09-12",
   "versions": {
-    "electron": "43.4.0",
+    "electron": "43.7.11",
     "sharp": "0.35.4",
     "sharp-libvips-posix": "1.3.3",
     "sharp-win32": "0.35.4",

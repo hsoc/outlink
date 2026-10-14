@@ -71,39 +71,44 @@ export class SecureStorageService {
     return 'password_setup_required';
   }
 
-  async configurePassword(password: string): Promise<void> {
-    if (password.length < MIN_PASSWORD_LENGTH || password.length > 256) {
-      throw new Error('Application password must contain 8 to 256 characters');
-    }
-    if (await this.passwordFileExists()) {
-      throw new Error('Application password storage is already configured');
-    }
-    if (this.osEncryptionAvailable()) {
-      throw new Error('OS-backed secure storage is already available');
-    }
-    if (await this.osEncryptedFileExists()) {
-      throw new Error('Cannot replace an existing OS-encrypted vault with an empty password vault');
-    }
-    const salt = randomBytes(16);
-    const key = await derivePasswordKey(password, salt);
-    await this.writePasswordValues({}, key, salt);
-    this.passwordKey = key;
-    this.passwordSalt = salt;
-  }
-
-  async unlockWithPassword(password: string): Promise<boolean> {
-    if (!(await this.passwordFileExists())) return this.osEncryptionAvailable();
-    try {
-      const envelope = await this.readPasswordEnvelope();
-      const salt = Buffer.from(envelope.salt, 'base64');
+  configurePassword(password: string): Promise<void> {
+    return this.serialized(async () => {
+      if (password.length < MIN_PASSWORD_LENGTH || password.length > 256) {
+        throw new Error('Application password must contain 8 to 256 characters');
+      }
+      if (await this.passwordFileExists()) {
+        throw new Error('Application password storage is already configured');
+      }
+      if (this.osEncryptionAvailable()) {
+        throw new Error('OS-backed secure storage is already available');
+      }
+      if (await this.osEncryptedFileExists()) {
+        throw new Error('Cannot replace an existing OS-encrypted vault with an empty password vault');
+      }
+      const salt = randomBytes(16);
       const key = await derivePasswordKey(password, salt);
-      await this.decryptPasswordValues(envelope, key);
+      await this.writePasswordValues({}, key, salt);
       this.passwordKey = key;
       this.passwordSalt = salt;
-      return true;
-    } catch {
-      return false;
-    }
+    });
+  }
+
+  unlockWithPassword(password: string): Promise<boolean> {
+    return this.serialized(async () => {
+      if (password.length < MIN_PASSWORD_LENGTH || password.length > 256) return false;
+      if (!(await this.passwordFileExists())) return this.osEncryptionAvailable();
+      try {
+        const envelope = await this.readPasswordEnvelope();
+        const salt = Buffer.from(envelope.salt, 'base64');
+        const key = await derivePasswordKey(password, salt);
+        await this.decryptPasswordValues(envelope, key);
+        this.passwordKey = key;
+        this.passwordSalt = salt;
+        return true;
+      } catch {
+        return false;
+      }
+    });
   }
 
   private validateKey(key: string): void {
@@ -158,14 +163,23 @@ export class SecureStorageService {
     ) {
       throw new Error('Password-encrypted storage has an invalid format');
     }
-    return parsed as PasswordEnvelope;
+    const envelope = parsed as PasswordEnvelope;
+    // Node accepts shortened GCM tags unless their length is explicitly fixed.
+    // Validate the writer's envelope before deriving a key or decrypting data.
+    for (const [field, length] of [['salt', 16], ['iv', 12], ['tag', 16]] as const) {
+      const bytes = Buffer.from(envelope[field], 'base64');
+      if (bytes.length !== length || bytes.toString('base64') !== envelope[field]) {
+        throw new Error('Password-encrypted storage has an invalid format');
+      }
+    }
+    return envelope;
   }
 
   private async decryptPasswordValues(
     envelope: PasswordEnvelope,
     key: Buffer,
   ): Promise<Record<string, string>> {
-    const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(envelope.iv, 'base64'));
+    const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(envelope.iv, 'base64'), { authTagLength: 16 });
     decipher.setAuthTag(Buffer.from(envelope.tag, 'base64'));
     const plain = Buffer.concat([
       decipher.update(Buffer.from(envelope.ciphertext, 'base64')),

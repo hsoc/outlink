@@ -58,3 +58,68 @@ describe('Electron secure-storage password fallback', () => {
     );
   });
 });
+
+
+describe('password vault integrity and setup ordering', () => {
+  let directory: string;
+
+  beforeEach(async () => {
+    directory = await fs.mkdtemp(path.join(os.tmpdir(), 'psstpsst-vault-integrity-test-'));
+    mockSafeStorage.isEncryptionAvailable.mockReturnValue(false);
+    mockSafeStorage.getSelectedStorageBackend.mockReturnValue('basic_text');
+  });
+
+  afterEach(async () => {
+    await fs.rm(directory, { recursive: true, force: true });
+  });
+
+  it.each([4, 8, 12, 13, 14, 15])('rejects an otherwise valid envelope with a %i-byte tag', async (length) => {
+    const first = new SecureStorageService(directory);
+    await first.configurePassword('correct horse battery staple');
+    await first.setItem('wallet-key', 'secret-value');
+    const file = path.join(directory, 'secrets.password.enc');
+    const envelope = JSON.parse(await fs.readFile(file, 'utf8'));
+    envelope.tag = Buffer.from(envelope.tag, 'base64').subarray(0, length).toString('base64');
+    await fs.writeFile(file, JSON.stringify(envelope));
+
+    const second = new SecureStorageService(directory);
+    await expect(second.unlockWithPassword('correct horse battery staple')).resolves.toBe(false);
+    await expect(second.getItem('wallet-key')).rejects.toThrow('password is required');
+  });
+
+  it.each(['salt', 'iv', 'tag'])('rejects noncanonical base64 in %s', async (field) => {
+    const service = new SecureStorageService(directory);
+    await service.configurePassword('correct horse battery staple');
+    const file = path.join(directory, 'secrets.password.enc');
+    const envelope = JSON.parse(await fs.readFile(file, 'utf8'));
+    envelope[field] += '!';
+    await fs.writeFile(file, JSON.stringify(envelope));
+    await expect(new SecureStorageService(directory).unlockWithPassword('correct horse battery staple'))
+      .resolves.toBe(false);
+  });
+
+  it('allows only one concurrent setup and keeps queued secrets', async () => {
+    const service = new SecureStorageService(directory);
+    const results = await Promise.allSettled([
+      service.configurePassword('first correct password'),
+      service.configurePassword('second correct password'),
+      service.setItem('wallet-key', 'secret-value'),
+    ]);
+    expect(results.map((result) => result.status)).toEqual(['fulfilled', 'rejected', 'fulfilled']);
+    const second = new SecureStorageService(directory);
+    await expect(second.unlockWithPassword('second correct password')).resolves.toBe(false);
+    await expect(second.unlockWithPassword('first correct password')).resolves.toBe(true);
+    await expect(second.getItem('wallet-key')).resolves.toBe('secret-value');
+  });
+
+  it('orders an unlock immediately after setup', async () => {
+    const service = new SecureStorageService(directory);
+    const results = await Promise.all([
+      service.configurePassword('correct horse battery staple'),
+      service.unlockWithPassword('correct horse battery staple'),
+      service.setItem('wallet-key', 'secret-value'),
+    ]);
+    expect(results[1]).toBe(true);
+    await expect(service.getItem('wallet-key')).resolves.toBe('secret-value');
+  });
+});
