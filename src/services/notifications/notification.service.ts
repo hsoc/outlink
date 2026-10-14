@@ -1,6 +1,8 @@
 import type { Rumor } from '@/db/schema/types';
 import i18n from '@/i18n';
 import { scheduleBackgroundDeadline } from '@/lib/background-deadline';
+import { IS_IOS } from '@/lib/platform';
+import { INTERNET_PUSH_ENABLED } from './push-feature';
 import { IS_DEVELOPMENT_BUILD } from '@/lib/environment';
 import { platform } from '@/platform';
 import { getActiveAccountPubkey } from '@/services/account/account.service';
@@ -469,7 +471,7 @@ class NotificationService {
   // ---- Settings surface ----
 
   async getStatus(): Promise<NotificationStatus> {
-    if (!platform.notifications.isAvailable()) return { enabled: false, granted: false };
+    if ((IS_IOS && !INTERNET_PUSH_ENABLED) || !platform.notifications.isAvailable()) return { enabled: false, granted: false };
     const granted = await platform.notifications.hasPermission();
     return { enabled: this.enabled, granted };
   }
@@ -497,7 +499,7 @@ class NotificationService {
    * the background poll. Returns the resulting status so the UI can surface a
    * denied (or unavailable) state. */
   async enable(): Promise<NotificationStatus> {
-    if (!platform.notifications.isAvailable()) return { enabled: false, granted: false };
+    if ((IS_IOS && !INTERNET_PUSH_ENABLED) || !platform.notifications.isAvailable()) return { enabled: false, granted: false };
     const granted = await platform.notifications.ensurePermission(
       i18n.t('notifications.channel_name'),
     );

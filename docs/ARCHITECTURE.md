@@ -325,7 +325,11 @@ where the lexicographically smaller event ID is newer. Pagination, unread
 watermarks, conversation heads, notifications, and media views share this rule.
 
 Mobile notifications and badges use the project-owned native notification
-module behind the platform ports. iOS APNs registration requires explicit
+module behind the platform ports. Internet push is currently disabled by a shared
+core feature gate: registration cannot acquire tokens and the extension suppresses
+incoming pushes before network access or intake. The iOS delivery controls are
+hidden; Android and desktop local delivery remain available. The retained iOS
+APNs implementation requires explicit
 notification consent; relay mutations use the account identity signer and durable
 registration/revocation state. Its notification extension runs the shared
 TypeScript receiver and notification policy in an independent JavaScriptCore
@@ -391,8 +395,9 @@ uninterrupted live session whose DM and own-metadata subscriptions have received
 and whose sockets have recent inbound traffic. Otherwise it immediately presents
 its result because a cold task cannot
 assume the resident native clock is running. iOS has no periodic background
-worker: APNs invokes the notification extension, which uses the shared gift-wrap
-intake and notification policy. Opening the app resumes normal relay sync. Electron uses a persisted
+worker. Its retained APNs extension uses the shared gift-wrap intake and
+notification policy, but currently suppresses incoming pushes while internet push
+is disabled. Opening the app resumes normal relay sync. Electron uses a persisted
 main-process timer while the application remains running; notification presence
 requires the window to be both visible and focused, and transient desktop
 delivery failures do not change the user's preference. A routed conversation

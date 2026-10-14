@@ -51,26 +51,8 @@ describe('resolveNostrUserInput', () => {
     expect(queryNip05ProfileMock).toHaveBeenCalledTimes(1);
   });
 
-  it('completes a bare name on the app NIP-05 domain', async () => {
-    const pubkey = 'c'.repeat(64);
-    queryNip05ProfileMock.mockResolvedValue({
-      identifier: 'alice@psstpsst.chat',
-      pubkey,
-    });
-
-    await expect(resolveNostrUserInput('Alice')).resolves.toEqual({
-      status: 'resolved',
-      pubkey,
-    });
-    expect(queryNip05ProfileMock).toHaveBeenCalledWith('alice@psstpsst.chat');
-  });
-
-  it('reports a missing bare name as nip05_not_found', async () => {
-    queryNip05ProfileMock.mockResolvedValue(null);
-
-    await expect(resolveNostrUserInput('alice')).resolves.toEqual({
-      status: 'nip05_not_found',
-    });
-    expect(queryNip05ProfileMock).toHaveBeenCalledWith('alice@psstpsst.chat');
+  it('rejects bare nicknames without contacting a naming provider', async () => {
+    await expect(resolveNostrUserInput('Alice')).resolves.toEqual({ status: 'invalid' });
+    expect(queryNip05ProfileMock).not.toHaveBeenCalled();
   });
 });

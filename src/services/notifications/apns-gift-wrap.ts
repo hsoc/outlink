@@ -1,3 +1,4 @@
+import { INTERNET_PUSH_ENABLED } from './push-feature';
 import type { Event } from 'nostr-tools';
 
 import { buildSigner, getAccount } from '@/services/account/account.service';
@@ -41,6 +42,7 @@ function recipientPubkeys(event: Event): string[] {
  * Returned events remain untrusted until the common verification pipeline accepts them.
  */
 export async function resolveApnsGiftWrap(payload: unknown): Promise<ApnsGiftWrap[]> {
+  if (!INTERNET_PUSH_ENABLED) return [];
   if (!record(payload) || !record(payload.data)) return [];
   if (payload.type === 'event') {
     if (!giftWrap(payload.data)) return [];

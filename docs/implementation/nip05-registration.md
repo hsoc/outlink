@@ -1,4 +1,11 @@
-# NIP-05 Registration Implementation
+# Retained NIP-05 Registration Implementation
+
+Outlink does not offer built-in username registration. Account creation activates
+the account immediately after key backup. Profile editing never performs a
+provider ownership lookup or offers a claim action. QR/contact sharing is the
+primary connection path; full identifiers from other providers remain supported.
+Bare nicknames do not trigger a naming-service lookup. The implementation below
+is dormant reference code, not a current product flow.
 
 PsstPsst uses the NIP-05 naming service at `https://psstpsst.chat`. Lookup uses
 `GET /.well-known/nostr.json`; registration is a service-specific HTTP API, not
@@ -35,12 +42,10 @@ with per-request timeouts. Typed `Nip05NameError` values let the UI distinguish
 an unavailable name from a failed availability check. The app does not expose
 deletion.
 
-Onboarding offers an optional claim step after key backup and before account
-bootstrap. After a successful claim, the client makes a best-effort update to
-the kind-0 profile's `nip05` field.
+Onboarding activates the account immediately after key backup. The retained
+claim component and service have no entry point in onboarding or profile editing.
 
 The profile editor accepts any provider's complete `<local-part>@<domain>`
-identifier. A reverse lookup decides whether to offer registration, rename, or
-selection of an existing `psstpsst.chat` name. User-input resolution completes
-a bare local part against `psstpsst.chat`; complete identifiers continue to use
-their own provider.
+identifier. Editing does not look up ownership at the built-in provider.
+User-input resolution accepts public keys and complete identifiers using their
+own provider; bare local parts are rejected without a network request.

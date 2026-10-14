@@ -47,13 +47,13 @@ test('automatic encryption-key updates default to off, keeping the 30-day interv
 test.each([
   ['iOS', true, false],
   ['other platforms', false, true],
-] as const)('notifications use the %s default and preserve explicit choices', async (_platform, isIos, defaultEnabled) => {
+] as const)('notifications use the %s default and respect push availability', async (_platform, isIos, defaultEnabled) => {
   mockIsIos = isIos;
   getPreference.mockResolvedValueOnce(null);
   await expect(getNotificationsEnabled()).resolves.toBe(defaultEnabled);
 
   getPreference.mockResolvedValueOnce('1');
-  await expect(getNotificationsEnabled()).resolves.toBe(true);
+  await expect(getNotificationsEnabled()).resolves.toBe(!isIos);
 
   getPreference.mockResolvedValueOnce('0');
   await expect(getNotificationsEnabled()).resolves.toBe(false);

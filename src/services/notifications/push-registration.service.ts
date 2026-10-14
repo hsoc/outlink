@@ -5,6 +5,7 @@ import { getDevicePreference, setDevicePreference } from '@/services/preferences
 import { loadAccountDmRelays } from '@/services/relay/local-relay-settings';
 
 import { mutatePushDevice, PushApiError, supportsPush } from './push-api';
+import { INTERNET_PUSH_ENABLED } from './push-feature';
 import { getNotificationsEnabled } from './notification-prefs';
 
 const STATE_KEY = 'notifications.apnsRegistrations';
@@ -39,11 +40,11 @@ export class PushRegistrationService {
 
   /** Sets consent synchronously so an in-flight register cannot keep adding accounts. */
   setEnabled(enabled: boolean): void {
-    this.enabled = enabled;
+    this.enabled = enabled && INTERNET_PUSH_ENABLED;
     this.retryCount = 0;
     if (this.retryTimer) clearTimeout(this.retryTimer);
     this.retryTimer = null;
-    if (!enabled && platform.pushNotifications?.isAvailable()) {
+    if (!this.enabled && platform.pushNotifications?.isAvailable()) {
       // Cancel native token acquisition immediately, independently of slow relay revocations.
       void platform.pushNotifications.unregister().catch((error) => {
         console.warn('[push] Unable to unregister with APNs.', error);
@@ -124,7 +125,7 @@ export class PushRegistrationService {
     if (this.enabled === null) {
       const enabled = await getNotificationsEnabled();
       // An explicit toggle during the storage read has precedence.
-      if (this.enabled === null) this.enabled = enabled;
+      if (this.enabled === null) this.enabled = enabled && INTERNET_PUSH_ENABLED;
     }
     const granted = this.enabled && await platform.notifications.hasPermission();
     const desired = new Map<string, Set<string>>();

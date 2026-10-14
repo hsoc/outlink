@@ -16,6 +16,9 @@ import {
   type DndWindow,
 } from '../notification-prefs';
 
+let mockInternetPushEnabled = true;
+jest.mock('../push-feature', () => ({ get INTERNET_PUSH_ENABLED() { return mockInternetPushEnabled; } }));
+
 let mockStoredValue: string | null = null;
 let mockIsIos = true;
 jest.mock('@/lib/platform', () => ({ get IS_IOS() { return mockIsIos; } }));
@@ -32,6 +35,7 @@ function makeWindow(overrides: Partial<DndWindow> = {}): DndWindow {
 }
 
 beforeEach(() => {
+  mockInternetPushEnabled = true;
   mockStoredValue = null;
   mockIsIos = true;
 });
@@ -132,4 +136,10 @@ describe('isDndActiveNow', () => {
   it('is inactive when no preference was ever stored', async () => {
     await expect(isDndActiveNow()).resolves.toBe(false);
   });
+});
+
+it('ignores a saved iOS opt-in while internet push is disabled', async () => {
+  mockInternetPushEnabled = false;
+  mockStoredValue = '1';
+  await expect(getNotificationsEnabled()).resolves.toBe(false);
 });

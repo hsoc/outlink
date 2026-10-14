@@ -17,6 +17,7 @@ import { formatMinutes, TimeOfDayPicker } from '@/components/common/TimeOfDayPic
 import { Toggle } from '@/components/common/Toggle';
 import { DESKTOP_OS, IS_ANDROID, IS_ELECTRON, IS_IOS } from '@/lib/platform';
 import { useApnsRelayEligibility } from '@/hooks/use-apns-relay-eligibility';
+import { INTERNET_PUSH_ENABLED } from '@/services/notifications/push-feature';
 import { APNS_RELAY_URL } from '@/services/notifications/push-api';
 import { useNotificationStatus } from '@/hooks/use-notification-status';
 import { platform } from '@/platform';
@@ -48,7 +49,8 @@ export default function NotificationsSettings() {
   const c = useThemeColors();
   const titleClearance = useScreenHeaderClearance();
   const relayEligibility = useApnsRelayEligibility();
-  const requiresRelaySettings = IS_IOS && relayEligibility.resolved && !relayEligibility.eligible;
+  const showDeliveryControls = !IS_IOS || INTERNET_PUSH_ENABLED;
+  const requiresRelaySettings = IS_IOS && INTERNET_PUSH_ENABLED && relayEligibility.resolved && !relayEligibility.eligible;
   const { enabled, busy, toggle, openSettings } = useNotificationStatus(relayEligibility.eligible);
   const notificationControlDisabled = busy || !relayEligibility.eligible;
   const unreadIndicators = useUnreadIndicatorPreference();
@@ -189,39 +191,41 @@ export default function NotificationsSettings() {
           gap: spacing.lg,
         }}
       >
-        <View style={{ gap: spacing.sm }}>
-          <ListGroup>
-            <ListRow
-              icon={<Bell size={22} color={notificationControlDisabled ? c.textMuted : c.text} />}
-              title={t('notifications.enable_label')}
-              titleTone={notificationControlDisabled ? 'muted' : 'default'}
-              trailing={
-                <Toggle value={enabled} onValueChange={onToggle} disabled={notificationControlDisabled} />
-              }
-            />
-            {requiresRelaySettings && (
+        {showDeliveryControls && (
+          <View style={{ gap: spacing.sm }}>
+            <ListGroup>
               <ListRow
-                icon={<ServerSquare size={22} color={c.text} />}
-                title={t('notifications.relay_settings_action')}
-                subtitle={t('notifications.required_relay_note', { relay: 'relay.psstpsst.chat' })}
-                subtitleTone="danger"
-                subtitleMultiline
-                trailing={<DirectionalChevron size={18} color={c.textMuted} />}
-                onPress={() => router.push({
-                  pathname: '/relays', params: { addDmRelay: APNS_RELAY_URL },
-                })}
+                icon={<Bell size={22} color={notificationControlDisabled ? c.textMuted : c.text} />}
+                title={t('notifications.enable_label')}
+                titleTone={notificationControlDisabled ? 'muted' : 'default'}
+                trailing={
+                  <Toggle value={enabled} onValueChange={onToggle} disabled={notificationControlDisabled} />
+                }
               />
+              {requiresRelaySettings && (
+                <ListRow
+                  icon={<ServerSquare size={22} color={c.text} />}
+                  title={t('notifications.relay_settings_action')}
+                  subtitle={t('notifications.required_relay_note', { relay: 'relay.psstpsst.chat' })}
+                  subtitleTone="danger"
+                  subtitleMultiline
+                  trailing={<DirectionalChevron size={18} color={c.textMuted} />}
+                  onPress={() => router.push({
+                    pathname: '/relays', params: { addDmRelay: APNS_RELAY_URL },
+                  })}
+                />
+              )}
+            </ListGroup>
+            {IS_ELECTRON && DESKTOP_OS !== 'darwin' && (
+              <AppText variant="caption" tone="muted" style={{ paddingHorizontal: spacing.xs }}>
+                {t('notifications.system_permission_note')}
+              </AppText>
             )}
-          </ListGroup>
-          {IS_ELECTRON && DESKTOP_OS !== 'darwin' && (
             <AppText variant="caption" tone="muted" style={{ paddingHorizontal: spacing.xs }}>
-              {t('notifications.system_permission_note')}
+              {t(DELIVERY_NOTE_KEY)}
             </AppText>
-          )}
-          <AppText variant="caption" tone="muted" style={{ paddingHorizontal: spacing.xs }}>
-            {t(DELIVERY_NOTE_KEY)}
-          </AppText>
-        </View>
+          </View>
+        )}
         <View style={{ gap: spacing.sm }}>
           <ListGroup>
             <ListRow

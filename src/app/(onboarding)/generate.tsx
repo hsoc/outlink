@@ -17,6 +17,7 @@ import {
   generateAccountKeyMaterial,
   persistGeneratedAccount,
 } from '@/services/account/account.service';
+import { useActiveAccount } from '@/stores/active-account.store';
 import { useScrolled } from '@/hooks/use-scrolled';
 import { iconStrokeWidth } from '@/theme/icons';
 import { spacing, useThemeColors } from '@/theme';
@@ -32,6 +33,7 @@ export default function Generate() {
   const [keyMaterial] = useState(() => generateAccountKeyMaterial());
   const [continuing, setContinuing] = useState(false);
   const { nsec } = keyMaterial;
+  const setActive = useActiveAccount((s) => s.setActive);
 
   async function handleCopy() {
     await copyText(nsec);
@@ -42,9 +44,8 @@ export default function Generate() {
     setContinuing(true);
     try {
       const { pubkey: savedPubkey } = await persistGeneratedAccount(keyMaterial.privkeyHex);
-      // The optional NIP-05 claim step comes next; the account is activated
-      // (setActive bootstrap) only when that step finishes or is skipped.
-      router.push({ pathname: '/nip05', params: { pubkey: savedPubkey } });
+      await setActive(savedPubkey);
+      router.replace('/');
     } finally {
       setContinuing(false);
     }

@@ -4,7 +4,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-export async function buildNotificationExtension(output = resolve(root, 'ios-notification-extension/processor.js')) {
+export async function buildNotificationExtension(output = resolve(root, 'ios-notification-extension/processor.js'), testPlugins = []) {
   await mkdir(dirname(output), { recursive: true });
   const result = await build({
     absWorkingDir: root,
@@ -21,7 +21,7 @@ export async function buildNotificationExtension(output = resolve(root, 'ios-not
       'process.env.NODE_ENV': '"production"',
       'process.env.EXPO_PUBLIC_APP_ENV': JSON.stringify(process.env.EXPO_PUBLIC_APP_ENV ?? 'production'),
     },
-    plugins: [{
+    plugins: [...testPlugins, {
       name: 'independent-notification-runtime',
       setup(builder) {
         builder.onResolve({ filter: /(^@\/i18n$|^@\/lib\/platform$|^\.\/registry$)/ }, ({ path, importer }) => {

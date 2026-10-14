@@ -1,6 +1,17 @@
 # iOS APNs notifications
 
-The iOS notification toggle is opt-in. A new installation does not request
+Internet push is currently disabled by `INTERNET_PUSH_ENABLED = false`. The iOS
+delivery control and relay setup guidance are hidden. Saved opt-ins cannot
+register a device, and the notification extension suppresses incoming pushes
+before fetching or processing messages. Existing registrations are revoked on
+reconciliation; failed revocations retain the existing bounded retry behavior.
+Android and desktop local notification delivery is unchanged. The retained
+implementation below requires a future service deployment and explicit product
+re-enablement; hiding the UI alone is insufficient.
+
+## Retained implementation (currently disabled)
+
+The iOS notification toggle is opt-in when the feature is enabled. A new installation does not request
 permission, obtain an APNs token or register with a relay until the user enables
 it. An existing explicit enabled preference is preserved. Android and Electron
 retain their local delivery adapters. iOS does not define or register periodic

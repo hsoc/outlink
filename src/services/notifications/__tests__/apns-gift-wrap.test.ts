@@ -1,6 +1,9 @@
 import { resolveApnsGiftWrap } from '../apns-gift-wrap';
 import { APNS_RELAY_URL } from '../push-api';
 
+let mockInternetPushEnabled = true;
+jest.mock('../push-feature', () => ({ get INTERNET_PUSH_ENABLED() { return mockInternetPushEnabled; } }));
+
 const mockProcessed = jest.fn();
 const mockAccount = jest.fn();
 const mockSigner = jest.fn();
@@ -28,6 +31,7 @@ const signer = { destroy: mockDestroy };
 const idPayload = { type: 'id', data: { id: eventId, p: account } };
 
 beforeEach(() => {
+  mockInternetPushEnabled = true;
   jest.clearAllMocks();
   mockProcessed.mockReset().mockResolvedValue(false);
   mockAccount.mockResolvedValue({ pubkey: account });
@@ -94,4 +98,13 @@ it('cleans up the signer after a network failure without marking the event proce
   mockFetch.mockRejectedValue(new Error('offline'));
   await expect(resolveApnsGiftWrap(idPayload)).rejects.toThrow('offline');
   expect(mockDestroy).toHaveBeenCalledTimes(1);
+});
+
+it('ignores incoming pushes before account lookup or network access when disabled', async () => {
+  mockInternetPushEnabled = false;
+  await expect(resolveApnsGiftWrap(idPayload)).resolves.toEqual([]);
+  await expect(resolveApnsGiftWrap({ type: 'event', data: event })).resolves.toEqual([]);
+  expect(mockAccount).not.toHaveBeenCalled();
+  expect(mockSigner).not.toHaveBeenCalled();
+  expect(mockFetch).not.toHaveBeenCalled();
 });

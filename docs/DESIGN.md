@@ -196,6 +196,9 @@ and leave controls remain on group information. The global profile screen may
 link to a read-only list of common groups, but never gains group-specific
 actions. Common-group rows open their chat histories.
 
+QR codes and contact sharing are the primary identity exchange paths. Built-in
+username registration is not part of onboarding or profile editing.
+
 Private-chat and group-chat creation use separate tasks. Private-chat contact
 rows open a conversation immediately; group creation owns multi-selection and
 a persistent bottom create action.

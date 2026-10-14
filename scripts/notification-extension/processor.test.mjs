@@ -15,12 +15,20 @@ import { buildNotificationExtension } from '../build-notification-extension.mjs'
 
 let directory;
 let processor;
+let disabledProcessor;
 let bootstrap;
 let journal;
 before(async () => {
   directory = await mkdtemp(join(tmpdir(), 'psstpsst-notification-test-'));
   await buildNotificationExtension(join(directory, 'processor.js'));
-  processor = await readFile(join(directory, 'processor.js'), 'utf8');
+  disabledProcessor = await readFile(join(directory, 'processor.js'), 'utf8');
+  await buildNotificationExtension(join(directory, 'enabled-processor.js'), [{
+    name: 'enable-retained-push-for-tests',
+    setup(builder) {
+      builder.onLoad({ filter: /push-feature\.ts$/ }, () => ({ contents: 'export const INTERNET_PUSH_ENABLED = true;', loader: 'ts' }));
+    },
+  }]);
+  processor = await readFile(join(directory, 'enabled-processor.js'), 'utf8');
   bootstrap = await readFile(resolve('ios-notification-extension/bootstrap.js'), 'utf8');
   journal = JSON.parse(await readFile(resolve('src/db/migrations/meta/_journal.json'), 'utf8'));
 });
@@ -102,7 +110,7 @@ async function database(input, { enabled = true, accepted = true, muted = false,
   return sqlite;
 }
 
-async function receive(sqlite, input, payload, { present = false, http } = {}) {
+async function receive(sqlite, input, payload, { present = false, http, bundle = processor } = {}) {
   const timers = new Set();
   let finish;
   const completed = new Promise((resolve) => { finish = resolve; });
@@ -148,7 +156,7 @@ async function receive(sqlite, input, payload, { present = false, http } = {}) {
   });
   try {
     runInContext(bootstrap, context);
-    runInContext(processor, context);
+    runInContext(bundle, context);
     context.PsstPsstNotification.receive(JSON.stringify(payload));
     return await Promise.race([completed, new Promise((_, reject) => {
       const id = setTimeout(() => reject(new Error('Processor deadline exceeded')), 5000);
@@ -339,5 +347,16 @@ test('sender opt-in supplies communication identity and avatar without exposing 
     assert.equal(result.communication.recipientId, input.account);
     assert.equal(result.communication.conversationId, `${input.account}:${input.rumor.pubkey}`);
     assert.ok(!result.body.includes(input.rumor.content));
+  } finally { sqlite.close(); }
+});
+
+test('production processor suppresses internet push without fetching or storing messages', async () => {
+  const input = fixture();
+  const sqlite = await database(input);
+  try {
+    for (const payload of [{ type: 'event', data: input.event }, { type: 'id', data: { id: input.event.id, p: input.account } }]) {
+      assert.equal((await receive(sqlite, input, payload, { bundle: disabledProcessor })).status, 'suppress');
+    }
+    assert.equal(sqlite.prepare('SELECT count(*) AS n FROM messages').get().n, 0);
   } finally { sqlite.close(); }
 });

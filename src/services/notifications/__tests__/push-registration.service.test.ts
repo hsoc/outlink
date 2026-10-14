@@ -1,5 +1,8 @@
 import { PushRegistrationService } from '../push-registration.service';
 
+let mockInternetPushEnabled = true;
+jest.mock('../push-feature', () => ({ get INTERNET_PUSH_ENABLED() { return mockInternetPushEnabled; } }));
+
 const mockStore = new Map<string, string>();
 const mockGetDevice = jest.fn();
 const mockUnregister = jest.fn();
@@ -35,6 +38,7 @@ const device = { token: '0012abcd', environment: 'sandbox' as const };
 const origin = 'https://relay.psstpsst.chat';
 let service: PushRegistrationService;
 beforeEach(() => {
+  mockInternetPushEnabled = true;
   jest.useFakeTimers();
   jest.clearAllMocks();
   mockStore.clear();
@@ -161,4 +165,25 @@ it('keeps a pending revocation and rejects account removal until the signer can 
   service.accountAdded('a');
   await service.reconcile();
   expect(JSON.parse(mockStore.get('notifications.apnsRegistrations')!).some((row: { accountPubkey: string; confirmed: boolean }) => row.accountPubkey === 'a' && row.confirmed)).toBe(true);
+});
+
+it('revokes saved registrations without acquiring a token while internet push is disabled', async () => {
+  mockInternetPushEnabled = false;
+  mockStore.set('notifications.enabled', '1');
+  mockStore.set('notifications.apnsInstallationId', 'installation');
+  mockStore.set('notifications.apnsRegistrations', JSON.stringify([{ accountPubkey: 'a', origin, ...device, confirmed: true, revoke: false }]));
+  service.setEnabled(true);
+  await service.reconcile();
+  expect(mockGetDevice).not.toHaveBeenCalled();
+  expect(mockSupports).not.toHaveBeenCalled();
+  expect(mockUnregister).toHaveBeenCalled();
+  expect(mockMutate).toHaveBeenCalledWith(expect.anything(), origin, 'installation', null);
+});
+
+it('ignores a saved opt-in during cold reconciliation while push is disabled', async () => {
+  mockInternetPushEnabled = false;
+  mockStore.set('notifications.enabled', '1');
+  await service.reconcile();
+  expect(mockGetDevice).not.toHaveBeenCalled();
+  expect(mockAccounts).not.toHaveBeenCalled();
 });

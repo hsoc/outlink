@@ -7,10 +7,9 @@ import { KeyMinimalistic as Fingerprint } from '@solar-icons/react-native/catego
 import { QrCode } from '@solar-icons/react-native/category/security/Linear/QrCode';
 import { Bolt } from '@solar-icons/react-native/category/ui/Linear/Bolt';
 import { UserRounded as User } from '@solar-icons/react-native/category/users/Linear/UserRounded';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
   type TextInput,
   View,
 } from 'react-native';
@@ -21,7 +20,6 @@ import { AppFormScrollView } from '@/components/common/AppFormScrollView';
 import { AppButton } from '@/components/common/AppButton';
 import { AppInput } from '@/components/common/AppInput';
 import { AppScreen } from '@/components/common/AppScreen';
-import { BottomSheet } from '@/components/common/BottomSheet';
 import { backSafely } from '@/lib/navigation';
 import { useClipboard } from '@/hooks/use-clipboard';
 import { IS_ELECTRON, IS_IOS } from '@/lib/platform';
@@ -31,8 +29,6 @@ import { ListRow } from '@/components/common/ListRow';
 import { ScreenHeader, useScreenHeaderClearance } from '@/components/common/ScreenHeader';
 import { PhotoCaptureModal } from '@/components/common/PhotoCaptureModal';
 import { ImageSourcePicker } from '@/components/profile/ImageSourcePicker';
-import { Nip05ClaimForm } from '@/components/nip05/Nip05ClaimForm';
-import { resolveProfileNip05Action } from '@/components/nip05/profile-nip05-action';
 import { NpubQrSheet } from '@/components/profile/NpubQrSheet';
 import { useScrolled } from '@/hooks/use-scrolled';
 import { useProfile } from '@/hooks/use-profile';
@@ -43,12 +39,11 @@ import { platform } from '@/platform';
 import { buildSigner } from '@/services/account/account.service';
 import { uploadPublicImage } from '@/services/files/blossom.service';
 import { loadAccountMediaServers } from '@/services/files/media-server.service';
-import { lookupNip05NameByPubkey } from '@/services/nip05/nip05.service';
 import { saveProfile, type ProfileMetadataInput } from '@/services/profile/profile.service';
 import { loadAccountDmRelays } from '@/services/relay/relay-list.service';
 import { mediaViewer } from '@/stores/media-viewer.store';
 import { iconStrokeWidth } from '@/theme/icons';
-import { spacing, typography, useThemeColors } from '@/theme';
+import { spacing, useThemeColors } from '@/theme';
 
 type CopyField = 'npub' | 'nip05' | 'lightning';
 type DraftPicture = {
@@ -83,14 +78,7 @@ export function ProfileView({ pubkey }: { pubkey: string }) {
   const [draftLightningAddress, setDraftLightningAddress] = useState('');
   const [draftPicture, setDraftPicture] = useState<DraftPicture | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
-  const [nip05ClaimOpen, setNip05ClaimOpen] = useState(false);
-  const [ownedNip05, setOwnedNip05] = useState<{
-    pubkey: string;
-    name: string | null;
-    reliable: boolean;
-  } | null>(null);
   const nip05InputRef = useRef<TextInput>(null);
-  const nip05ClaimInputRef = useRef<TextInput>(null);
   const lightningInputRef = useRef<TextInput>(null);
 
   const npub = pubkeyToNpub(pubkey);
@@ -100,27 +88,6 @@ export function ProfileView({ pubkey }: { pubkey: string }) {
   const nip05 = profile?.nip05 || '';
   const lightningAddress = profile?.lud16 || profile?.lud06 || '';
   const previewPicture = editing && draftPicture ? draftPicture.uri : profile?.picture;
-  const hasOwnedNip05Lookup = ownedNip05?.pubkey === pubkey;
-  const ownedNip05Name = hasOwnedNip05Lookup ? ownedNip05.name : undefined;
-  const ownedNip05Hint =
-    hasOwnedNip05Lookup && ownedNip05.reliable ? ownedNip05.name : undefined;
-  const nip05Action = resolveProfileNip05Action(draftNip05, ownedNip05Name);
-
-  useEffect(() => {
-    if (!editing || hasOwnedNip05Lookup) return;
-    let active = true;
-    lookupNip05NameByPubkey(pubkey)
-      .then((ownedName) => {
-        if (active) setOwnedNip05({ pubkey, name: ownedName, reliable: true });
-      })
-      .catch(() => {
-        if (active) setOwnedNip05({ pubkey, name: null, reliable: false });
-      });
-    return () => {
-      active = false;
-    };
-  }, [editing, hasOwnedNip05Lookup, pubkey]);
-
   async function copyValue(field: CopyField, value: string) {
     if (!value) return;
     await copyText(value, field);
@@ -195,7 +162,6 @@ export function ProfileView({ pubkey }: { pubkey: string }) {
     setDraftPicture(null);
     resetCopied();
     // Ownership is remote state and may have changed since the previous edit session.
-    setOwnedNip05(null);
     setEditing(true);
   }
 
@@ -315,6 +281,19 @@ export function ProfileView({ pubkey }: { pubkey: string }) {
           ) : null}
         </View>
 
+        {/* sharing */}
+        {!editing ? (
+          <View style={{ marginTop: spacing.xl }}>
+            <ListGroup>
+              <ListRow
+                icon={<QrCode size={22} color={c.text} />}
+                title={t('profile.show_qr')}
+                trailing={<ChevronRight size={18} color={c.textMuted} />}
+                onPress={() => setQrOpen(true)}
+              />
+            </ListGroup>
+          </View>
+        ) : null}
         <View style={{ marginTop: spacing['2xl'], gap: spacing.md }}>
           {editing ? (
             <View style={{ gap: spacing.lg }}>
@@ -352,54 +331,6 @@ export function ProfileView({ pubkey }: { pubkey: string }) {
                   returnKeyType="next"
                   blurOnSubmit={false}
                   onSubmitEditing={() => lightningInputRef.current?.focus()}
-                />
-                {/* Any provider remains editable above. This quiet field action
-                    either stages the already-owned address or opens its claim flow. */}
-                <AppButton
-                  label={
-                    nip05Action.kind === 'switch'
-                      ? t('nip05.profile_switch', {
-                          address: nip05Action.identifier,
-                        })
-                      : nip05Action.kind === 'manage'
-                        ? t('nip05.change')
-                        : t('nip05.profile_entry')
-                  }
-                  variant="accentText"
-                  labelVariant="caption"
-                  labelNumberOfLines={1}
-                  labelEllipsizeMode="tail"
-                  contentJustify="start"
-                  fullWidth
-                  compact
-                  compactAxis="none"
-                  iconLeft={
-                    nip05Action.kind === 'loading' ? (
-                      <View
-                        style={{
-                          width: typography.caption.lineHeight,
-                          height: typography.caption.lineHeight,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <ActivityIndicator
-                          size="small"
-                          color={c.accent}
-                          style={{ transform: [{ scale: 0.7 }] }}
-                        />
-                      </View>
-                    ) : undefined
-                  }
-                  disabled={savingProfile || nip05Action.kind === 'loading'}
-                  onPress={() => {
-                    if (nip05Action.kind === 'switch') {
-                      setDraftNip05(nip05Action.identifier);
-                      setNip05InputErrorVisible(false);
-                    } else {
-                      setNip05ClaimOpen(true);
-                    }
-                  }}
                 />
               </View>
               <AppInput
@@ -484,19 +415,6 @@ export function ProfileView({ pubkey }: { pubkey: string }) {
           )}
         </View>
 
-        {/* sharing */}
-        {!editing ? (
-          <View style={{ marginTop: spacing.xl }}>
-            <ListGroup>
-              <ListRow
-                icon={<QrCode size={22} color={c.text} />}
-                title={t('profile.show_qr')}
-                trailing={<ChevronRight size={18} color={c.textMuted} />}
-                onPress={() => setQrOpen(true)}
-              />
-            </ListGroup>
-          </View>
-        ) : null}
       </AppFormScrollView>
       <ScreenHeader
         bordered={scrolled}
@@ -552,32 +470,6 @@ export function ProfileView({ pubkey }: { pubkey: string }) {
         name={name}
         nip05={nip05}
       />
-
-      {/* Claiming binds the name server-side immediately; the identifier lands
-          in the edit draft and is published with the normal Save. */}
-      <BottomSheet
-        visible={nip05ClaimOpen}
-        onClose={() => setNip05ClaimOpen(false)}
-        inputFocusRef={nip05ClaimInputRef}
-        title={t('nip05.title')}
-      >
-        <Nip05ClaimForm
-          pubkey={pubkey}
-          inputRef={nip05ClaimInputRef}
-          intro
-          ownedNameHint={ownedNip05Hint}
-          onClaimed={(identifier) => {
-            setDraftNip05(identifier);
-            setNip05InputErrorVisible(false);
-            setOwnedNip05({
-              pubkey,
-              name: identifier.slice(0, identifier.indexOf('@')),
-              reliable: true,
-            });
-            setNip05ClaimOpen(false);
-          }}
-        />
-      </BottomSheet>
 
       <PhotoCaptureModal
         visible={photoCaptureOpen}

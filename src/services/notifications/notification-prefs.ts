@@ -2,6 +2,7 @@ import {
   getDevicePreference,
   setDevicePreference,
 } from '@/services/preferences/device-preferences.service';
+import { INTERNET_PUSH_ENABLED } from './push-feature';
 import { IS_IOS } from '@/lib/platform';
 
 /** Device-level preference. iOS requires explicit consent before APNs registration. */
@@ -47,7 +48,7 @@ export const DEFAULT_NOTIFICATION_CONTENT_PREFERENCES: NotificationContentPrefer
  * pulling in the notification service / dm service at module load. */
 export async function getNotificationsEnabled(): Promise<boolean> {
   const stored = await getDevicePreference(ENABLED_KEY, ENABLED_KEY);
-  return IS_IOS ? stored === '1' : stored !== '0';
+  return IS_IOS ? INTERNET_PUSH_ENABLED && stored === '1' : stored !== '0';
 }
 
 export async function setNotificationsEnabled(enabled: boolean): Promise<void> {

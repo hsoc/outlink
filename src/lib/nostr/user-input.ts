@@ -1,6 +1,5 @@
 import { parseNostrInput } from '@/lib/nostr/keys';
 import {
-  expandBareNip05Name,
   isNip05Identifier,
   queryNip05Profile,
 } from '@/lib/nostr/nip05';
@@ -13,8 +12,8 @@ export type NostrUserInputResolution =
 /**
  * Resolve the user identifiers accepted by user search and recipient pickers.
  * Public keys resolve locally; NIP-05 identifiers use the existing network
- * lookup and preserve a distinct not-found result for useful UI feedback. A
- * bare name (no `@domain`) is completed on the app's own NIP-05 domain.
+ * lookup and preserve a distinct not-found result for useful UI feedback.
+ * Bare nicknames never trigger a request to a built-in naming provider.
  */
 export async function resolveNostrUserInput(
   input: string,
@@ -23,7 +22,7 @@ export async function resolveNostrUserInput(
     return { status: 'resolved', pubkey: parseNostrInput(input) };
   } catch {}
 
-  const identifier = isNip05Identifier(input) ? input : expandBareNip05Name(input);
+  const identifier = isNip05Identifier(input) ? input : null;
   if (!identifier) return { status: 'invalid' };
 
   const profile = await queryNip05Profile(identifier);
