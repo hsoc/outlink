@@ -1,4 +1,5 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
+import type { RecordsPort } from '../ports/records';
 import type { HistoryPort } from '../ports/history';
 import type { PreferencesPort } from '../ports/mobile';
 import type { SecureStoragePort } from '../ports/secure-storage';
@@ -9,7 +10,7 @@ type Row = { sequence: number; room: string; id: string; value: string };
 /** One database/key owner for history and private preferences, including resumable upgrades. */
 export function createEncryptedStorage(
   open: () => Promise<SQLiteDatabase>,
-  secrets: Pick<SecureStoragePort, 'getItem' | 'setItem'>,
+  secrets: Pick<SecureStoragePort, 'getItem' | 'setItem' | 'deleteItem'>,
   legacy: PreferencesPort,
   compactLegacyPreferences?: () => Promise<void>,
 ) {
@@ -24,13 +25,17 @@ export function createEncryptedStorage(
           sequence INTEGER PRIMARY KEY AUTOINCREMENT, room TEXT NOT NULL, id TEXT NOT NULL,
           value TEXT NOT NULL, UNIQUE(room, id));
         CREATE INDEX IF NOT EXISTS encrypted_room_sequence ON encrypted_messages(room, sequence);
-        CREATE TABLE IF NOT EXISTS private_preferences (name TEXT PRIMARY KEY, value TEXT NOT NULL);`);
+        CREATE TABLE IF NOT EXISTS private_preferences (name TEXT PRIMARY KEY, value TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS protected_records (
+          sequence INTEGER PRIMARY KEY AUTOINCREMENT, scope TEXT NOT NULL, id TEXT NOT NULL,
+          value TEXT NOT NULL, UNIQUE(scope, id));
+        CREATE INDEX IF NOT EXISTS protected_scope_sequence ON protected_records(scope, sequence);`);
       const marker = await db.getFirstAsync<{ value: string }>('SELECT value FROM local_meta WHERE name = ?', 'key-check-v1');
       let key = await secrets.getItem(KEY);
       if (!key) {
         const existing = await db.getFirstAsync('SELECT sequence FROM encrypted_messages LIMIT 1');
         const preferences = await db.getFirstAsync('SELECT name FROM private_preferences LIMIT 1');
-        if (marker || existing || preferences) throw new Error('Local storage key is unavailable; encrypted data was preserved');
+        if (marker || existing || preferences || await db.getFirstAsync('SELECT sequence FROM protected_records LIMIT 1')) throw new Error('Local storage key is unavailable; encrypted data was preserved');
         key = newLocalStorageKey();
         await secrets.setItem(KEY, key);
       }
@@ -85,6 +90,11 @@ export function createEncryptedStorage(
   }
   const get = () => initialized ??= initialize().catch(error => { initialized = undefined; throw error; });
   const history: HistoryPort = {
+    async get(input, messageId) {
+      const { db, cipher } = await get(), room = cipher.index(`room:${input}`), id = cipher.index(`id:${input}:${messageId}`);
+      const row = await db.getFirstAsync<{ value: string }>('SELECT value FROM encrypted_messages WHERE room = ? AND id = ?', room, id);
+      return row ? cipher.open(row.value, `message:${room}:${id}`) : null;
+    },
     async load(input, before = Number.MAX_SAFE_INTEGER) {
       const { db, cipher } = await get(), room = cipher.index(`room:${input}`);
       const rows = await db.getAllAsync<Row>('SELECT sequence, room, id, value FROM encrypted_messages WHERE room = ? AND sequence < ? ORDER BY sequence DESC LIMIT 200', room, before);
@@ -124,5 +134,44 @@ export function createEncryptedStorage(
       await db.runAsync('DELETE FROM private_preferences WHERE name = ?', name);
     },
   };
-  return { history, preferences };
+  const records: RecordsPort = {
+    async get(input, recordId) {
+      const { db, cipher } = await get(), scope = cipher.index(`scope:${input}`), id = cipher.index(`record-id:${input}:${recordId}`);
+      const row = await db.getFirstAsync<{ value: string }>('SELECT value FROM protected_records WHERE scope = ? AND id = ?', scope, id);
+      return row ? cipher.open(row.value, `record:${scope}:${id}`) : null;
+    },
+    async set(input, recordId, value) {
+      const { db, cipher } = await get(), scope = cipher.index(`scope:${input}`), id = cipher.index(`record-id:${input}:${recordId}`);
+      await db.runAsync('INSERT INTO protected_records(scope, id, value) VALUES (?, ?, ?) ON CONFLICT(scope, id) DO UPDATE SET value = excluded.value', scope, id, cipher.seal(value, `record:${scope}:${id}`));
+    },
+    async remove(input, recordId) {
+      const { db, cipher } = await get();
+      await db.runAsync('DELETE FROM protected_records WHERE scope = ? AND id = ?', cipher.index(`scope:${input}`), cipher.index(`record-id:${input}:${recordId}`));
+    },
+    async list(input, before = Number.MAX_SAFE_INTEGER) {
+      const { db, cipher } = await get(), scope = cipher.index(`scope:${input}`);
+      const rows = await db.getAllAsync<{ sequence: number; id: string; value: string }>('SELECT sequence, id, value FROM protected_records WHERE scope = ? AND sequence < ? ORDER BY sequence DESC LIMIT 200', scope, before);
+      const values: { sequence: number; value: string }[] = [];
+      for (const [index, row] of rows.entries()) {
+        values.push({ sequence: row.sequence, value: cipher.open(row.value, `record:${scope}:${row.id}`) });
+        if (index % 20 === 19) await new Promise(resolve => setTimeout(resolve, 0));
+      }
+      return values;
+    },
+    async clear(input) {
+      const { db, cipher } = await get();
+      if (input === undefined) await db.runAsync('DELETE FROM protected_records');
+      else await db.runAsync('DELETE FROM protected_records WHERE scope = ?', cipher.index(`scope:${input}`));
+    },
+  };
+  async function wipe() {
+    const { db, cipher } = await get();
+    await db.withExclusiveTransactionAsync(async tx => {
+      await tx.execAsync('PRAGMA secure_delete = ON; DELETE FROM encrypted_messages; DELETE FROM protected_records; DELETE FROM private_preferences; DELETE FROM local_meta;');
+    });
+    await db.execAsync('PRAGMA wal_checkpoint(TRUNCATE); VACUUM; PRAGMA wal_checkpoint(TRUNCATE);');
+    await secrets.deleteItem(KEY);
+    cipher.destroy(); await db.closeAsync(); initialized = undefined;
+  }
+  return { history, preferences, records, wipe };
 }

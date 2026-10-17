@@ -1,0 +1,38 @@
+/** @jest-environment node */
+import { createHash } from 'node:crypto';
+import { hexToBytes, bytesToHex } from '@noble/hashes/utils.js';
+import { buildFilter, decodeFilter, bucket, GossipCache, gossipId, encodeSync, decodeSync } from '../compatibility/gossip';
+import { bytes, type BitchatPacket } from '../bitchat-wire';
+const packet = (timestamp: number, content = 'hello'): BitchatPacket => ({ version: 1, type: 2, ttl: 7, timestamp, sender: '0102030405060708', payload: bytes(content) });
+it('matches the documented MSB-first Golomb-Rice bitstream and canonical packet ID', () => {
+  expect(decodeFilter(3, 100, hexToBytes('0180'))).toEqual([1, 3, 12]);
+  const value = packet(123456), timestamp = Buffer.alloc(8); timestamp.writeBigUInt64BE(123456n);
+  const independent = createHash('sha256').update(Buffer.concat([Buffer.from([2]), Buffer.from(value.sender, 'hex'), timestamp, Buffer.from('hello')])).digest().subarray(0, 16);
+  expect(bytesToHex(gossipId(value))).toBe(independent.toString('hex'));
+});
+it('keeps the complete newest input prefix inside a bounded filter without false negatives', () => {
+  const ids = Array.from({ length: 1000 }, (_, i) => gossipId(packet(i)));
+  const filter = buildFilter(ids, 64);
+  expect(filter.data.length).toBeLessThanOrEqual(64);
+  expect(filter.included).toBeLessThan(ids.length);
+  const values = new Set(decodeFilter(filter.p, filter.m, filter.data));
+  for (const id of ids.slice(0, filter.included)) expect(values.has(bucket(id, filter.m))).toBe(true);
+});
+it('round trips sync flags/cursors and rejects invalid or oversized filters', () => {
+  const request = { p: 7, m: 1024, data: hexToBytes('0180'), types: 0x703, since: 123456, fragmentIds: ['0123456789abcdef'] };
+  expect(decodeSync(encodeSync(request))).toEqual(request);
+  expect(() => decodeSync(encodeSync({ ...request, p: 33 }))).toThrow();
+  expect(() => decodeSync(encodeSync({ ...request, data: new Uint8Array(1025) }))).toThrow();
+  expect(decodeFilter(33, 10, new Uint8Array(4))).toEqual([]);
+});
+it('serves only missing public packets and expires history without persisting private traffic', () => {
+  const changes = jest.fn(), cache = new GossipCache(changes), now = Date.now();
+  cache.add(packet(now - 10)); cache.add(packet(now - 20, 'older'));
+  cache.add({ ...packet(now), type: 17, recipient: '1111111111111111' });
+  expect(cache.entries(now)).toHaveLength(2);
+  const request = decodeSync(cache.request(now));
+  expect(cache.missing(request, now)).toHaveLength(0);
+  expect(cache.missing({ p: 7, m: 1, data: new Uint8Array(), types: 3 }, now)).toHaveLength(2);
+  expect(cache.entries(now + 21600001)).toHaveLength(0);
+  expect(changes).toHaveBeenCalledTimes(4);
+});

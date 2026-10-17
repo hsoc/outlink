@@ -2,7 +2,7 @@
 import { x25519 } from '@noble/curves/ed25519.js';
 import type { ProximityTransportPort } from '@/platform';
 import { BitchatSession, type BitchatMessage, type BitchatPeer } from '../bitchat-session';
-import { bytes, decodePacket, encodePacket, BitchatType } from '../bitchat-wire';
+import { bytes, decodePacket, encodePacket, BitchatType, signPacket } from '../bitchat-wire';
 
 type Radio = { port: ProximityTransportPort; listeners: Map<string, Set<(event: Record<string, unknown>) => void>>;
   neighbors: Map<string, Radio>; id: string; wire: Uint8Array[] };
@@ -71,7 +71,7 @@ it('negotiates Noise across an intermediate node, hides private plaintext from i
   const a = node('Alice', 1), b = node('Bob', 2), c = node('Carol', 3);
   await Promise.all([a.session.start(), b.session.start(), c.session.start()]);
   connect(a.r, b.r); connect(b.r, c.r);
-  await until(() => a.peers.has(c.session.id) && c.peers.has(a.session.id));
+  await until(() => (a.peers.get(c.session.id)?.lastSeen ?? 0) > 0 && (c.peers.get(a.session.id)?.lastSeen ?? 0) > 0);
   await a.session.sendPrivate(c.session.id, 'secret message', 'private-1');
   await until(() => c.messages.length === 1 && a.receipts.some((r) => r[2] === 'delivered'));
   expect(b.messages).toHaveLength(0);
@@ -150,4 +150,36 @@ it('cancels paced and queued transmissions when the session stops', async () => 
   expect((await sends).some(result => result.status === 'rejected')).toBe(true);
   await new Promise(resolve => setTimeout(resolve, 25));
   expect(a.messages.length).toBe(messagesAfterStop);
+});
+it('backfills a public message into a newly joined partition without the original sender present', async () => {
+  const a = node('Alice', 1), b = node('Bob', 2);
+  await Promise.all([a.session.start(), b.session.start()]); connect(a.r, b.r);
+  await until(() => b.peers.has(a.session.id));
+  await a.session.sendPublic('message before Carol joined');
+  await until(() => b.messages.length === 1);
+  await a.session.stop();
+  const c = node('Carol', 3); await c.session.start(); connect(b.r, c.r);
+  await until(() => c.messages.some(message => message.content === 'message before Carol joined'));
+  expect(c.messages.filter(message => message.content === 'message before Carol joined')).toHaveLength(1);
+});
+
+it('verifies both identity keys with an encrypted nonce challenge and rejects a changed live signing pin', async () => {
+  const a = node('Alice', 1), b = node('Bob', 2);
+  await Promise.all([a.session.start(), b.session.start()]); connect(a.r, b.r);
+  await until(() => !!a.peers.get(b.session.id)?.lastSeen && !!b.peers.get(a.session.id)?.lastSeen);
+  const bob = a.peers.get(b.session.id)!;
+  await a.session.verifyContact(bob.id, bob.noisePublicKey!, bob.signingPublicKey!);
+  expect(a.peers.get(bob.id)?.secure).toBe(true);
+  expect(a.messages).toHaveLength(0); expect(b.messages).toHaveLength(0);
+  await expect(a.session.verifyContact(bob.id, bob.noisePublicKey!, '00'.repeat(32))).rejects.toThrow('live peer');
+});
+
+it('accepts the explicit all-FF public recipient without rewriting signed bytes', async () => {
+  const a = node('Alice', 1), b = node('Bob', 2);
+  await Promise.all([a.session.start(), b.session.start()]); connect(a.r, b.r);
+  await until(() => !!b.peers.get(a.session.id)?.lastSeen);
+  const packet = signPacket({ version: 1, type: BitchatType.message, ttl: 7, timestamp: Date.now(), sender: a.session.id, recipient: 'ffffffffffffffff', payload: bytes('explicit broadcast') }, new Uint8Array(32).fill(11));
+  b.r.listeners.get('onMessage')!.forEach(fn => fn({ endpointId: a.r.id, payload: encodePacket(packet) }));
+  await until(() => b.messages.some(message => message.content === 'explicit broadcast'));
+  expect(b.messages.find(message => message.content === 'explicit broadcast')?.recipient).toBeUndefined();
 });

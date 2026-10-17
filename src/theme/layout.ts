@@ -159,3 +159,6 @@ export const density = {
     },
   },
 } as const;
+
+/** Stable contact-code scanning and presentation geometry. */
+export const verificationLayout = { size: 280 } as const;

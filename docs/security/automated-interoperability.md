@@ -35,3 +35,26 @@ fragment/handshake/rate/queue bounds remain in force.
 Unverified: actual Android↔iOS BLE discovery/notification delivery, official-client
 interoperability, native keychain/keystore migration, permissions, and OS lifecycle
 behavior. JavaScript bundle exports and simulated radios do not exercise these.
+
+
+## Compatibility expansion
+
+The suite additionally covers the upstream's frozen iOS and Android private
+Nostr envelopes, published courier tag/TLV/signing vectors, Noise X static/prekey
+domain separation, signed prekey bundle validation, and an independent GCS
+bitstream. Fixture provenance records upstream paths, revision and SHA-256; only
+published synthetic fixture data is included.
+
+A partition regression checks public-history transfer after the original sender
+has left, including the distinction between cached identity and live reachability.
+A live encrypted verification exchange tests both full key pins without exposing
+challenge/control payloads as chat. Public messages with an explicit all-FF
+broadcast recipient retain their original signed bytes and display correctly.
+
+Queue regressions cover concurrent quotas, offline/reopen persistence, retry
+budgets/expiry, cancellation, recipient-bound receipts and immediate ACK races.
+Private-mailbox tests check subscription isolation, absence of public presence,
+relay acceptance, malformed events, deduplication, storage-error retry and stop.
+Erasure tests cover key deletion, fresh storage keys, fail/retry behavior and
+foreground-resume invalidation. These remain automated tests, not official-client
+or physical-radio interoperability evidence.

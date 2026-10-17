@@ -89,6 +89,11 @@
       "path": "common/react-native-MIT.txt",
       "source": "node_modules/react-native/LICENSE; shared by React Native workspace packages that omit a notice from their npm archive.",
       "sha256": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93"
+    },
+    {
+      "path": "common/qrcode-generator-MIT.txt",
+      "source": "https://github.com/kazuhikoarase/qrcode-generator/blob/master/LICENSE; reviewed against qrcode-generator@2.0.4 package metadata and dist/qrcode.mjs copyright header. The npm archive omits LICENSE.",
+      "sha256": "470cb367c0231951b7d2ddf4b45731e095b9ecdcaccf684b2415baea11d890d8"
     }
   ],
   "npmOverrides": {
@@ -251,6 +256,11 @@
       "version": "250829098.0.17",
       "integrity": "sha512-qG1PXzTEtriF6oQLZF3vyHhSMxOdW5h2TqqLri0rdpstPustd2fSvRZQMVAPdlhgFwBfYnj3OUZtiO6LjYsEFw==",
       "file": "common/react-native-MIT.txt"
+    },
+    "qrcode-generator": {
+      "version": "2.0.4",
+      "integrity": "sha512-mZSiP6RnbHl4xL2Ap5HfkjLnmxfKcPWpWe/c+5XxCuetEenqmNFf1FH/ftXPCtFG5/TDobjsjz6sSNL0Sr8Z9g==",
+      "file": "common/qrcode-generator-MIT.txt"
     }
   }
 }

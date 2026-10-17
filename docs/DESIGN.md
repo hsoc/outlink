@@ -32,3 +32,5 @@ frosted iOS chrome, opaque Android chrome, typography, spacing, and radii.
 15. User-facing strings live in locale catalogs. New copy may fall back to
     English until translated; never leave a misleading retired-feature message.
 16. Record durable design changes here, and implementation details in code/tests.
+
+Verification QR codes use fixed, high-contrast paper and ink theme tokens in both appearances. Camera previews mount only during an explicit scan on the focused, foreground screen.

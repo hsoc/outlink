@@ -11,6 +11,7 @@ export {
   useEffectiveColorScheme,
 } from './effective-color-scheme';
 export {
+  verificationLayout,
   bottomChrome,
   contentWidth,
   density,
@@ -23,6 +24,8 @@ export { iconStrokeWidth } from './icons';
 export type { FontWeight, TextVariant } from './typography';
 
 export type ThemeColors = {
+  qrPaper: string;
+  qrInk: string;
   background: string;
   surface: string;
   surfaceElevated: string;
@@ -118,6 +121,8 @@ export const lightPalette: ThemeColors = {
   sheetBackground: '#F2F2F7',
   lightboxBackdrop: LIGHTBOX_BACKDROP,
   onOverlay: ON_OVERLAY,
+  qrPaper: ON_OVERLAY,
+  qrInk: LIGHTBOX_BACKDROP,
 };
 
 export const darkPalette: ThemeColors = {
@@ -154,6 +159,8 @@ export const darkPalette: ThemeColors = {
   sheetBackground: '#141416',
   lightboxBackdrop: LIGHTBOX_BACKDROP,
   onOverlay: ON_OVERLAY,
+  qrPaper: ON_OVERLAY,
+  qrInk: LIGHTBOX_BACKDROP,
 };
 
 // The accent palette (`AccentKey`, `ACCENTS`, `ACCENT_KEYS`) lives in its own

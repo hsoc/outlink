@@ -1,4 +1,4 @@
-import { getPublicKey, type Event } from 'nostr-tools/pure';
+import { getEventHash, verifyEvent, getPublicKey, type Event } from 'nostr-tools/pure';
 import { createGeohashEvent, normalizeGeoRelays, validateGeohashEvent } from './geohash-protocol';
 import { normalizeGeohash } from './geohash';
 
@@ -10,6 +10,7 @@ export interface GeoSocket {
   onmessage: ((e: { data: unknown }) => void) | null;
   send(data: string): void; close(): void;
 }
+export type RelayMode = { subscription: string; filters(): Record<string, unknown>[]; event(value: unknown): void };
 type Callbacks = { message(message: GeoMessage): void; delivery(id: string, status: 'sent' | 'failed'): void;
   connection(count: number): void; presence(count: number): void; error(): void };
 type Link = { socket?: GeoSocket; timeout?: ReturnType<typeof setTimeout>; retry?: ReturnType<typeof setTimeout>; opened: boolean; attempts: number;
@@ -28,7 +29,8 @@ export class GeohashSession {
   private readonly pending = new Map<string, Pending>();
   constructor(hash: string, private readonly key: Uint8Array, private readonly name: string,
     private readonly relays: string[], private readonly callbacks: Callbacks,
-    private readonly socket: (url: string) => GeoSocket = url => new WebSocket(url) as unknown as GeoSocket) {
+    private readonly socket: (url: string) => GeoSocket = url => new WebSocket(url) as unknown as GeoSocket,
+    private readonly mode?: RelayMode) {
     this.hash = normalizeGeohash(hash); this.relays = normalizeGeoRelays(relays);
     this.publicKey = getPublicKey(key);
     if (!name.trim() || new TextEncoder().encode(name).length > 64) throw new Error('Invalid nickname');
@@ -38,7 +40,7 @@ export class GeohashSession {
     this.stopped = false;
     this.links = this.relays.map(() => ({ opened: false, attempts: 0, rateAt: 0, rate: 0 }));
     this.links.forEach((link, index) => this.connect(link, this.relays[index]));
-    this.heartbeat = setInterval(() => {
+    if (!this.mode) this.heartbeat = setInterval(() => {
       this.presence();
       const cutoff = Date.now() - 180_000;
       for (const [pubkey, at] of this.present) if (at < cutoff) this.present.delete(pubkey);
@@ -65,15 +67,15 @@ export class GeohashSession {
       if (link.retry) { clearTimeout(link.retry); link.retry = undefined; }
       link.opened = true; link.attempts = 0; this.connections();
       try {
-        socket.send(JSON.stringify(['REQ', 'geohash', { kinds: [20000, 20001], '#g': [this.hash],
-          since: Math.floor(Date.now() / 1000) - 900, limit: 200 }]));
-        this.presence(socket);
+        socket.send(JSON.stringify(['REQ', this.mode?.subscription ?? 'geohash', ...(this.mode?.filters() ?? [{ kinds: [20000, 20001], '#g': [this.hash],
+          since: Math.floor(Date.now() / 1000) - 900, limit: 200 }])]));
+        if (!this.mode) this.presence(socket);
       } catch { socket.close(); retry(); }
     };
     socket.onclose = () => { if (current()) retry(); };
     socket.onerror = () => { if (current()) { socket.close(); retry(); } };
     socket.onmessage = ({ data }) => {
-      if (!current() || !link.opened || typeof data !== 'string' || data.length > 16_384) return;
+      if (!current() || !link.opened || typeof data !== 'string' || data.length > (this.mode ? 131072 : 16384)) return;
       const now = Date.now();
       if (now - link.rateAt >= 1000) { link.rateAt = now; link.rate = 0; }
       if (++link.rate > 32) return;
@@ -87,7 +89,8 @@ export class GeohashSession {
         else { pending.rejected.add(socket); if (pending.rejected.size >= pending.total) pending.reject(new Error('Relays rejected the message')); }
         return;
       }
-      if (frame[0] !== 'EVENT' || frame[1] !== 'geohash') return;
+      if (frame[0] !== 'EVENT' || frame[1] !== (this.mode?.subscription ?? 'geohash')) return;
+      if (this.mode) { try { this.mode.event(frame[2]); } catch { this.callbacks.error(); } return; }
       const event = validateGeohashEvent(frame[2], this.hash);
       if (!event || this.seen.has(event.id)) return;
       this.seen.add(event.id);
@@ -120,6 +123,14 @@ export class GeohashSession {
     if (this.seen.size > 2048) this.seen.delete(this.seen.values().next().value!);
     this.callbacks.message(this.message(event, true));
     try {
+      await this.publish(event);
+      this.callbacks.delivery(event.id, 'sent');
+    } catch (error) { this.callbacks.delivery(event.id, 'failed'); throw error; }
+  }
+  async publish(event: Event): Promise<void> {
+    if (this.stopped || this.pending.size >= 8 || getEventHash(event) !== event.id || !verifyEvent(event)) throw new Error('Relay is not ready or event is invalid');
+    const sockets = this.links.filter(link => link.opened && link.socket?.readyState === 1).map(link => link.socket!);
+    if (!sockets.length) throw new Error('No relay is connected');
       await new Promise<void>((resolve, reject) => {
         const finish = (error?: Error) => {
           const pending = this.pending.get(event.id); if (!pending) return;
@@ -135,8 +146,6 @@ export class GeohashSession {
             if (pending && pending.rejected.size >= sockets.length) finish(new Error('Send failed')); }
         }
       });
-      this.callbacks.delivery(event.id, 'sent');
-    } catch (error) { this.callbacks.delivery(event.id, 'failed'); throw error; }
   }
   stop(): void {
     this.stopped = true;
@@ -146,7 +155,7 @@ export class GeohashSession {
       if (link.timeout) clearTimeout(link.timeout);
       if (link.socket) {
         link.socket.onopen = null; link.socket.onmessage = null; link.socket.onclose = null; link.socket.onerror = null;
-        try { if (link.opened) link.socket.send(JSON.stringify(['CLOSE', 'geohash'])); } catch {}
+        try { if (link.opened) link.socket.send(JSON.stringify(['CLOSE', this.mode?.subscription ?? 'geohash'])); } catch {}
         link.socket.close();
       }
     }

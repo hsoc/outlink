@@ -43,3 +43,14 @@ this npm assessment does not cover CocoaPods/Gradle or prove absence of other fl
 Validation includes protocol and storage regressions, type/lint checks, offline
 notice consistency, and Android/iOS bundle exports. Physical-device testing was
 omitted at the maintainer's request.
+
+
+Compatibility-stage additions: `expo-camera@57.0.6` and
+`qrcode-generator@2.0.4` are locked for explicit QR contact sharing. The camera
+plugin disables microphone permission/recording; generated Android/iOS projects
+were checked for camera-only permission changes. The QR package omits a LICENSE
+file from its npm archive, so its published MIT notice is retained as a reviewed,
+integrity-pinned override. Production npm audit remains 43 findings (27 high,
+16 moderate), with no reported advisory for the camera, QR encoder,
+barcode-detector or zxing-wasm additions. Existing unresolved findings above
+remain unresolved. Native compilation and native dependency audits are separate.

@@ -1,5 +1,5 @@
 /** @jest-environment node */
-import { createSessionLifecycle } from '../lifecycle';
+import { createSessionLifecycle, invalidateSessionIntent } from '../lifecycle';
 function setup() {
   const mesh = { connection: { account: 'device', name: 'Alice' } as { account: string; name: string } | undefined,
     stop: jest.fn(async () => { mesh.connection = undefined; }),
@@ -31,4 +31,10 @@ it('does not reconnect after the root unmounts', async () => {
   const { mesh, lifecycle } = setup();
   await lifecycle.change('background'); lifecycle.dispose(); await lifecycle.change('active');
   expect(mesh.start).not.toHaveBeenCalled();
+});
+
+it('does not resurrect the previous identity after an explicit wipe while backgrounded', async () => {
+  const { mesh, geo, lifecycle } = setup();
+  await lifecycle.change('background'); invalidateSessionIntent(); await lifecycle.change('active');
+  expect(mesh.start).not.toHaveBeenCalled(); expect(geo.join).not.toHaveBeenCalled();
 });

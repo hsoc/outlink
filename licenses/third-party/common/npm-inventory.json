@@ -1,6 +1,6 @@
 {
   "reviewed": "2026-10-17",
-  "lockfileSha256": "514eaad501214a62ed50c3d8f2d719ec53fb42dc966010ef6aabc13aafbf87f5",
+  "lockfileSha256": "720884820cb7d8076d131d7a86cb189d2cfced136d5efb8eecf39032e0cbf55b",
   "scope": "All locked non-development npm packages on all platforms, plus the shipped Electron runtime. Includes build utilities; not an exact binary inventory.",
   "packages": [
     {
@@ -2716,6 +2716,20 @@
       ]
     },
     {
+      "name": "@types/emscripten",
+      "version": "1.41.6",
+      "license": "MIT",
+      "integrity": "sha512-uN+9i8bFT5CUcZfyIEYDrSueACEyKGbUs5kC/72DGlZZoinh84sJfVV0i8UOJD1asdzkvLPBRrKs41kZ8MdEXg==",
+      "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+      "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/emscripten",
+      "licenseFiles": [
+        {
+          "source": "emscripten/LICENSE",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ]
+    },
+    {
       "name": "@types/graceful-fs",
       "version": "4.1.9",
       "license": "MIT",
@@ -3401,6 +3415,20 @@
         {
           "source": "LICENSE.md",
           "sha256": "d408f38ffa3355c5faec517153295338892eb0f1ea43f57874bb23c6075979b5"
+        }
+      ]
+    },
+    {
+      "name": "barcode-detector",
+      "version": "3.2.2",
+      "license": "MIT",
+      "integrity": "sha512-/4QOrrNrCRmDSBWiiP4aC72dnkuXUEdcFRidHgbPRXUpy82XcCMvJssI6fEs6JT42LS7DvBVZO70qasJbYKyrA==",
+      "repository": "git+https://github.com/Sec-ant/barcode-detector.git",
+      "homepage": "https://github.com/Sec-ant/barcode-detector",
+      "licenseFiles": [
+        {
+          "source": "LICENSE",
+          "sha256": "fb506e4ade12d7a9efa67c9d76a9a28c8e15d347ca49a69e48e29b40b34ad2ab"
         }
       ]
     },
@@ -4478,6 +4506,20 @@
       "integrity": "sha512-uyBeJwxIuXzWXXNrnRub5pcF8VzQsiOz0VBTWDpMG2UztmaFyfAz6pI/GCwRtWpHhiOpLoJj79WLdg1GMB+9cg==",
       "repository": "https://github.com/expo/expo.git",
       "homepage": "https://docs.expo.dev/versions/latest/sdk/blur-view/",
+      "licenseFiles": [
+        {
+          "source": "LICENSE",
+          "sha256": "fb3ca4a837f5779e83cef89b78253a8949cfb9429c340309f62d0465ec6610b4"
+        }
+      ]
+    },
+    {
+      "name": "expo-camera",
+      "version": "57.0.6",
+      "license": "MIT",
+      "integrity": "sha512-eswB77bOzQ2OEvll/hV5VnzywaICFnYF21HIwcyokebFcSTSMfGQk8+VW06DRec9JnWuRExs0QXlfxyMPjS6KQ==",
+      "repository": "https://github.com/expo/expo.git",
+      "homepage": "https://docs.expo.dev/versions/latest/sdk/camera/",
       "licenseFiles": [
         {
           "source": "LICENSE",
@@ -7588,6 +7630,18 @@
       ]
     },
     {
+      "name": "qrcode-generator",
+      "version": "2.0.4",
+      "license": "MIT",
+      "integrity": "sha512-mZSiP6RnbHl4xL2Ap5HfkjLnmxfKcPWpWe/c+5XxCuetEenqmNFf1FH/ftXPCtFG5/TDobjsjz6sSNL0Sr8Z9g==",
+      "licenseFiles": [
+        {
+          "source": "Reviewed distribution notices: licenses/third-party/common/qrcode-generator-MIT.txt",
+          "sha256": "470cb367c0231951b7d2ddf4b45731e095b9ecdcaccf684b2415baea11d890d8"
+        }
+      ]
+    },
+    {
       "name": "query-string",
       "version": "7.1.3",
       "license": "MIT",
@@ -8730,6 +8784,19 @@
       ]
     },
     {
+      "name": "tagged-tag",
+      "version": "1.0.0",
+      "license": "MIT",
+      "integrity": "sha512-yEFYrVhod+hdNyx7g5Bnkkb0G6si8HJurOoOEgC8B/O0uXLHlaey/65KRv6cuWBNhBgHKAROVpc7QyYqE5gFng==",
+      "repository": "sindresorhus/tagged-tag",
+      "licenseFiles": [
+        {
+          "source": "license",
+          "sha256": "5c932d88256b4ab958f64a856fa48e8bd1f55bc1d96b8149c65689e0c61789d3"
+        }
+      ]
+    },
+    {
       "name": "terminal-link",
       "version": "2.1.1",
       "license": "MIT",
@@ -8895,6 +8962,23 @@
         {
           "source": "license",
           "sha256": "48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0"
+        }
+      ]
+    },
+    {
+      "name": "type-fest",
+      "version": "5.10.0",
+      "license": "(MIT OR CC0-1.0)",
+      "integrity": "sha512-NoSdpq/WEiAg5sjmBkmV/hfxv6HJH4NqPNrqjtSO5CwRmpsDfaf4begxW34KdJykH/l1yHtwBWQkCRdoXO8mPA==",
+      "repository": "sindresorhus/type-fest",
+      "licenseFiles": [
+        {
+          "source": "license-cc0",
+          "sha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499"
+        },
+        {
+          "source": "license-mit",
+          "sha256": "5c932d88256b4ab958f64a856fa48e8bd1f55bc1d96b8149c65689e0c61789d3"
         }
       ]
     },
@@ -9586,6 +9670,20 @@
         {
           "source": "LICENSE",
           "sha256": "c1e6e266563517467b1bf874817d23e426f3149252bd7d42758cd697514b8417"
+        }
+      ]
+    },
+    {
+      "name": "zxing-wasm",
+      "version": "3.1.3",
+      "license": "MIT",
+      "integrity": "sha512-3lC9BJk4fR5ZJxcGjb0hVnDFOW7KpLXHIebiBmVd4FDRQZVeObztoTKxRUPxlWwSgxrMRONK0u50hBD1aTYEKg==",
+      "repository": "git+https://github.com/Sec-ant/zxing-wasm.git",
+      "homepage": "https://github.com/Sec-ant/zxing-wasm",
+      "licenseFiles": [
+        {
+          "source": "LICENSE",
+          "sha256": "fb506e4ade12d7a9efa67c9d76a9a28c8e15d347ca49a69e48e29b40b34ad2ab"
         }
       ]
     }

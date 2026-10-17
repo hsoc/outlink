@@ -6,13 +6,14 @@ export const BITCHAT_SERVICE_UUID = 'F47B5E2D-4A9E-4C5A-9B3F-8E1D2C3A4B5C';
 export const BITCHAT_CHARACTERISTIC_UUID = 'A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D';
 export const BITCHAT_TTL = 7;
 export const BITCHAT_MAX_PACKET = 128 * 1024;
-export const BitchatType = { announce: 1, message: 2, leave: 3, handshake: 16, encrypted: 17, fragment: 32 } as const;
+export const BitchatType = { announce: 1, message: 2, leave: 3, courier: 4, handshake: 16, encrypted: 17, fragment: 32, sync: 33, file: 34, board: 35, prekeys: 36, group: 37, ping: 38, pong: 39, carrier: 40, voice: 41 } as const;
 export type BitchatPacket = {
   version: 1 | 2; type: number; ttl: number; timestamp: number; sender: string;
   recipient?: string; route?: string[]; payload: Uint8Array; signature?: Uint8Array;
   /** Retain original compression bytes for forwarding and signature validation. */
   wirePayload?: Uint8Array; compressed?: boolean; rsr?: boolean;
 };
+export const isBroadcast = (packet: Pick<BitchatPacket, 'recipient'>): boolean => !packet.recipient || packet.recipient === 'ffffffffffffffff';
 export type InflateRaw = (bytes: Uint8Array, size: number) => Promise<Uint8Array>;
 const utf8 = new TextEncoder();
 const decoder = new TextDecoder('utf-8', { fatal: true });

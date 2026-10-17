@@ -21,6 +21,13 @@ are not stored or included in events. Manual area entry does not need location
 permission. Foreground location and Bluetooth may still be subject to platform
 permissions and radio metadata.
 
+Favorite contacts may exchange a separate Nostr identity through encrypted
+Bluetooth control messages or signed contact codes. Optional internet delivery
+connects to the configured relays only after enabling it and joining Bluetooth;
+relays observe IP addresses, timing, and addressed outer public keys, while
+message content is encrypted. This option is disabled by default. Contact-code
+scanning requests camera access only on an explicit scan and stores no images.
+
 There is no internet push registration or background delivery guarantee. Connections
 pause in the background and reconnect on return within the same app process.
 Messages, drafts, channel selections, relay settings, and nickname are encrypted
@@ -34,7 +41,11 @@ Existing mobile plaintext history/preferences are upgraded in resumable batches
 and the live databases compacted. This does not guarantee erasure of flash-storage
 remnants or previous backups. Retired pre-redesign databases are not imported or
 deleted. Settings → Clear local history deletes saved messages and drafts, not
-identity/storage keys, relay copies, recipients' copies, or screenshots.
+identity/storage keys, contacts, queued outgoing messages, relay copies,
+recipients' copies, or screenshots. Queued outgoing messages can still send after
+clearing history. Settings → Erase identity and all local data also removes
+contacts, queues, gossip and the old identity/storage keys. Remote copies and
+flash-storage/backups remain outside this deletion boundary.
 See [local storage](security/local-storage.md) for the full protection boundary.
 
 No hosted Outlink naming or notification service is configured. Source and

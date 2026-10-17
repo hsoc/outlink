@@ -1,8 +1,8 @@
 # Bitchat live Bluetooth messaging
 
 Outlink implements this interoperability profile independently under the
-repository's MIT license. This is **live Bluetooth mesh text messaging**, not
-an implementation of every Bitchat feature.
+repository's MIT license. The target is complete current-main compatibility; that target is not yet
+achieved. See the explicit [compatibility inventory](compatibility.md).
 
 ## Reference and compatibility
 
@@ -21,12 +21,17 @@ Implemented:
 - Noise XX private text, encrypted delivery acknowledgments and read receipts.
 - Bitchat fragments, optional v2 routes, incoming raw-DEFLATE payloads, padding.
 - Noise-authenticated signing-key state (`0x21`).
+- Signed link-local GCS public-history synchronization and encrypted durable cache.
+- QR contact sharing/pins and live encrypted verification challenges (`0x10`/`0x11`).
+- Encrypted durable outgoing private queue, favorites and block controls.
 
 The separate geohash transport is described in [geohash.md](geohash.md).
-Not emitted or consumed on this BLE transport: courier envelopes, public
-history/GCS synchronization, groups, board posts, files, voice, prekeys, gateway
-carriers, or rotating-ID presence. These need separate interoperability profiles.
-There is no offline delivery/outbox guarantee in this version.
+Not yet emitted or consumed on this BLE transport: courier envelopes, groups,
+board posts, files, voice, prekeys, gateway carriers, or rotating-ID presence.
+Courier/prekey codecs have vector tests, but their runtime lifecycle remains
+unimplemented. The outbox retries when a route becomes available; delivery is
+not guaranteed. Optional favorite internet delivery uses the independent private
+envelope implementation described in the compatibility inventory.
 
 Packet tests and simulated meshes pass; **physical interoperability with Bitchat
 apps has not been established**. Wire compatibility does not establish audited
@@ -120,7 +125,9 @@ until the peer proves possession of the Noise key. Private XX sessions check
 that full static key. Authenticated signing-key state then supplies the
 signing key through that established session. Users should compare fingerprints
 before sending sensitive content; discovery alone is not in-person verification.
-Remote identity pins are not persisted by this implementation.
+Contact identity pins are encrypted and persisted. Favorites and verified contacts
+are pinned across restarts. Scanning pins both full keys; the verified badge additionally
+requires the live encrypted challenge described in the compatibility inventory.
 
 ## Private sessions
 
@@ -150,6 +157,8 @@ Decrypted payload begins with one type byte:
 | `0x01` | Private-message TLVs: `0x00` message ID, `0x01` UTF-8 text |
 | `0x02` | Read receipt: original message ID as UTF-8 |
 | `0x03` | Delivery receipt: original message ID as UTF-8 |
+| `0x10` | Verification challenge: one-byte TLVs `1` target Noise key hex, `2` nonce[16] |
+| `0x11` | Verification response: same TLVs plus `3` Ed25519 signature[64] |
 | `0x21` | Version `1`, then TLVs: `0x01` capabilities, `0x02` signing key |
 
 Delivery/read receipts travel only inside the private session. Their sender
@@ -203,3 +212,20 @@ IDs, timing, or mesh traffic volume. Bitchat traffic is never silently bridged
 into public geohash channels.
 
 Public internet area channels are documented separately in [geohash.md](geohash.md).
+
+## Public-history synchronization
+
+RequestSync (`0x21`) uses 16-bit-length TLVs for GCS Rice parameter, bucket range,
+filter data, little-endian type mask, and optional timestamp cursor/fragment IDs.
+Membership IDs hash type, sender, timestamp and decompressed payload. Requests
+are signed, link-local, and never forwarded, including fragmented requests.
+Outlink currently requests/serves only verified announcements and public text.
+Responses retain original signatures, set mutable RSR, and use TTL zero; they
+are accepted only during a locally requested sync window. Cached announcements
+do not prove current reachability. Reply work runs outside the receive queue so
+history transfer cannot block a Noise handshake.
+
+The encrypted public cache retains at most 1000 packets/8 MiB; public text expires
+after six hours and announcements after 15 minutes. Announcements are served
+before messages and bypass a message cursor. Each ingress permits eight requests
+per 30 seconds and at most one response task at a time.

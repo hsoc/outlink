@@ -42,7 +42,9 @@
     "sent": "Sent",
     "delivered": "Delivered",
     "read": "Read",
-    "error": "Unable to connect or send. Check Bluetooth, use an updated build, and try again."
+    "error": "Unable to connect or send. Check Bluetooth, use an updated build, and try again.",
+    "queued": "Queued",
+    "carried": "Carried"
   },
   "appearance": {
     "title": "Appearance",
@@ -95,6 +97,33 @@
     "clear_history": "Clear local history",
     "clear_confirm": "Delete saved messages and drafts on this device? Other people and relays may retain copies.",
     "cancel": "Cancel",
-    "latest": "Latest messages"
+    "latest": "Latest messages",
+    "contacts": "Contacts",
+    "contact_hint": "Share or scan a contact code. Verification completes through an encrypted Bluetooth challenge when the contact is connected.",
+    "show_code": "Show my contact code",
+    "code_expiry": "This code expires in five minutes. Generate a new code if needed.",
+    "share_contact": "Share contact link",
+    "scan_contact": "Scan contact code",
+    "contact_link": "Contact verification link",
+    "add_contact": "Save and verify contact",
+    "contact_verified": "Contact verified.",
+    "contact_saved": "Contact saved. Connect over Bluetooth and scan a fresh code to verify.",
+    "camera_denied": "Camera access was denied. You can paste a contact link instead.",
+    "find_contact": "Find a contact",
+    "verified": "Verified",
+    "unverified": "Unverified",
+    "favorite": "Favorite",
+    "unfavorite": "Remove favorite",
+    "block": "Block",
+    "unblock": "Unblock",
+    "internet_private": "Internet delivery for favorites",
+    "internet_private_hint": "Optional encrypted relay delivery. Uses internet access and shares your relay connection with the selected servers. Disabled by default. This is not push notifications.",
+    "enable": "Enable",
+    "disable": "Disable",
+    "wipe_identity": "Erase identity and all local data",
+    "wipe_confirm": "This permanently removes your identity keys, contacts, queued messages, drafts, and conversations. Contacts will need your new identity.",
+    "wipe_done": "Identity and local data erased.",
+    "contact_code": "Contact verification QR",
+    "queue_retention_note": "Clearing history keeps contacts and pending outgoing messages. Pending messages may still be sent. Use identity erasure to remove them too."
   }
 }

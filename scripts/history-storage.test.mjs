@@ -21,7 +21,7 @@ const { createEncryptedStorage } = compiled('../src/platform/expo/encrypted-stor
 function fixture() {
   const directory = mkdtempSync(join(tmpdir(), 'outlink-history-'));
   const keys = new Map(), legacyValues = new Map();
-  const secrets = { async getItem(key) { return keys.get(key) ?? null; }, async setItem(key, value) { keys.set(key, value); } };
+  const secrets = { async getItem(key) { return keys.get(key) ?? null; }, async setItem(key, value) { keys.set(key, value); }, async deleteItem(key) { keys.delete(key); } };
   const legacy = { async getItem(key) { return legacyValues.get(key) ?? null; }, async setItem(key, value) { legacyValues.set(key, value); }, async deleteItem(key) { legacyValues.delete(key); } };
   let failSequence, failCompaction = false, compactions = 0;
   function open() {
@@ -173,5 +173,50 @@ test('interrupted preference cleanup resumes without replacing encrypted values 
     assert.equal(await adapter.preferences.getItem('mobile.workspace'), 'original draft');
     assert.equal(f.compactions(), 2); assert.equal(f.keys.size, 1); assert.equal(f.legacyValues.size, 0);
     f.raw(db => assert.equal(db.prepare("SELECT name FROM local_meta WHERE name = 'preferences-cleanup'").get(), undefined));
+  } finally { adapter.close(); f.cleanup(); }
+});
+
+test('protocol records are encrypted, scope-isolated, paginated and independent of chat deletion', async () => {
+  const f = fixture(); let adapter = f.open();
+  try {
+    await adapter.records.set('contacts', 'secret-contact', 'private-contact-record');
+    await adapter.records.set('outbox', 'secret-contact', 'private-outbox-record');
+    await adapter.history.save('mesh', 'one', 'private-transcript');
+    assert.equal(await adapter.history.get('mesh', 'one'), 'private-transcript');
+    await adapter.history.clear();
+    assert.equal(await adapter.history.get('mesh', 'one'), null);
+    assert.equal(await adapter.records.get('contacts', 'secret-contact'), 'private-contact-record');
+    assert.equal(await adapter.records.get('outbox', 'secret-contact'), 'private-outbox-record');
+    for (let i = 0; i < 205; ++i) await adapter.records.set('gossip', String(i), String(i));
+    const page = await adapter.records.list('gossip');
+    assert.equal(page.length, 200); assert.equal((await adapter.records.list('gossip', page.at(-1).sequence)).length, 5);
+    adapter.close(); adapter = f.open();
+    assert.equal(await adapter.records.get('contacts', 'secret-contact'), 'private-contact-record');
+    const bytes = readFileSync(join(f.directory, 'history.db'));
+    for (const text of ['secret-contact', 'private-contact-record', 'private-outbox-record']) assert.equal(bytes.includes(Buffer.from(text)), false);
+    await adapter.records.clear('contacts'); assert.equal(await adapter.records.get('contacts', 'secret-contact'), null);
+    assert.equal(await adapter.records.get('outbox', 'secret-contact'), 'private-outbox-record');
+  } finally { adapter.close(); f.cleanup(); }
+});
+test('identity wipe deletes histories, protected records, preferences and the old encryption key', async () => {
+  const f = fixture(); let adapter = f.open();
+  try {
+    await adapter.history.save('mesh', 'one', 'old transcript');
+    await adapter.records.set('contacts', 'one', 'old contact');
+    await adapter.preferences.setItem('mobile.workspace', 'old drafts');
+    const oldKeys = [...f.keys.values()]; assert.equal(oldKeys.length, 1);
+    await adapter.wipe(); assert.equal(f.keys.size, 0);
+    adapter.close(); adapter = f.open();
+    assert.equal((await adapter.history.load('mesh')).length, 0);
+    assert.equal((await adapter.records.list('contacts')).length, 0);
+    assert.equal(await adapter.preferences.getItem('mobile.workspace'), null);
+    assert.notDeepEqual([...f.keys.values()], oldKeys);
+  } finally { adapter.close(); f.cleanup(); }
+});
+test('protected protocol records prevent silent key regeneration after secure storage loss', async () => {
+  const f = fixture(); let adapter = f.open();
+  try {
+    await adapter.records.set('contacts', 'one', 'identity pin'); adapter.close(); f.keys.clear(); adapter = f.open();
+    await assert.rejects(adapter.records.list('contacts'), /key/i); assert.equal(f.keys.size, 0);
   } finally { adapter.close(); f.cleanup(); }
 });

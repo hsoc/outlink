@@ -1,6 +1,6 @@
 # Local encrypted storage
 
-Messages and private preferences (drafts, selected conversations/channels, relay
+Messages, protected protocol records (contacts, outbox, and gossip), and private preferences (drafts, selected conversations/channels, relay
 settings, and nickname) are encrypted before SQLite writes. Appearance preferences
 remain ordinary local preferences. This is authenticated record encryption, not
 SQLCipher or encryption of every SQLite page.
@@ -19,7 +19,8 @@ Room names and message identifiers are keyed HMAC indexes; SQLite still reveals
 record counts, insertion order, approximate lengths, and access patterns.
 
 One lazy initialization promise owns the database and key for both history and
-private preferences. The authenticated key-check record prevents missing or
+private preferences and protected records. Protected-record scope and ID indexes
+are separately keyed, and their AEAD context binds both indexes. The authenticated key-check record prevents missing or
 incorrect keys from silently replacing an existing encrypted store. Initialization
 failures preserve data and propagate to the normal error UI. There is currently no
 key recovery/export feature; a database restored without its device key cannot be
@@ -55,3 +56,18 @@ swapping/tampering, missing keys, failed key saves, interrupted/resumed migratio
 pagination, reopen persistence, and absence of message/identifier plaintext in the
 upgraded database. SQLite integration uses the actual adapter factory with Node's
 SQLite driver; native keychain/keystore behavior has not been exercised on devices.
+
+
+## Explicit identity erasure
+
+The confirmed erasure action stops mesh/relay sessions, waits for pending work,
+and invalidates foreground auto-resume before clearing messages, protected
+protocol records and private preferences. It compacts/checkpoints the database,
+deletes the old secure-storage encryption key and messaging identity root/seeds,
+and resets application state. A later operation generates fresh keys. A failed
+erasure remains disconnected and reports failure; it is not reported as success.
+This does not promise deletion of flash remnants or backup/remote copies.
+
+Additional integration tests cover encrypted protocol-record scope isolation,
+bounded pagination, survival across chat deletion/reopen, rejection of lost keys
+when only protocol records remain, and erasure followed by a fresh encryption key.
