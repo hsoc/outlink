@@ -26,7 +26,9 @@ async function collectArchive(pkg, directory) {
     const read = (name) => execFileSync('tar', ['-xOzf', archive, '--', name], { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
     let metadata;
     try {
-      metadata = JSON.parse(read('package/package.json'));
+      const metadataPaths = files.filter(file => /^[^/]+\/package\.json$/.test(file));
+      if (metadataPaths.length !== 1) throw new Error('Ambiguous archive metadata');
+      metadata = JSON.parse(read(metadataPaths[0]));
     } catch (error) {
       throw new Error(`Cannot read package metadata from ${packageKey(pkg)}.`, { cause: error });
     }

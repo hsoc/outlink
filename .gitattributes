@@ -8,3 +8,7 @@ src/generated/licenses/* text eol=lf
 package-lock.json text eol=lf
 LICENSE text eol=lf
 licenses/zxing-cpp/* -text
+
+# Original legal text may contain trailing spaces/CRLF; do not normalize it.
+licenses/third-party/**/*.txt -whitespace
+assets/licenses/*.txt -whitespace

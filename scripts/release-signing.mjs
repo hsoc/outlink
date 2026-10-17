@@ -7,7 +7,6 @@ import { pathToFileURL } from 'node:url';
 
 const signingVariables = {
   android: ['ANDROID_KEYSTORE_BASE64', 'ANDROID_KEYSTORE_PASSWORD', 'ANDROID_KEY_ALIAS', 'ANDROID_KEY_PASSWORD'],
-  macos: ['MAC_CSC_LINK', 'MAC_CSC_KEY_PASSWORD', 'APPLE_ID', 'APPLE_APP_SPECIFIC_PASSWORD', 'APPLE_TEAM_ID'],
 };
 
 export function signingMode(platform, env = process.env) {
@@ -126,7 +125,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     } else if (command === 'sign-android-bundle' && args.length === 2) {
       signAndroidBundle(...args);
     } else {
-      throw new Error('Usage: release-signing.mjs check <android|macos> | sign-android <input.apk> <output.apk> | sign-android-bundle <input.aab> <output.aab>');
+      throw new Error('Usage: release-signing.mjs check <android> | sign-android <input.apk> <output.apk> | sign-android-bundle <input.aab> <output.aab>');
     }
   } catch (error) {
     console.error(error.message);

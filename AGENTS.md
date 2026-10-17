@@ -36,22 +36,14 @@ Write high-quality, **high-performance** code: treat performance as part of the 
 
 These are examples — the standard is to *think about the performance characteristics of what you write*, not to apply a fixed checklist.
 
-# Project Structure & Platform Layer
+# Mobile architecture
 
-The codebase shares its core between mobile and Electron — see
-[`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) §2 for the layer boundaries.
-The layers and their rules:
-
-- `src/app/`, `src/components/` — **UI**. Read data via `src/hooks/` + `src/stores/` (never the raw `@/db/client` handle); trigger work via `src/services/`.
-- `src/services/`, `src/db/`, `src/lib/`, `src/stores/`, `src/i18n/` — **core**. Business logic, platform-free: these layers must not import `expo-*` or `react-native` (a few sanctioned wrappers exempt — `lib/haptics.ts`, `lib/clipboard.ts`, `lib/navigation.ts`, `lib/platform.ts`, `lib/attachments/failure.ts`; the Drizzle binding has its own seam in `db/use-live-query.ts`). Session state that services drive lives in the service layer as vanilla zustand stores; `src/stores/` holds the React bindings. Services never import from UI layers.
-- `src/platform/` — **ports & adapters**. `ports/` are pure interfaces; `expo/` are the implementations; consumers use `import { platform } from '@/platform'`.
-
-Conventions enforced here (and by `no-restricted-imports` in `eslint.config.js`):
-
-- **New OS capability → port first.** Define the interface in `src/platform/ports/`, implement the Expo adapter, register both, then consume via `platform.<port>`. Never import an `expo-*` module into a core layer directly.
-- **Ports are async-first.** Every port method returns a promise, even when the Expo adapter underneath is synchronous. No sync port methods (documented exceptions: capability probes, listener registration, cached module-scope reads, pure-CPU work).
-- **Live queries** import `useLiveQuery`/`useMigrations` from `@/db/use-live-query` only — never from `drizzle-orm/expo-sqlite`.
-- **New UI dependency → prefer libraries with a web implementation** (the desktop shell will render via react-native-web).
+Outlink now ships Android and iOS only. UI uses shared primitives and theme
+from `src/components/common` and `src/theme`. Services use the mobile platform
+ports, not Expo/React Native imports. Keep Bitchat BLE private messages separate
+from public geohash Nostr channels. No desktop runtime, wallet, generic Nostr
+account/inbox bootstrap, or push notification service should be reintroduced.
+Preferences are asynchronous key/value storage; secrets use secure storage.
 
 # Project Direction
 

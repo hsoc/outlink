@@ -195,4 +195,6 @@ visible over the radio. The static-key-derived ID is stable, so Bitchat mode
 allows correlation of a device over time. Leaving stops presence but does not
 rotate the stored local identity. A private message hides content, not recipient
 IDs, timing, or mesh traffic volume. Bitchat traffic is never silently bridged
-into Outlink's Nostr conversations, relays, or history exports.
+into public geohash channels.
+
+Public internet area channels are documented separately in [geohash.md](geohash.md).

@@ -1,8 +1,0 @@
-{
-  "name": "expo-noise",
-  "version": "0.1.0",
-  "license": "MIT",
-  "description": "Native Noise protocol state and cryptography for Outlink",
-  "main": "index.ts",
-  "private": true
-}

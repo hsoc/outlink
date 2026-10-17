@@ -1,1 +1,0 @@
-ALTER TABLE `proximity_peers` ADD `connection_failure` text;

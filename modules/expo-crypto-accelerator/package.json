@@ -1,8 +1,0 @@
-{
-  "name": "expo-crypto-accelerator",
-  "version": "0.1.0",
-  "license": "MIT",
-  "description": "Native cryptographic acceleration for Outlink",
-  "main": "src/index.ts",
-  "private": true
-}

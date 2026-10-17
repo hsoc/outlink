@@ -2,13 +2,11 @@
   "production": {
     "name": "Outlink",
     "id": "io.github.hsoc.outlink",
-    "scheme": "outlink",
-    "packageName": "outlink-desktop"
+    "scheme": "outlink"
   },
   "development": {
     "name": "Outlink Dev",
     "id": "io.github.hsoc.outlink.dev",
-    "scheme": "outlink-dev",
-    "packageName": "outlink-desktop-dev"
+    "scheme": "outlink-dev"
   }
 }

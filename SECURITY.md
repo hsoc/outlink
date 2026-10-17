@@ -1,35 +1,30 @@
-# Security policy
+# Security
 
-## Reporting a vulnerability
+Report vulnerabilities through the repository's private reporting channel when
+available: https://github.com/hsoc/outlink/security/advisories/new.
 
-Do not post vulnerability details, exploit code, private keys, wallet connection
-strings, or real message data in public issues or pull requests.
+Bluetooth private chat uses the retained Bitchat Noise XX implementation and
+stable device keys in platform secure storage. Public mesh and geohash messages
+are public. Fingerprint comparison remains necessary for peer verification.
+There is no assertion of an independent security audit or guaranteed anonymity.
 
-Use [GitHub private vulnerability reporting](https://github.com/hsoc/outlink/security/advisories/new)
-when it is available. If that page is unavailable, open an issue asking only for
-a private security contact, without describing the vulnerability. Wait for a
-private channel before sharing technical details.
+Public-channel intake bounds input sizes/rates, validates channel/timestamp/expiry,
+recomputes canonical event IDs, verifies signatures, and deduplicates across
+relays. Session keys are cleared and pending operations stopped on leave.
+Historical signing keys, relays, nicknames, and radio metadata still have privacy
+implications. See docs/PRIVACY.md and docs/protocols/geohash.md.
 
-Include the affected version or commit, platform, reproduction steps, expected
-and actual behavior, and likely impact. Use test accounts and sanitized logs.
-Report protocol, cryptographic, key-storage, IPC, attachment-handling, and
-account-isolation issues through the same private process. Coordinate public
-disclosure with the maintainer so a fix can be prepared.
+No remote-event content is executed, rendered as HTML, or used as a relay URL.
+No internet push, Tor, Nostr private-message fallback, or background delivery is
+implemented in the mobile-only app. Do not send sensitive data in public channels.
 
-## Versions and fixes
+## Dependency advisory status
 
-Before the first public release, report issues against `master` and include the
-commit hash. After release, fixes target `master` and the latest public release;
-older versions do not have a separate backport commitment. Update to the latest
-release when fixes become available. There is no guaranteed response or fix
-schedule.
-
-## Security review status
-
-This repository does not currently include a published independent security
-audit report. Use of Nostr encryption specifications and Noise does not establish
-that the complete application has been independently audited.
-
-The [privacy policy](https://github.com/hsoc/outlink/blob/master/docs/PRIVACY.md) describes the current client behavior. The
-[architecture guide](docs/ARCHITECTURE.md) and
-[protocol documents](docs/protocols/) describe implementation boundaries.
+On 2026-10-17, `npm audit --omit=dev` reported 45 advisory-affected package
+entries (29 high, 16 moderate). Expo's dependency closure includes build tooling,
+so this is not a count of confirmed exploitable mobile runtime flaws. Findings
+include glob/brace parsing, URI decoding, build certificate tooling, UUID
+buffer handling, and formatting/source-map utilities. Some suggested fixes
+require incompatible Expo/React Native version changes. No blanket SDK upgrade
+or `npm audit fix --force` was applied as part of this mobile redesign. Review
+and update the supported SDK/tooling versions before a production release.

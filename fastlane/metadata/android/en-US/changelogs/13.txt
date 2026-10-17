@@ -1,0 +1,5 @@
+Focus Outlink on Android and iOS Bitchat messaging.
+Keep Bluetooth mesh chat and encrypted private messages.
+Add public geohash channels with optional foreground location selection.
+Remove desktop, wallet, account onboarding, and the old messaging inbox.
+Preserve the existing visual theme and add mobile-only build workflows.

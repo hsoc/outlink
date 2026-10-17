@@ -1,1 +1,0 @@
-ALTER TABLE `proximity_peers` ADD `nickname` text;

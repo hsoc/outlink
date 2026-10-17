@@ -12,8 +12,6 @@ module.exports = ({ config }) => {
       ...config.ios,
       ...(process.env.APPLE_TEAM_ID ? { appleTeamId: process.env.APPLE_TEAM_ID } : {}),
       bundleIdentifier: identity.id,
-      // Xcode replaces this with the selected provisioning profile's signed value.
-      entitlements: { ...config.ios?.entitlements, 'aps-environment': 'development' },
     },
     android: { ...config.android, package: identity.id },
   };

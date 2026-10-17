@@ -1,1 +1,0 @@
-ALTER TABLE `conversations` ADD `favorite` integer DEFAULT false NOT NULL;

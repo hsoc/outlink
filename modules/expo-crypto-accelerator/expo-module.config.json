@@ -1,9 +1,0 @@
-{
-  "platforms": ["apple", "android"],
-  "apple": {
-    "modules": ["ExpoCryptoAcceleratorModule"]
-  },
-  "android": {
-    "modules": ["io.github.hsoc.outlink.cryptoaccelerator.ExpoCryptoAcceleratorModule"]
-  }
-}

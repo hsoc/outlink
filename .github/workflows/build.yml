@@ -1,381 +1,95 @@
-name: Build Apps
-
+name: Build Mobile Apps
 on:
   workflow_dispatch:
     inputs:
-      macos:
-        description: macOS architecture
-        type: choice
-        default: arm64
-        options: [none, arm64]
-      windows:
-        description: Windows architectures
-        type: choice
-        default: all
-        options: [none, x64, arm64, all]
-      linux:
-        description: Linux architectures
-        type: choice
-        default: all
-        options: [none, x64, arm64, all]
       android:
-        description: 'Android packages (all: APK plus AAB when signing is configured)'
-        type: choice
-        default: all
-        options: [none, apk, aab, all]
+        description: Build signed Android APK (testing APK if no signing key)
+        type: boolean
+        default: true
+      ios:
+        description: Build signed iOS IPA (requires iOS certificate and profile)
+        type: boolean
+        default: false
   push:
-    tags:
-      - "v*"
-
+    tags: ['v*']
 permissions:
   contents: read
-
 concurrency:
-  group: build-${{ github.ref }}
+  group: mobile-${{ github.ref }}
   cancel-in-progress: false
-
-env:
-  RELEASE_REPOSITORY: hsoc/outlink
-  EXPO_PUBLIC_APP_ENV: production
-
 jobs:
-  validate-version:
-    name: Validate version and signing
+  checks:
     runs-on: ubuntu-24.04
-    outputs:
-      matrix: ${{ steps.targets.outputs.matrix }}
-      desktop: ${{ steps.targets.outputs.desktop }}
-      android: ${{ steps.targets.outputs.android }}
-      apk: ${{ steps.targets.outputs.apk }}
-      aab: ${{ steps.targets.outputs.aab }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: 24.15.0
-          package-manager-cache: false
-      - name: Select build targets
-        id: targets
-        env:
-          HAS_ANDROID_SIGNING: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && 'true' || 'false' }}
-        run: node scripts/build-targets.mjs
-      - name: Verify Android build image
-        if: steps.targets.outputs.android == 'true'
-        run: bash scripts/build-android-reproducible.sh --check-image
-      - name: Verify third-party notices
-        run: |
-          npm run test:branding
-          npm run licenses:check
-          npm run licenses:test
-      - name: Validate signing configuration
-        env:
-          BUILD_MACOS: ${{ steps.targets.outputs.macos }}
-          BUILD_ANDROID: ${{ steps.targets.outputs.android }}
-          MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
-          MAC_CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          if [[ "$BUILD_MACOS" == 'true' ]]; then
-            node scripts/release-signing.mjs check macos
-          fi
-          if [[ "$BUILD_ANDROID" == 'true' ]]; then
-            node scripts/release-signing.mjs check android
-          fi
-      - name: Match tag to desktop and Android versions
-        if: github.event_name == 'push'
-        shell: bash
-        run: |
-          if [[ "${GITHUB_REPOSITORY,,}" != "$RELEASE_REPOSITORY" ]]; then
-            echo "Tag releases must run in $RELEASE_REPOSITORY, not $GITHUB_REPOSITORY."
-            exit 1
-          fi
-
-          expected="v$(node -p "require('./desktop/package.json').version")"
-          if [[ "$GITHUB_REF_NAME" != "$expected" ]]; then
-            echo "Tag $GITHUB_REF_NAME does not match desktop/package.json version $expected."
-            exit 1
-          fi
-
-          expected_android="v$(node -p "require('./app.json').expo.version")"
-          if [[ "$GITHUB_REF_NAME" != "$expected_android" ]]; then
-            echo "Tag $GITHUB_REF_NAME does not match app.json version $expected_android."
-            exit 1
-          fi
-
-          version_code="$(node -p "require('./app.json').expo.android.versionCode")"
-          notes_file="fastlane/metadata/android/en-US/changelogs/${version_code}.txt"
-          if [[ ! -s "$notes_file" ]]; then
-            echo "Release notes are missing or empty: $notes_file"
-            exit 1
-          fi
-
-          notes_characters="$(wc -m < "$notes_file")"
-          if (( notes_characters > 500 )); then
-            echo "Release notes exceed the 500-character store limit: $notes_file"
-            exit 1
-          fi
-
-  build:
-    name: ${{ matrix.name }}
-    needs: validate-version
-    if: needs.validate-version.outputs.desktop == 'true'
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(needs.validate-version.outputs.matrix) }}
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24.15.0
+          node-version: 24
           cache: npm
-
-      - name: Use stable Rust
-        if: runner.os != 'macOS'
-        shell: bash
-        run: |
-          rustup update stable --no-self-update
-          rustup default stable
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build packages
-        shell: bash
+      - run: npm ci
+      - run: npm run check:mobile
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm test -- --watch=false
+      - run: npm run licenses:check
+      - run: npm run export:mobile
         env:
-          npm_config_script_shell: bash
-          CSC_LINK: ${{ startsWith(matrix.runner, 'macos-') && secrets.MAC_CSC_LINK || '' }}
-          CSC_KEY_PASSWORD: ${{ startsWith(matrix.runner, 'macos-') && secrets.MAC_CSC_KEY_PASSWORD || '' }}
-          APPLE_ID: ${{ startsWith(matrix.runner, 'macos-') && secrets.APPLE_ID || '' }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ startsWith(matrix.runner, 'macos-') && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
-          APPLE_TEAM_ID: ${{ startsWith(matrix.runner, 'macos-') && secrets.APPLE_TEAM_ID || '' }}
-          WIN_CSC_LINK: ${{ startsWith(matrix.runner, 'windows-') && secrets.WIN_CSC_LINK || '' }}
-          WIN_CSC_KEY_PASSWORD: ${{ startsWith(matrix.runner, 'windows-') && secrets.WIN_CSC_KEY_PASSWORD || '' }}
-        run: |
-          signing_args=()
-          if [[ "$RUNNER_OS" == "macOS" && -z "${CSC_LINK:-}" ]]; then
-            echo "MAC_CSC_LINK is not configured; producing an unsigned macOS artifact."
-            signing_args+=(--config.mac.forceCodeSigning=false --config.mac.identity=null)
-            signing_args+=(--config.mac.hardenedRuntime=false --config.mac.notarize=false)
-          fi
-          npm run electron:package:signed -- ${{ matrix.builder-args }} "${signing_args[@]}"
-
-      - name: Verify macOS signature and notarization
-        if: runner.os == 'macOS'
-        shell: bash
-        env:
-          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
-        run: |
-          if [[ -n "$CSC_LINK" ]]; then
-            codesign --verify --deep --strict --verbose=2 release/mac-arm64/Outlink.app
-            spctl --assess --type execute --verbose=2 release/mac-arm64/Outlink.app
-            xcrun stapler validate release/mac-arm64/Outlink.app
-          fi
-
-      - name: Upload packages
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ matrix.artifact }}
-          if-no-files-found: error
-          retention-days: 14
-          path: |
-            release/*.AppImage
-            release/*.blockmap
-            release/*.deb
-            release/*.dmg
-            release/*.exe
-            release/*.yml
-            release/*.zip
-            !release/builder-*.yml
-            !release/builder-*.yaml
-
-  build-android:
-    name: Android packages
-    needs: validate-version
-    if: needs.validate-version.outputs.android == 'true'
+          EXPO_NO_TELEMETRY: '1'
+          EXPO_PUBLIC_APP_ENV: production
+  android:
+    needs: checks
+    if: github.event_name == 'push' || inputs.android
     runs-on: ubuntu-24.04
-    timeout-minutes: 180
-    env:
-      CI: '1'
-      NODE_ENV: production
-      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
-      HAS_ANDROID_SIGNING: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && 'true' || 'false' }}
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v6
-
       - uses: actions/setup-node@v6
         with:
-          node-version: 24.15.0
-          package-manager-cache: false
-
+          node-version: 24
+          cache: npm
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
-
       - uses: android-actions/setup-android@v4
-
-      - name: Install APK signing tools
-        run: sdkmanager "build-tools;36.0.0"
-
-      - name: Build Android packages in the F-Droid environment
-        shell: bash
+      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;27.1.12297006'
+      - run: npm ci
+      - run: npm run android:apk
         env:
-          ANDROID_RELEASE_UNSIGNED: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && '1' || '0' }}
-          ANDROID_BUILD_APK: ${{ needs.validate-version.outputs.apk == 'true' && '1' || '0' }}
-          ANDROID_BUILD_BUNDLE: ${{ needs.validate-version.outputs.aab == 'true' && '1' || '0' }}
-        run: |
-          for attempt in 1 2; do
-            if bash scripts/build-android-reproducible.sh release/fdroid-build; then
-              exit 0
-            fi
-            if (( attempt == 2 )); then
-              exit 1
-            fi
-            echo "::warning::The isolated Android build failed; retrying once with a fresh container."
-          done
-
-      - name: Sign and verify APK
-        if: needs.validate-version.outputs.apk == 'true'
-        shell: bash
-        env:
+          CI: '1'
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          node scripts/release-signing.mjs sign-android \
-            release/fdroid-build/app-release.apk \
-            release/Outlink-android.apk
-
-      - name: Upload APK
-        if: needs.validate-version.outputs.apk == 'true'
-        uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v7
         with:
           name: android-apk
+          path: release/Outlink-android.apk
           if-no-files-found: error
           retention-days: 14
-          path: release/*.apk
-
-      - name: Sign and verify AAB
-        if: needs.validate-version.outputs.aab == 'true'
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          node scripts/release-signing.mjs sign-android-bundle \
-            release/fdroid-build/app-release.aab \
-            release/Outlink-android.aab
-
-      - name: Upload AAB
-        if: needs.validate-version.outputs.aab == 'true'
-        uses: actions/upload-artifact@v7
-        with:
-          name: android-aab
-          if-no-files-found: error
-          retention-days: 14
-          path: release/Outlink-android.aab
-
-      - name: Audit F-Droid signature compatibility (non-blocking)
-        id: fdroid_audit
-        if: needs.validate-version.outputs.apk == 'true' && env.HAS_ANDROID_SIGNING == 'true'
-        continue-on-error: true
-        timeout-minutes: 5
-        env:
-          PYTHON: ${{ runner.temp }}/fdroid-verifier/bin/python
-        run: |
-          python3 -m venv "$RUNNER_TEMP/fdroid-verifier"
-          "$PYTHON" -m pip install \
-            --disable-pip-version-check \
-            --no-deps \
-            --only-binary=:all: \
-            --require-hashes \
-            --retries 2 \
-            --timeout 20 \
-            --requirement scripts/fdroid-reproducibility-requirements.txt
-          node scripts/verify-fdroid-reproducibility.mjs \
-            release/fdroid-build/app-release.apk \
-            release/Outlink-android.apk
-
-      - name: Report F-Droid audit failure
-        if: always() && steps.fdroid_audit.outcome == 'failure'
-        run: echo "::warning::F-Droid signature audit failed; the APK was already uploaded and the release will continue."
-
-  publish-draft:
-    name: Publish draft release
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs: [build, build-android]
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
+  ios:
+    needs: checks
+    if: github.event_name == 'workflow_dispatch' && inputs.ios
+    runs-on: macos-26
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v6
-
-      - name: Download packages
-        uses: actions/download-artifact@v8
+      - uses: actions/setup-node@v6
         with:
-          pattern: electron-*
-          path: release-assets
-          merge-multiple: true
-
-      - name: Download Android APK
-        uses: actions/download-artifact@v8
-        with:
-          name: android-apk
-          path: release-assets
-
-      - name: Download Android AAB
-        uses: actions/download-artifact@v8
-        with:
-          name: android-aab
-          path: release-assets
-
-      - name: Validate release assets
-        run: node scripts/release-assets.mjs release-assets
-
-      - name: Create or update draft release
-        shell: bash
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: sudo xcode-select --switch /Applications/Xcode_26.4.app/Contents/Developer
+      - run: bash scripts/mobile-ios-build.sh
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          version="${GITHUB_REF_NAME#v}"
-          version_code="$(node -p "require('./app.json').expo.android.versionCode")"
-          notes_file="fastlane/metadata/android/en-US/changelogs/${version_code}.txt"
-          if draft_state="$(
-            gh release view "$GITHUB_REF_NAME" \
-              --repo "$RELEASE_REPOSITORY" \
-              --json isDraft \
-              --jq .isDraft \
-              2>/dev/null
-          )"; then
-            if [[ "$draft_state" != "true" ]]; then
-              echo "::error::Release $GITHUB_REF_NAME is already published; refusing to replace live update assets."
-              exit 1
-            fi
-            gh release edit "$GITHUB_REF_NAME" \
-              --repo "$RELEASE_REPOSITORY" \
-              --title "Outlink $version" \
-              --notes-file "$notes_file"
-          else
-            gh release create "$GITHUB_REF_NAME" \
-              --repo "$RELEASE_REPOSITORY" \
-              --draft \
-              --verify-tag \
-              --notes-file "$notes_file" \
-              --title "Outlink $version"
-          fi
-
-          gh release upload "$GITHUB_REF_NAME" release-assets/* \
-            --repo "$RELEASE_REPOSITORY" \
-            --clobber
+          CI: '1'
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          IOS_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ios-ipa
+          path: release/ios/*.ipa
+          if-no-files-found: error
+          retention-days: 14

@@ -1,52 +1,26 @@
-name: Quality checks
-
+name: Mobile quality checks
 on:
   pull_request:
   push:
     branches: [master]
-
 permissions:
   contents: read
-
-concurrency:
-  group: quality-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  quality:
-    name: Lint, types, and tests
+  mobile:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
     env:
-      CI: "true"
-      EXPO_NO_TELEMETRY: "1"
-      # Type-aware ESLint exceeds Node's default heap limit on the CI runner.
-      NODE_OPTIONS: "--max-old-space-size=4096"
+      CI: '1'
+      EXPO_NO_TELEMETRY: '1'
     steps:
       - uses: actions/checkout@v6
-        with:
-          persist-credentials: false
       - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
-      - name: Install dependencies
-        run: npm ci
-      - name: Lint
-        run: npm run lint
-      - name: Typecheck
-        run: npx tsc --noEmit
-      - name: Unit tests
-        run: npm test -- --ci
-      - name: Dependency security regressions
-        run: npm run test:dependencies
-      - name: App identity regressions
-        run: node --test scripts/app-identities.test.mjs
-      - name: Release asset regressions
-        run: node --test scripts/release-assets.test.mjs
-      - name: Electron signing regressions
-        run: node --test scripts/electron-signing.test.mjs
-      - name: Android release signing regressions
-        run: |
-          node --test scripts/release-signing.test.mjs
-          node --test scripts/verify-fdroid-reproducibility.test.mjs
+      - run: npm ci
+      - run: npm run check:mobile
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm test -- --ci
+      - run: npm run licenses:check
+      - run: npm run export:mobile

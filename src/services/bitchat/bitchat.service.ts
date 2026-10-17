@@ -2,7 +2,6 @@ import { ed25519, x25519 } from '@noble/curves/ed25519.js';
 import { bytesToHex, hexToBytes, randomBytes } from '@noble/hashes/utils.js';
 import { createStore } from 'zustand/vanilla';
 import { platform } from '@/platform';
-import { proximityService } from '@/services/proximity/proximity.service';
 import { BitchatSession, type BitchatIdentity, type BitchatMessage, type BitchatPeer } from './bitchat-session';
 
 export type BitchatState = { active: boolean; busy: boolean; id: string; account: string | null; peers: BitchatPeer[];
@@ -26,7 +25,6 @@ class BitchatService {
   private account?: string;
   private identity?: BitchatIdentity;
   private removeAppListener?: () => void;
-  private release?: () => Promise<void>;
   private lifecycle: Promise<void> = Promise.resolve();
   private transition(operation: () => Promise<void>): Promise<void> {
     const promise = this.lifecycle.catch(() => {}).then(operation);
@@ -38,7 +36,6 @@ class BitchatService {
       bitchatSessionStore.setState({ ...empty, busy: true });
       try {
         this.identity = await loadIdentity(account); this.account = account;
-        this.release = await proximityService.suspendForExternalTransport();
         this.session = new BitchatSession(platform.proximityTransport, this.identity, name, {
           peer: (peer) => bitchatSessionStore.setState((state) => {
             const index = state.peers.findIndex((p) => p.id === peer.id), peers = state.peers.slice();
@@ -55,7 +52,7 @@ class BitchatService {
         await this.session.start();
         bitchatSessionStore.setState({ active: true, busy: false, id: this.session.id, account });
         this.removeAppListener = platform.appState.addChangeListener((state) => {
-          if (state !== 'active') void this.stop().catch(() => {});
+          if (state === 'background') void this.stop().catch(() => {});
         });
       } catch (error) { await this.stopInternal(); bitchatSessionStore.setState({ error: true }); throw error; }
     });
@@ -68,9 +65,7 @@ class BitchatService {
     finally {
       this.identity?.noiseSeed.fill(0); this.identity?.signingSeed.fill(0);
       this.identity = undefined; this.account = undefined;
-      const release = this.release; this.release = undefined;
-      try { if (release) await release(); }
-      finally { bitchatSessionStore.setState(empty, true); }
+      bitchatSessionStore.setState(empty, true);
     }
   }
   async send(content: string, peer?: string): Promise<void> {

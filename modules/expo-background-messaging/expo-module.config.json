@@ -1,6 +1,0 @@
-{
-  "platforms": ["android"],
-  "android": {
-    "modules": ["io.github.hsoc.outlink.backgroundmessaging.ExpoBackgroundMessagingModule"]
-  }
-}

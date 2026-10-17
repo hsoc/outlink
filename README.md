@@ -1,213 +1,59 @@
 # Outlink
 
-**Decentralized, end-to-end encrypted messaging. No phone number required.**
+An MIT-licensed Bitchat-compatible messenger for **Android and iOS**. No accounts,
+phone numbers, wallets, or username registration.
 
-Outlink is a free, open-source messenger for iOS, Android, and desktop. Your
-cryptographic keys are your account: get started without a phone number or
-email address, and exchange encrypted messages over Nostr or nearby Bluetooth.
+- **Nearby:** Bluetooth mesh public chat and Noise-encrypted private messages.
+- **Location channels:** public Bitchat geohash chat and presence over Nostr.
+  Enter an area code manually, or choose an approximate area using optional
+  foreground location access. Exact coordinates are never included in events.
+- The existing theme, typography, shared controls, light/dark modes, accents,
+  and localized Bitchat strings are retained. New location copy falls back to
+  English until translated.
 
-[Downloads](#downloads) · [Build from source](#build-from-source) ·
-[Contribute](CONTRIBUTING.md) · [Privacy](https://github.com/hsoc/outlink/blob/master/docs/PRIVACY.md) · [Security](SECURITY.md)
+Location channels require internet access and are public. They are separate
+from encrypted Bluetooth private chats. There is no Tor integration, internet
+private-message fallback, push delivery, file transfer, or background messaging.
+Sessions stop and in-memory messages clear when the app backgrounds or you leave.
+Ephemeral Nostr events do not guarantee historical message retrieval.
 
-New Outlink screenshots will be added after native builds are verified.
+## Build
 
-## Downloads
+Use Node.js 24 and npm, then:
 
-The first public release is being prepared. Published installers and release
-notes will be available on
-[GitHub Releases](https://github.com/hsoc/outlink/releases).
-Until then, use the source-build instructions below.
-
-| Platform | Distribution target                                                    |
-| -------- | ---------------------------------------------------------------------- |
-| Android  | Universal APK                                                          |
-| macOS    | Apple Silicon DMG and ZIP                                              |
-| Windows  | x64 and arm64 installers                                               |
-| Linux    | x64 and arm64 AppImage and DEB                                         |
-| iOS      | Build with Xcode; public distribution details will accompany a release |
-
-This table describes the configured release targets, not store availability.
-Check each release's notes for tested OS versions and known issues.
-
-## Features
-
-- **Private conversations:** end-to-end encrypted one-to-one text, media, files,
-  voice messages, replies, reactions, and forwarding.
-- **Keys as accounts:** no central account provider, phone number, or email
-  requirement; optional Nostr names make people easier to find.
-- **Nearby messaging:** exchange messages and files over Bluetooth Low Energy
-  without Internet access, with compatible Outlink peers.
-- **Connected wallets:** non-custodial Lightning wallet connections through
-  Nostr Wallet Connect.
-- **Mobile and desktop:** shared conversations UI with light and dark themes
-  and layouts that adapt to the available space.
-
-See [application identity and compatibility](docs/implementation/outlink-renaming.md)
-for installation, data, and protocol changes in this fork.
-
-## Before you start
-
-Back up your identity key and use the app's key-transfer and archive features
-when moving devices. An identity-key backup alone does not guarantee recovery
-of encrypted chat history. The [privacy policy](https://github.com/hsoc/outlink/blob/master/docs/PRIVACY.md)
-describes the current client behavior.
-
-- Messaging currently supports one-to-one conversations. The messaging-key
-  extension requires compatible peers; support for Nostr alone does not
-  guarantee private-message interoperability.
-- Nearby requires Bluetooth permissions and hardware/OS support. On Windows and
-  Linux, the adapter must support both BLE Central and Peripheral roles. Range,
-  transfer speed, and background availability depend on the device.
-- Notifications are best-effort. iOS background checks are scheduled by the OS;
-  Android uses a foreground service and is subject to battery restrictions.
-  Desktop background checks require the application to remain running.
-- An ordinary browser is not a supported app runtime. React Native Web powers
-  the Electron renderer; Expo Go cannot run the complete native application.
-
-See [SECURITY.md](SECURITY.md) for vulnerability reporting and the documented
-security review status.
-
-## Build from source
-
-Use Node.js 22 and npm. Mobile builds need the corresponding native toolchain;
-Electron builds also compile a host-specific Bluetooth helper. See
-[development setup](CONTRIBUTING.md#development-setup) for prerequisites,
-Windows shell setup, and troubleshooting details.
-On Windows, run the commands in Git Bash and use `npm --script-shell=bash run ...`
-in place of `npm run ...`.
-
-```bash
-git clone https://github.com/hsoc/outlink.git
-cd outlink
+```sh
 npm ci
+npm test
+npx tsc --noEmit
+npm run lint
+npm run check:mobile
+npm run export:mobile
 ```
 
-The local builds below need no release signing credentials. They bundle
-JavaScript, so no Metro server is needed to run them. They use the production identity (**Outlink**,
-`io.github.hsoc.outlink`). For development with Fast Refresh, use `npm start` plus
-`npm run ios:dev` / `npm run android:dev`, or `npm run electron:dev`; see
-[CONTRIBUTING.md](CONTRIBUTING.md#running-the-app).
+A native development build is required for Bluetooth; Expo Go cannot provide
+the project-owned BLE module. Use `npm run android:dev` or `npm run ios:dev`
+and `npm start`. Production IDs remain `io.github.hsoc.outlink` on both platforms;
+development uses `.dev`.
 
-### Android APK
+[GitHub Actions](https://github.com/hsoc/outlink/actions/workflows/build.yml)
+provides Android APK builds and optional signed iOS IPA builds. See
+[release setup](docs/RELEASING.md) for signing secrets.
 
-```bash
-npm run android:prebuild
-npm run android:build
-```
+## Implementation and limits
 
-The universal APK is written to
-`android/app/build/outputs/apk/release/app-release.apk`. Transfer it to an Android
-device and open it to install, or use
-`adb install -r android/app/build/outputs/apk/release/app-release.apk`.
+The Bitchat wire/session implementation is original MIT code. It uses existing
+cryptographic libraries and the retained mobile BLE adapter; no upstream Bitchat
+application source was copied. Protocol vectors and simulated radios are tested.
+Real-device Bluetooth interoperability, background transitions, location prompts,
+and signed distribution builds still require physical Android/iOS validation.
 
-This is a release-mode build, signed with the generated project's **debug key**
-for local use. It is not signed with the official release key and cannot update
-an installation signed with a different key. For your own distribution key, see
-[Android signing](docs/RELEASING.md#android-developer-owned-apk-signing).
+This mobile redesign does not migrate the retired Nostr account/chat database.
+Old on-device data is not intentionally deleted. Back up any existing keys and
+history with the previous app before upgrading; do not assume old conversations
+appear in this version.
 
-### iOS simulator
+[Architecture](docs/ARCHITECTURE.md) · [Geohash protocol](docs/protocols/geohash.md)
+· [Privacy](docs/PRIVACY.md) · [Security](SECURITY.md)
 
-On macOS, build a standalone Release app for the simulator without signing
-credentials:
-
-```bash
-npm run ios:prebuild
-npm run ios:build
-```
-
-Select an iOS simulator when prompted. Installing on a physical iPhone requires
-signing and provisioning for the app and share extension. See the
-[iOS release guide](docs/RELEASING.md#signing-configuration-and-archive) for device
-signing, archives, IPA export, and TestFlight distribution.
-
-For both mobile platforms, run `*:prebuild` on initial setup and after changing
-native configuration, plugins, dependencies, or the app environment. It replaces
-the selected generated native directory, including manual edits. Keep lasting
-native changes in app config, plugins, or local modules. Subsequent builds can
-run `*:build` directly. To switch back to development, follow the
-[development prebuild instructions](CONTRIBUTING.md#install).
-
-### Desktop installers
-
-Build on the target operating system.
-
-```bash
-npm run electron:package
-```
-
-Installers are written to `release/`: DMG and ZIP on macOS, NSIS installers on
-Windows, and AppImage and DEB on Linux. This command packages for the host
-architecture; CI builds the additional architectures listed above.
-
-On macOS, this command disables certificate signing and notarization, so no Apple
-release credentials are needed. The local package may be blocked by Gatekeeper.
-For signed distribution builds, see the
-[local macOS signing guide](docs/RELEASING.md#local-macos-signing).
-
-### Clean build outputs
-
-To return dependencies and build outputs to a fresh-clone state, stop running
-development servers and builds, then run:
-
-```bash
-npm run clean -- --dry-run # Preview what will be removed
-npm run clean
-npm ci # Reinstall when ready to develop again
-```
-
-The cleanup requires only Node.js and Git. It removes ignored dependencies,
-generated `ios/` and `android/` projects (including manual edits inside them),
-Expo and Electron outputs, local native-module build outputs, and build/test
-caches. It preserves tracked files, other untracked source files, root `.env`
-files, signing credentials outside generated directories, editor settings, and
-app data. Global npm, Gradle, CocoaPods, and Xcode caches are left intact.
-
-## Protocol and architecture
-
-Private Nostr messages combine the
-[NIP-4E proposal](https://github.com/nostr-protocol/nips/pull/1647), which separates
-messaging encryption keys from identity keys, with
-[NIP-17](https://github.com/nostr-protocol/nips/blob/master/17.md),
-[NIP-44 v2](https://github.com/nostr-protocol/nips/blob/master/44.md), and
-[NIP-59](https://github.com/nostr-protocol/nips/blob/master/59.md).
-Nearby uses authenticated Noise sessions over BLE.
-
-TypeScript, React Native, Expo SDK 57, SQLite, and Electron share a core behind
-platform interfaces. UI, services, storage, and OS adapters have explicit
-boundaries; conversation history is read in bounded windows. See the
-[architecture guide](docs/ARCHITECTURE.md) for the full design.
-
-## Contributing and documentation
-
-Bug reports, focused fixes, translations, and documentation improvements are
-welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md); discuss major features
-with the maintainer before implementation. Report vulnerabilities through the
-[security process](SECURITY.md).
-
-- [Architecture](docs/ARCHITECTURE.md) and [design system](docs/DESIGN.md)
-- [Builds and releases](docs/RELEASING.md)
-- [Protocol specifications](docs/protocols/README.md): NIP-4E profile, NIP-17
-  extensions, Nearby messaging, and file transfer
-- [Implementation notes](docs/implementation/README.md): delivery, recovery,
-  publication, groups, and client behavior
-- [Android QR scanner maintenance](docs/ANDROID_QR_SCANNER.md)
-- [Third-party notice maintenance](docs/OPEN_SOURCE_NOTICES.md)
-
-## License
-
-Outlink is licensed under the [MIT License](LICENSE). Third-party components
-retain their own licenses and copyright notices; see
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and the accompanying license files.
-
-### Bitchat Bluetooth compatibility
-
-**Nearby → Bitchat** opens an optional live mesh room with signed public text
-and Noise-encrypted private text. The implementation is independently written
-under this repository's MIT license, reuses existing BLE/crypto components,
-and adds no packages. It requires rebuilt native modules/helpers. Physical
-Bitchat-device interoperability and Apple/Android native builds still need
-validation before release. Nostr/geohash channels, media, couriers, and public
-history synchronization are outside this initial profile.
-
-See the [wire profile](docs/protocols/bitchat.md) and
-[implementation and validation notes](docs/implementation/bitchat.md).
+Original copyright notices and third-party license texts are preserved.
+[MIT license](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md)

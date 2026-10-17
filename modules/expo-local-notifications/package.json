@@ -1,8 +1,0 @@
-{
-  "name": "expo-local-notifications",
-  "version": "0.1.0",
-  "license": "MIT",
-  "description": "Native local notifications and badges for Outlink",
-  "main": "src/index.ts",
-  "private": true
-}

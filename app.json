@@ -10,39 +10,29 @@
     "ios": {
       "icon": "./assets/images/icon.png",
       "bundleIdentifier": "io.github.hsoc.outlink",
-      "buildNumber": "12",
+      "buildNumber": "13",
       "supportsTablet": true
     },
     "android": {
-      "versionCode": 12,
+      "versionCode": 13,
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "permissions": [
+      "permissions": [],
+      "blockedPermissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.CAMERA",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.MODIFY_AUDIO_SETTINGS",
-        "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING"
-      ],
-      "blockedPermissions": [
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.SYSTEM_ALERT_WINDOW",
-        "android.permission.ACCESS_WIFI_STATE",
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.READ_MEDIA_VIDEO",
         "android.permission.READ_MEDIA_AUDIO",
-        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED"
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW"
       ],
       "package": "io.github.hsoc.outlink"
-    },
-    "web": {
-      "output": "single",
-      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       "./plugins/with-ios-signing",
@@ -57,14 +47,8 @@
           }
         }
       ],
-      "expo-sqlite",
       "expo-secure-store",
-      [
-        "expo-local-authentication",
-        {
-          "faceIDPermission": "Allow $(PRODUCT_NAME) to use Face ID to confirm Lightning payments."
-        }
-      ],
+      "expo-sqlite",
       [
         "expo-localization",
         {
@@ -92,99 +76,21 @@
         }
       ],
       [
-        "expo-image-picker",
+        "expo-location",
         {
-          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos so you can send images, add custom emoji, and scan QR codes."
-        }
-      ],
-      [
-        "expo-sharing",
-        {
-          "ios": {
-            "enabled": true,
-            "activationRule": {
-              "supportsText": true,
-              "supportsWebUrlWithMaxCount": 1,
-              "supportsImageWithMaxCount": 10,
-              "supportsMovieWithMaxCount": 10,
-              "supportsFileWithMaxCount": 10,
-              "supportsAttachmentsWithMaxCount": 10
-            }
-          },
-          "android": {
-            "enabled": true,
-            "singleShareMimeTypes": [
-              "text/*",
-              "image/*",
-              "video/*",
-              "audio/*",
-              "application/*"
-            ],
-            "multipleShareMimeTypes": [
-              "image/*",
-              "video/*",
-              "audio/*",
-              "application/*",
-              "*/*"
-            ]
-          }
-        }
-      ],
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "Allow $(PRODUCT_NAME) to use the camera so you can take photos and scan QR codes."
-        }
-      ],
-      [
-        "expo-media-library",
-        {
-          "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos and videos to your library.",
-          "granularPermissions": [],
-          "isAccessMediaLocationEnabled": false
-        }
-      ],
-      [
-        "expo-video",
-        {
-          "supportsBackgroundPlayback": false,
-          "supportsPictureInPicture": false
-        }
-      ],
-      [
-        "expo-audio",
-        {
-          "enableBackgroundPlayback": false,
-          "microphonePermission": "Allow $(PRODUCT_NAME) to record voice messages."
-        }
-      ],
-      "expo-image",
-      [
-        "./plugins/with-local-notifications",
-        {
-          "icon": "./assets/images/notification-icon.png"
+          "locationWhenInUsePermission": "Allow Outlink to select a nearby public area channel. Exact coordinates are not published."
         }
       ],
       "./plugins/with-proximity-bluetooth",
-      "./plugins/with-device-orientation-policy",
-      "./plugins/with-pointer-hover",
-      "./plugins/with-ios-warning-cleanup",
-      "./plugins/with-third-party-notices",
-      [
-        "expo-build-properties",
-        {
-          "ios": {
-            "usePrecompiledModules": false
-          }
-        }
-      ],
-      "expo-web-browser",
-      "expo-asset",
-      "./plugins/with-notification-extension"
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": false,
       "reactCompiler": true
-    }
+    },
+    "platforms": [
+      "ios",
+      "android"
+    ]
   }
 }

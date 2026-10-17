@@ -1,1 +1,0 @@
-ALTER TABLE `accounts` ADD `local_setup_pending` integer DEFAULT false NOT NULL;
