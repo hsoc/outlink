@@ -1,6 +1,6 @@
 {
   "reviewed": "2026-10-17",
-  "lockfileSha256": "17bc584fc1a43d5c3c1c2d7e68cba03b3b6cf3630c8d23a53dca65849e8457a2",
+  "lockfileSha256": "514eaad501214a62ed50c3d8f2d719ec53fb42dc966010ef6aabc13aafbf87f5",
   "scope": "All locked non-development npm packages on all platforms, plus the shipped Electron runtime. Includes build utilities; not an exact binary inventory.",
   "packages": [
     {
@@ -3484,10 +3484,11 @@
     },
     {
       "name": "brace-expansion",
-      "version": "1.1.18",
+      "version": "1.1.21",
       "license": "MIT",
-      "integrity": "sha512-Edep/X9fGqVNmzKBVsDYIOtD+z1tuezV70LBjdCst9Tqu76lsnvRiZ6oTic1n+/BIwX6QDGAO94PN4N2SADvtw==",
+      "integrity": "sha512-9zeA+KLZNNzglF2TPKRQEDyx6Yby7daAkuy8MiPzpXPsYDWi/DRM8jmwUDxokQjYqBpv5DgPiwD4h4ZZSy1Ujw==",
       "repository": "git://github.com/juliangruber/brace-expansion.git",
+      "homepage": "https://github.com/juliangruber/brace-expansion",
       "licenseFiles": [
         {
           "source": "LICENSE",
@@ -3497,9 +3498,9 @@
     },
     {
       "name": "brace-expansion",
-      "version": "5.0.9",
+      "version": "5.0.12",
       "license": "MIT",
-      "integrity": "sha512-ScQ4IuvIEF1TMlP7Zt+vjJ//9zlPb2SDcxWxM3bk8s6t6GGdJ7KO1dCcTidOPJKePW30LE/2cT7wCyPho9/Wxg==",
+      "integrity": "sha512-YovQ3rzhaLMIrDjNDMkNS01tea93qhEhG5xy8f6+R0l+dw3Ki+5sCoIoI942iuLZTHWogWktgwVDhU09iNEimQ==",
       "repository": "git+https://github.com/juliangruber/brace-expansion.git",
       "licenseFiles": [
         {
@@ -8417,10 +8418,11 @@
     },
     {
       "name": "source-map-js",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "license": "BSD-3-Clause",
-      "integrity": "sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==",
+      "integrity": "sha512-KGj/8Y43x35aZVDtt+J4mK1hoLGHULMYfSkODJNQjNDC3oW1PqPoxMwo0pLUsWM/UEGzON/NxeHywEfNXNP3Vw==",
       "repository": "7rulnik/source-map-js",
+      "homepage": "https://github.com/7rulnik/source-map-js",
       "licenseFiles": [
         {
           "source": "LICENSE",

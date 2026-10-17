@@ -33,10 +33,14 @@ connections/timers are released, private session key material is cleared, and
 message history is retained. Foreground resumption reconnects sessions that were
 active before backgrounding. Cold launch restores history and selections without
 opening a transport until Join. History uses an asynchronous SQLite platform port,
-indexed by room and insertion sequence, with 200-record pages and a 500-record
+indexed by keyed room/message identifiers and insertion sequence, with 200-record pages and a 500-record
 visible window. Writes are incremental and serialized with reads and deletion.
 Drafts are keyed per public/private mesh conversation or geohash. Settings provides
-explicit deletion. There is no background delivery promise.
+explicit deletion. The adapter encrypts message payloads and private preferences
+with a device-secured independent key and authenticated, versioned records.
+Upgrades from mobile plaintext storage are transactional and resumable; unreadable
+encrypted data is preserved rather than reset. There is no background delivery promise.
+See [local storage](security/local-storage.md).
 
 Historical third-party notice snapshots are retained in source for provenance.
 The mobile notice generator selects the locked mobile dependency closure and

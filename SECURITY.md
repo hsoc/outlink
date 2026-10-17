@@ -18,13 +18,21 @@ No remote-event content is executed, rendered as HTML, or used as a relay URL.
 No internet push, Tor, Nostr private-message fallback, or background delivery is
 implemented in the mobile-only app. Do not send sensitive data in public channels.
 
+## Local storage
+
+Messages, drafts, nickname, and selected conversations/channels are encrypted at
+rest with XChaCha20-Poly1305 and a separate device-secured key. Keyed indexes hide
+room names and message IDs. Missing keys or authentication failures preserve data
+and fail closed. This is record encryption, not an app lock or full-file encryption.
+See [local storage](docs/security/local-storage.md) for migration and backup limits.
+
 ## Dependency advisory status
 
-On 2026-10-17, `npm audit --omit=dev` reported 45 advisory-affected package
-entries (29 high, 16 moderate). Expo's dependency closure includes build tooling,
-so this is not a count of confirmed exploitable mobile runtime flaws. Findings
-include glob/brace parsing, URI decoding, build certificate tooling, UUID
-buffer handling, and formatting/source-map utilities. Some suggested fixes
-require incompatible Expo/React Native version changes. No blanket SDK upgrade
-or `npm audit fix --force` was applied as part of this mobile redesign. Review
-and update the supported SDK/tooling versions before a production release.
+On 2026-10-17 compatible brace-expansion/source-map-js patches reduced the npm
+production-closure audit from 45 affected entries to 43 (27 high, 16 moderate).
+Five root advisory groups remain; affected Expo build dependencies are included
+in these counts. External native links are restricted before navigation query
+parsing to reduce exposure to the remaining decode-uri-component finding.
+No blanket SDK upgrade, forced overrides, or audit suppression was applied.
+See the [dependency assessment](docs/security/dependency-review.md) for exact
+versions, paths, remaining risks, and validation.

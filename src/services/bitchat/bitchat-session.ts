@@ -11,7 +11,7 @@ export type BitchatIdentity = { noiseSeed: Uint8Array; noisePublicKey: Uint8Arra
 export type BitchatPeer = { id: string; name: string; fingerprint: string; lastSeen: number; secure: boolean };
 export type BitchatMessage = { id: string; peer: string; recipient?: string; name: string; content: string;
   timestamp: number; outgoing: boolean; delivery: 'sending' | 'sent' | 'delivered' | 'read' | 'failed' };
-type KnownPeer = BitchatPeer & { noiseKey: Uint8Array; signingKey: Uint8Array };
+type KnownPeer = BitchatPeer & { ingress: string; noiseKey: Uint8Array; signingKey: Uint8Array };
 type Negotiation = { handshake: BitchatHandshake; at: number; promise: Promise<void>;
   resolve: () => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> };
 type Callbacks = { peer: (peer: BitchatPeer) => void; message: (message: BitchatMessage) => void;
@@ -36,6 +36,8 @@ export class BitchatSession {
   private queued = 0;
   private readonly relays = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly sends = new Map<string, Promise<void>>();
+  private readonly outboundTimes = new Map<string, number[]>();
+  private readonly sendWaits = new Map<string, { timer: ReturnType<typeof setTimeout>; resolve(): void }>();
   constructor(private readonly transport: ProximityTransportPort, private readonly identity: BitchatIdentity,
     private readonly name: string, private readonly callbacks: Callbacks,
     private readonly random: (length: number) => Uint8Array) {
@@ -60,7 +62,16 @@ export class BitchatSession {
         void this.broadcast(this.announcement(), undefined, e.endpointId).catch((error) => this.report(error));
       }),
       this.transport.addListener('onConnection', (e) => {
-        if (e.state === 'disconnected' && typeof e.endpointId === 'string') this.links.delete(e.endpointId);
+        if (e.state !== 'disconnected' || typeof e.endpointId !== 'string') return;
+        this.links.delete(e.endpointId); this.outboundTimes.delete(e.endpointId);
+        const wait = this.sendWaits.get(e.endpointId);
+        if (wait) { clearTimeout(wait.timer); wait.resolve(); this.sendWaits.delete(e.endpointId); }
+        // A returned peer keeps its identity, but may have discarded its ephemeral Noise state.
+        for (const peer of this.peers.values()) if (peer.ingress === e.endpointId) {
+          this.ciphers.get(peer.id)?.cipher.destroy(); this.ciphers.delete(peer.id);
+          this.failHandshake(peer.id, new Error('Bitchat peer disconnected'));
+          peer.lastSeen = 0; peer.secure = false; this.callbacks.peer(peer);
+        }
       }),
       this.transport.addListener('onMessage', (e) => {
         if (!this.running || typeof e.endpointId !== 'string' || !(e.payload instanceof Uint8Array)) return;
@@ -113,10 +124,10 @@ export class BitchatSession {
     const outcomes = await Promise.allSettled(targets.map(async (endpoint) => {
       const previous = this.sends.get(endpoint) ?? Promise.resolve();
       const send = previous.catch(() => {}).then(async () => {
-        if (!this.running || !this.links.has(endpoint)) return;
+        if (!this.running || !this.links.has(endpoint)) throw new Error('Bitchat link is stopped');
         const mtu = await this.transport.maximumFrameSizeAsync!(endpoint);
         for (const frame of fragmentPacket(packet, mtu, this.random(8))) {
-          if (!this.running) return;
+          await this.pace(endpoint);
           await this.transport.sendAsync(endpoint, frame);
         }
       });
@@ -125,6 +136,19 @@ export class BitchatSession {
     }));
     if (outcomes.length && outcomes.every((result) => result.status === 'rejected'))
       throw (outcomes[0] as PromiseRejectedResult).reason;
+  }
+  private async pace(endpoint: string): Promise<void> {
+    // At most 48 frames in any second, leaving headroom under the 64-frame ingress cap.
+    while (this.running && this.links.has(endpoint)) {
+      const now = Date.now(), recent = (this.outboundTimes.get(endpoint) ?? []).filter(at => now - at < 1000);
+      this.outboundTimes.set(endpoint, recent);
+      if (recent.length < 48) { recent.push(now); return; }
+      await new Promise<void>(resolve => {
+        const timer = setTimeout(() => { this.sendWaits.delete(endpoint); resolve(); }, Math.max(1, recent[0] + 1001 - now));
+        this.sendWaits.set(endpoint, { timer, resolve });
+      });
+    }
+    throw new Error('Bitchat link is stopped');
   }
   async sendPublic(content: string): Promise<void> {
     if (!content.trim() || bytes(content).length > 255) throw new Error('Message must fit 255 UTF-8 bytes');
@@ -211,7 +235,7 @@ export class BitchatSession {
       if (previous && (!previous.noiseKey.every((v, i) => v === noiseKey[i]) ||
           !previous.signingKey.every((v, i) => v === signingKey[i]))) return;
       if (!previous && this.peers.size >= 256) return;
-      const peer: KnownPeer = { id: packet.sender, name, noiseKey, signingKey,
+      const peer: KnownPeer = { id: packet.sender, name, noiseKey, signingKey, ingress,
         fingerprint: bytesToHex(sha256(noiseKey)), lastSeen: Date.now(), secure: this.ciphers.has(packet.sender) };
       this.peers.set(packet.sender, peer); this.callbacks.peer(peer);
     } else if ((packet.type === BitchatType.message || packet.type === BitchatType.leave)) {
@@ -298,6 +322,8 @@ export class BitchatSession {
   async stop(): Promise<void> {
     this.running = false; if (this.timer) clearTimeout(this.timer);
     this.relays.forEach(clearTimeout); this.relays.clear();
+    for (const wait of this.sendWaits.values()) { clearTimeout(wait.timer); wait.resolve(); }
+    this.sendWaits.clear(); this.outboundTimes.clear();
     this.subscriptions.forEach((s) => s.remove()); this.subscriptions = [];
     for (const key of this.negotiations.keys()) this.failHandshake(key, new Error('Bitchat stopped'));
     this.ciphers.forEach((v) => v.cipher.destroy()); this.ciphers.clear();

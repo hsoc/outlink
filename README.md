@@ -58,3 +58,9 @@ appear in this version.
 
 Original copyright notices and third-party license texts are preserved.
 [MIT license](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md)
+
+Local message history, drafts, and private preferences are encrypted with a
+device-secured key; existing mobile history is migrated automatically.
+See [storage protections](docs/security/local-storage.md),
+[dependency review](docs/security/dependency-review.md), and
+[automated interoperability results](docs/security/automated-interoperability.md).

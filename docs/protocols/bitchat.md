@@ -22,7 +22,8 @@ Implemented:
 - Bitchat fragments, optional v2 routes, incoming raw-DEFLATE payloads, padding.
 - Noise-authenticated signing-key state (`0x21`).
 
-Not emitted or consumed: Nostr/geohash channels, courier envelopes, public
+The separate geohash transport is described in [geohash.md](geohash.md).
+Not emitted or consumed on this BLE transport: courier envelopes, public
 history/GCS synchronization, groups, board posts, files, voice, prekeys, gateway
 carriers, or rotating-ID presence. These need separate interoperability profiles.
 There is no offline delivery/outbox guarantee in this version.
@@ -184,7 +185,9 @@ stricter than Bitchat's media limits.
 
 Additional limits: 64 transport links, 256 discovered peers, 16 simultaneous
 handshakes, 128 queued inbound packets, 128 scheduled relays, and 64 inbound
-frames per second per admitted link. Invalid inbound radio traffic is discarded
+frames per second per admitted link. Outbound link writes are paced to 48 frames
+per rolling second; stop/disconnect cancels waiting writes. Losing an authenticated
+peer's ingress invalidates its ephemeral cipher until a fresh handshake. Invalid inbound radio traffic is discarded
 without injecting it into the user timeline. Local history persists until explicitly deleted in Settings. The visible
 timeline is bounded to 500 messages; older records are loaded in indexed
 200-message pages. Closing a room releases transport/session keys without

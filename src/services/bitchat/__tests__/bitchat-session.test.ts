@@ -6,14 +6,20 @@ import { bytes, decodePacket, encodePacket, BitchatType } from '../bitchat-wire'
 
 type Radio = { port: ProximityTransportPort; listeners: Map<string, Set<(event: Record<string, unknown>) => void>>;
   neighbors: Map<string, Radio>; id: string; wire: Uint8Array[] };
-function radio(id: string): Radio {
+function radio(id: string, frameSize = 185): Radio {
   const listeners = new Map<string, Set<(e: Record<string, unknown>) => void>>(), neighbors = new Map<string, Radio>();
   const wire: Uint8Array[] = [];
   return { id, listeners, neighbors, wire, port: {
     isAvailable: () => true, requestPermissions: async () => true,
-    configureProtocolAsync: jest.fn(async () => {}), maximumFrameSizeAsync: async () => 185,
+    configureProtocolAsync: jest.fn(async () => {}), maximumFrameSizeAsync: async () => frameSize,
     startAdvertisingAsync: async () => {}, updateProfileAsync: async () => {}, preferPeripheralAsync: async () => {},
-    startScanAsync: async () => {}, stopScanAsync: async () => {}, stopSessionAsync: async () => {},
+    startScanAsync: async () => {}, stopScanAsync: async () => {}, stopSessionAsync: async () => {
+      for (const neighbor of neighbors.values()) {
+        neighbor.neighbors.delete(id);
+        neighbor.listeners.get('onConnection')?.forEach(fn => fn({ endpointId: id, state: 'disconnected' }));
+      }
+      neighbors.clear();
+    },
     refreshPeerProfileAsync: async () => {},
     async sendAsync(endpoint, payload) {
       wire.push(payload.slice());
@@ -37,8 +43,8 @@ async function until(check: () => boolean) {
   while (!check()) { if (Date.now() > deadline) throw new Error('Mesh test timed out'); await new Promise((r) => setTimeout(r, 10)); }
 }
 const sessions: BitchatSession[] = [];
-function node(id: string, n: number) {
-  const r = radio(id), peers = new Map<string, BitchatPeer>(), messages: BitchatMessage[] = [];
+function node(id: string, n: number, frameSize = 185) {
+  const r = radio(id, frameSize), peers = new Map<string, BitchatPeer>(), messages: BitchatMessage[] = [];
   const receipts: [string, string, string][] = [];
   const noiseSeed = new Uint8Array(32).fill(n);
   let counter = 1;
@@ -105,4 +111,43 @@ it('resolves simultaneous private initiations without changing the authenticated
   await until(() => a.messages.some((m) => !m.outgoing) && b.messages.some((m) => !m.outgoing));
   expect(a.messages.find((m) => !m.outgoing)?.content).toBe('bob private');
   expect(b.messages.find((m) => !m.outgoing)?.content).toBe('alice private');
+});
+
+it.each([64, 185, 512])('exchanges fragmented signed public and encrypted private UTF-8 at a %i-byte GATT value size', async frameSize => {
+  const a = node('Alice', 1, frameSize), b = node('Bob', 2, frameSize);
+  await Promise.all([a.session.start(), b.session.start()]); connect(a.r, b.r);
+  await until(() => a.peers.has(b.session.id) && b.peers.has(a.session.id));
+  const content = '💬'.repeat(63) + 'abc';
+  await a.session.sendPublic(content); await until(() => b.messages.length === 1);
+  await a.session.sendPrivate(b.session.id, content, 'private-mtu');
+  await until(() => b.messages.length === 2 && a.receipts.some(receipt => receipt[2] === 'delivered'));
+  expect(b.messages.map(message => message.content)).toEqual([content, content]);
+  expect([...a.r.wire, ...b.r.wire].every(wire => wire.length <= frameSize)).toBe(true);
+});
+it('reestablishes private encryption when the receiver returns with the same identity after disconnecting', async () => {
+  const a = node('Alice', 1), b = node('Bob', 2);
+  await Promise.all([a.session.start(), b.session.start()]); connect(a.r, b.r);
+  await until(() => a.peers.has(b.session.id) && b.peers.has(a.session.id));
+  await b.session.sendPrivate(a.session.id, 'before restart', 'before-restart');
+  await until(() => a.messages.length === 1);
+  await a.session.stop();
+  const returned = node('Alice', 1); await returned.session.start(); connect(returned.r, b.r);
+  await until(() => returned.peers.has(b.session.id));
+  await b.session.sendPrivate(returned.session.id, 'after restart', 'after-restart');
+  await until(() => returned.messages.length === 1);
+  expect(returned.session.id).toBe(a.session.id);
+  expect(returned.messages[0].content).toBe('after restart');
+});
+
+it('cancels paced and queued transmissions when the session stops', async () => {
+  const a = node('Alice', 1), b = node('Bob', 2);
+  await Promise.all([a.session.start(), b.session.start()]); connect(a.r, b.r);
+  await until(() => a.peers.has(b.session.id) && b.peers.has(a.session.id));
+  const sends = Promise.allSettled(Array.from({ length: 80 }, (_, i) => a.session.sendPublic(`queued-${i}`)));
+  await until(() => a.r.wire.length >= 48);
+  await a.session.stop();
+  const messagesAfterStop = a.messages.length;
+  expect((await sends).some(result => result.status === 'rejected')).toBe(true);
+  await new Promise(resolve => setTimeout(resolve, 25));
+  expect(a.messages.length).toBe(messagesAfterStop);
 });

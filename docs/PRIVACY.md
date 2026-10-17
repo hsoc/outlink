@@ -23,12 +23,19 @@ permissions and radio metadata.
 
 There is no internet push registration or background delivery guarantee. Connections
 pause in the background and reconnect on return within the same app process.
-Messages are stored in a local SQLite database, and drafts/channel selections
-in local preferences. Outlink does not encrypt this local history; device protection
-and backup policy apply. Settings → Clear local history deletes saved messages
-and drafts, not identity keys, other participants’ copies, or relay copies. Relays, recipients, device
-backups, and screenshots may retain data after local clearing. Old app databases
-are not automatically imported or deleted by this redesign.
+Messages, drafts, channel selections, relay settings, and nickname are encrypted
+before being saved locally, using a separate key kept in device secure storage.
+Appearance preferences remain unencrypted. Message/room indexes are keyed;
+record counts, order, and approximate lengths remain visible. The running app
+can access the key, so this is not an app lock. A backup restored without its
+device key cannot decrypt these records; there is no key recovery feature.
+
+Existing mobile plaintext history/preferences are upgraded in resumable batches
+and the live databases compacted. This does not guarantee erasure of flash-storage
+remnants or previous backups. Retired pre-redesign databases are not imported or
+deleted. Settings → Clear local history deletes saved messages and drafts, not
+identity/storage keys, relay copies, recipients' copies, or screenshots.
+See [local storage](security/local-storage.md) for the full protection boundary.
 
 No hosted Outlink naming or notification service is configured. Source and
 protocol details: https://github.com/hsoc/outlink.

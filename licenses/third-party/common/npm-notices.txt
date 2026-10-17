@@ -1853,14 +1853,14 @@ README.md
   Text: 4a09c55c64d57abe284e09318763dcd69795ed7a201a84edf1bf8774c3b91a8e
 ========================================
 
-brace-expansion@1.1.18
+brace-expansion@1.1.21
 License: MIT
 Source: git://github.com/juliangruber/brace-expansion.git
 LICENSE
   Text: 68f12f6e2c33688699249c01d8f9623c534da20aa71989c57b061b7bc1676d14
 ========================================
 
-brace-expansion@5.0.9
+brace-expansion@5.0.12
 License: MIT
 Source: git+https://github.com/juliangruber/brace-expansion.git
 LICENSE
@@ -4480,7 +4480,7 @@ LICENSE
   Text: 8df3c23e3dfffa0d3d41c59fae5741ea3e2c50eb19c52a5d8912a68fdba554c2
 ========================================
 
-source-map-js@1.2.1
+source-map-js@1.2.2
 License: BSD-3-Clause
 Source: 7rulnik/source-map-js
 LICENSE

@@ -85,7 +85,7 @@
     "light": "Light",
     "dark": "Dark",
     "failed": "Unable to connect or send. Check Bluetooth, internet access, location permission, and the area or relay addresses, then try again.",
-    "storage_note": "Messages and drafts are saved on this device until you clear local history. Connections pause in the background and reconnect when you return. Local history is not encrypted by Outlink.",
+    "storage_note": "Messages and drafts are saved encrypted on this device until you clear local history. Connections pause in the background and reconnect when you return. Restoring a backup without this device’s key cannot recover saved chats.",
     "source": "Source code",
     "licenses": "Open-source notices",
     "join": "Join",
