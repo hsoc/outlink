@@ -58,3 +58,11 @@ relay acceptance, malformed events, deduplication, storage-error retry and stop.
 Erasure tests cover key deletion, fresh storage keys, fail/retry behavior and
 foreground-resume invalidation. These remain automated tests, not official-client
 or physical-radio interoperability evidence.
+
+
+Routing tests additionally cover fresh mutual edges, version gating, intermediate
+hop limits, broken-route suppression/cooldown, independently ranked fanout,
+link-local sync suppression and TTL/jitter classes. A simulated three-node chain
+exchanges encrypted messages and receipts over signed originated v2 routes.
+Connection probes are tested across a relay, on stop, and against a burst of
+rotating forged sender IDs sharing one ingress link.

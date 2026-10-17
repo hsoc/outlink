@@ -19,11 +19,12 @@ Implemented:
 - Mainnet BLE discovery, simultaneous central/peripheral roles, signed presence.
 - Signed public text, multi-hop forwarding, TTL limits, duplicate suppression.
 - Noise XX private text, encrypted delivery acknowledgments and read receipts.
-- Bitchat fragments, optional v2 routes, incoming raw-DEFLATE payloads, padding.
+- Bitchat fragments, signed v2 source routes/flood fallback, incoming raw-DEFLATE payloads, padding.
 - Noise-authenticated signing-key state (`0x21`).
 - Signed link-local GCS public-history synchronization and encrypted durable cache.
 - QR contact sharing/pins and live encrypted verification challenges (`0x10`/`0x11`).
 - Encrypted durable outgoing private queue, favorites and block controls.
+- Connection probes with nonce/sender binding and per-ingress response limits.
 
 The separate geohash transport is described in [geohash.md](geohash.md).
 Not yet emitted or consumed on this BLE transport: courier envelopes, groups,
@@ -106,7 +107,7 @@ Announcement (`0x01`) payload uses `[type:u8][length:u8][value]` TLVs:
 | `0x01` | UTF-8 nickname |
 | `0x02` | 32-byte X25519 public key |
 | `0x03` | 32-byte Ed25519 public key |
-| `0x04` | Optional direct-neighbor IDs; ignored by this flooding implementation |
+| `0x04` | Up to ten direct-neighbor IDs, eight bytes each; advisory topology claims |
 | `0x05` | Optional capability bits; Outlink advertises zero optional capabilities |
 
 Unknown announcement TLVs are skipped; duplicates and malformed fields are
@@ -169,11 +170,24 @@ advertised as supported and are not accepted.
 
 ## Mesh forwarding and resource limits
 
-Packets originate with TTL 7. Relays decrement TTL, exclude the ingress link,
-and jitter forwarding by 10–220 ms. A duplicate cancels a scheduled relay.
-Dense broadcast nodes (six or more links) cap forwarded TTL at 5. Outlink uses
-bounded full fanout rather than source-route computation/fanout subsetting.
-Intermediates forward directed private ciphertext without decrypting it.
+Packets originate with TTL 7; relays stop at TTL 1, exclude the ingress peer's
+known links, and decrement TTL. Jitter/TTL classes match directed handshake,
+directed encrypted, fragment and sparse/dense broadcast policies. A duplicate
+cancels a scheduled relay. Broadcast fanout uses deterministic SHA-256-ranked
+subsets per central/peripheral role; announce, fragment and RequestSync control
+traffic retain full eligible fanout. Duplicate known-peer links collapse toward
+the outgoing/write side except announcements, which bind every link.
+
+Signed live neighbor claims form an advisory graph. Routes use only fresh
+(one-minute), bidirectionally claimed edges and observed v2 peers, with at most
+four intermediates. Outlink emits v2 announcements to signal decoder support.
+Originated routes are signed after attaching the route and upgrading the header;
+relays never rewrite or re-sign someone else's route. A missing next-hop link
+falls back to flooding. Unconfirmed sends suppress routing after ten seconds
+and use flooding for sixty seconds. Directed traffic uses a known direct link
+when available. Such link hints are provisional and **must not** authorize
+courier trust or destructive handover. Intermediates forward private ciphertext
+without decrypting it.
 
 Deduplication excludes mutable TTL/relay flags and incorporates sender, type,
 timestamp, addressing, and payload. Seen sets retain at most 1000 entries.
@@ -229,3 +243,14 @@ The encrypted public cache retains at most 1000 packets/8 MiB; public text expir
 after six hours and announcements after 15 minutes. Announcements are served
 before messages and bypass a message cursor. Each ingress permits eight requests
 per 30 seconds and at most one response task at a time.
+
+## Connection diagnostics
+
+Ping (`0x26`) and pong (`0x27`) carry a random eight-byte nonce and one-byte
+origin TTL, with optional trailing extension bytes accepted. A pong must echo an
+outstanding nonce and its claimed sender must match the probed peer. Hop count
+is origin TTL minus received TTL plus one; inconsistent TTLs yield no estimate.
+Probes expire after ten seconds and stop cancels outstanding probes. At most
+sixteen local probes are pending. Replies are capped at five per incoming
+physical link per ten seconds; rotating unsigned sender IDs cannot reset this
+budget. These probes measure reachability, not authenticated identity.

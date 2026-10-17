@@ -17,7 +17,7 @@ cryptographic primitives are reused rather than implementing ciphers.
 | --- | --- | --- |
 | BLE bearer, signed presence/public text | Android/iOS native bearer; raw packet framing, signatures, forwarding, tamper/dedup tests | Official-client/native interoperation remains unverified; adaptive scan/RSSI policies differ |
 | Noise private text and receipts | XX handshake, counter replay protection, authenticated signing state, delivery/read receipts | Reserved non-destructive session replacement and full peer capability lifecycle |
-| Wire packets | v1/v2 decode, raw DEFLATE receive, padding, route field preservation; absent/all-FF broadcast recipient | Outbound compression, complete source-route origination/following, larger media limits |
+| Wire packets | v1/v2 decode, raw DEFLATE receive, padding, signed source routing with flood fallback; absent/all-FF broadcast recipient | Outbound compression and larger media limits |
 | Public history | Signed link-local RequestSync, GCS membership filters, durable encrypted announcement/text cache, rate-limited RSR backfill | Fragment/file/board/group/prekey sync caches and respective quotas/schedules |
 | Contacts and verification | Signed expiring QR/link import/export, encrypted pins, encrypted live nonce challenge/response, favorite/block controls | Vouch and mutual-verification coordination; verification remains pending when offline |
 | Outgoing private queue | Durable encrypted per-contact queue; bounded retries/expiry; authenticated receipt binding; offline composition | Courier and bridge routes; persistent deferred read acknowledgments |
@@ -29,7 +29,7 @@ cryptographic primitives are reused rather than implementing ciphers.
 | Board | Message type inventory only | Signed posts/tombstones, retention/owner checks, UI and sync |
 | Files/images/recorded audio | Message type inventory only | Public/private media formats, transfer/reassembly limits, encrypted storage, receipts and UI |
 | Live voice | Message type inventory only | Voice bursts, codec/native audio pipeline, cancellation/order/timeout handling and UI |
-| Diagnostics | Message type inventory only | Ping/pong and diagnostics controls |
+| Diagnostics | Nonce-bound ping/pong, per-ingress reply budget, contact connection check | Official-client/native verification remains outstanding |
 | Nostr carrier/gateway/bridge | Message type inventory only | Event validation/dispatch, forwarding, bridge mailbox and role/consent controls |
 | Identity erasure | Confirmed full local wipe stops sessions, invalidates foreground resume, removes encryption and identity keys | Platform storage/backup erasure is not guaranteed; remote copies cannot be erased |
 

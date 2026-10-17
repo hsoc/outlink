@@ -299,6 +299,10 @@ class BitchatService {
       name: await platform.preferences.getItem('mobile.nickname') ?? 'Outlink', content, timestamp: Date.now(), outgoing: true, delivery: 'queued' });
     if (this.connection) void this.flush(peer).catch(() => bitchatSessionStore.setState({ error: true }));
   }
+  async ping(peer: string) {
+    if (!this.session || contactsService.get(peer)?.blocked) throw new Error('Contact is unavailable');
+    return this.session.ping(peer);
+  }
   async read(peer: string, id: string): Promise<void> {
     await this.session?.markRead(peer, id);
     bitchatSessionStore.setState((state) => ({ messages: state.messages.map((m) =>

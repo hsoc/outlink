@@ -124,6 +124,8 @@
     "wipe_confirm": "This permanently removes your identity keys, contacts, queued messages, drafts, and conversations. Contacts will need your new identity.",
     "wipe_done": "Identity and local data erased.",
     "contact_code": "Contact verification QR",
-    "queue_retention_note": "Clearing history keeps contacts and pending outgoing messages. Pending messages may still be sent. Use identity erasure to remove them too."
+    "queue_retention_note": "Clearing history keeps contacts and pending outgoing messages. Pending messages may still be sent. Use identity erasure to remove them too.",
+    "check_connection": "Check connection",
+    "connection_result": "{{name}} replied in {{ms}} ms; {{hops}} link(s). This checks reachability, not identity."
   }
 }

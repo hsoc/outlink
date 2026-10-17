@@ -183,3 +183,38 @@ it('accepts the explicit all-FF public recipient without rewriting signed bytes'
   await until(() => b.messages.some(message => message.content === 'explicit broadcast'));
   expect(b.messages.find(message => message.content === 'explicit broadcast')?.recipient).toBeUndefined();
 });
+
+it('originates and follows a signed v2 route across mutually confirmed topology', async () => {
+  const a = node('Alice', 1, 512), b = node('Bob', 2, 512), c = node('Carol', 3, 512);
+  await Promise.all([a.session.start(), b.session.start(), c.session.start()]); connect(a.r, b.r); connect(b.r, c.r);
+  await until(() => a.session.routeTo(c.session.id)?.[0] === b.session.id && c.session.routeTo(a.session.id)?.[0] === b.session.id);
+  await a.session.sendPrivate(c.session.id, 'routed private message', 'routed-1');
+  await until(() => c.messages.some(message => message.id === 'routed-1') && a.receipts.some(receipt => receipt[0] === 'routed-1' && receipt[2] === 'delivered'));
+  const routed = await Promise.all(a.r.wire.filter(wire => wire[1] === BitchatType.handshake).map(wire => decodePacket(wire)));
+  expect(routed.some(packet => packet.version === 2 && packet.route?.[0] === b.session.id && packet.signature?.length === 64)).toBe(true);
+  expect(b.messages).toHaveLength(0);
+});
+
+it('exchanges connection probes across a relay and cancels pending probes when stopped', async () => {
+  const a = node('Alice', 1, 512), b = node('Bob', 2, 512), c = node('Carol', 3, 512);
+  await Promise.all([a.session.start(), b.session.start(), c.session.start()]); connect(a.r, b.r); connect(b.r, c.r);
+  await until(() => !!a.peers.get(c.session.id)?.lastSeen && !!c.peers.get(a.session.id)?.lastSeen);
+  const result = await a.session.ping(c.session.id);
+  expect(result.hops).toBe(2); expect(result.rttMs).toBeGreaterThanOrEqual(0);
+  expect(a.messages).toHaveLength(0); expect(b.messages).toHaveLength(0); expect(c.messages).toHaveLength(0);
+  const pending = a.session.ping('00'.repeat(8)), stopped = expect(pending).rejects.toThrow('stopped');
+  await a.session.stop(); await stopped;
+});
+it('budgets unsigned ping replies per ingress even if a sender rotates claimed IDs', async () => {
+  const a = node('Alice', 1, 512), b = node('Bob', 2, 512);
+  await Promise.all([a.session.start(), b.session.start()]); connect(a.r, b.r);
+  await until(() => !!b.peers.get(a.session.id)?.lastSeen);
+  for (let i = 1; i <= 9; i++) {
+    const payload = new Uint8Array(9).fill(i); payload[8] = 7;
+    const probe = encodePacket({ version: 1, type: BitchatType.ping, ttl: 7, sender: i.toString(16).padStart(16, '0'), recipient: b.session.id, timestamp: Date.now(), payload });
+    b.r.listeners.get('onMessage')!.forEach(fn => fn({ endpointId: a.r.id, payload: probe }));
+  }
+  await until(() => b.r.wire.filter(wire => wire[1] === BitchatType.pong).length === 5);
+  await new Promise(resolve => setTimeout(resolve, 100));
+  expect(b.r.wire.filter(wire => wire[1] === BitchatType.pong)).toHaveLength(5);
+});
