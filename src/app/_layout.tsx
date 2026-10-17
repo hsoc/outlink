@@ -1,3 +1,4 @@
+import { createSessionLifecycle } from '@/services/history/lifecycle';
 import 'react-native-get-random-values';
 import '@/i18n';
 import { useEffect, useState } from 'react';
@@ -17,10 +18,9 @@ export default function Layout() {
   useEffect(() => {
     let alive = true;
     void useThemeStore.getState().load().finally(() => { if (alive) setReady(true); });
-    const remove = platform.appState.addChangeListener(state => {
-      if (state === 'background') { void bitchatService.stop().catch(() => {}); geohashService.stop(); }
-    });
-    return () => { alive = false; remove(); void bitchatService.stop().catch(() => {}); geohashService.stop(); };
+    const lifecycle = createSessionLifecycle(bitchatService, geohashService);
+    const remove = platform.appState.addChangeListener(state => { void lifecycle.change(state).catch(() => {}); });
+    return () => { alive = false; remove(); lifecycle.dispose(); };
   }, []);
   return <GestureHandlerRootView style={{ flex: 1 }}><SafeAreaProvider><KeyboardProvider><SystemColorSchemeProvider>
     {ready ? <Stack screenOptions={{ headerShown: false }} /> : <AppScreen><AppText>Outlink</AppText></AppScreen>}

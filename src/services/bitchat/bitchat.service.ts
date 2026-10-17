@@ -1,3 +1,4 @@
+import { loadMessages, saveMessage } from '@/services/history/history';
 import { ed25519, x25519 } from '@noble/curves/ed25519.js';
 import { bytesToHex, hexToBytes, randomBytes } from '@noble/hashes/utils.js';
 import { createStore } from 'zustand/vanilla';
@@ -20,11 +21,44 @@ async function loadIdentity(account: string): Promise<BitchatIdentity> {
   if (!saved) await platform.secureStorage.setItem(storageKey(account), JSON.stringify(stored));
   return { noiseSeed, noisePublicKey, signingSeed };
 }
+bitchatSessionStore.subscribe((state, previous) => {
+  if (state.messages === previous.messages) return;
+  const old = new Map(previous.messages.map(message => [message.id + ('peer' in message ? message.peer : ''), message]));
+  for (const message of state.messages) {
+    const id = message.id + ('peer' in message ? message.peer : '');
+    if (old.get(id) !== message) void saveMessage('mesh', id, message).catch(() => bitchatSessionStore.setState({ error: true }));
+  }
+});
 class BitchatService {
+  connection?: { account: string; name: string };
+  private hydrated = false;
+  private historyVersion = 0;
+  clearMessages(): void {
+    ++this.historyVersion; this.before = undefined;
+    bitchatSessionStore.setState({ messages: [] });
+  }
+  private before?: number;
+  async restore(): Promise<void> {
+    if (this.hydrated) return;
+    const version = this.historyVersion;
+    const page = await loadMessages<BitchatMessage>('mesh');
+    if (version !== this.historyVersion) return;
+    this.before = page.before; this.hydrated = true;
+    bitchatSessionStore.setState({ messages: page.messages });
+  }
+  async latest(): Promise<void> { this.hydrated = false; await this.restore(); }
+  async older(): Promise<void> {
+    if (!this.before) return;
+    const version = this.historyVersion;
+    const page = await loadMessages<BitchatMessage>('mesh', this.before);
+    if (version !== this.historyVersion) return;
+    this.before = page.before;
+    bitchatSessionStore.setState(state => ({ messages: [...page.messages, ...state.messages].slice(0, 500) }));
+  }
   private session?: BitchatSession;
   private account?: string;
   private identity?: BitchatIdentity;
-  private removeAppListener?: () => void;
+
   private lifecycle: Promise<void> = Promise.resolve();
   private transition(operation: () => Promise<void>): Promise<void> {
     const promise = this.lifecycle.catch(() => {}).then(operation);
@@ -33,7 +67,8 @@ class BitchatService {
   start(account: string, name: string): Promise<void> {
     return this.transition(async () => {
       await this.stopInternal();
-      bitchatSessionStore.setState({ ...empty, busy: true });
+      await this.restore();
+      bitchatSessionStore.setState({ busy: true, error: false });
       try {
         this.identity = await loadIdentity(account); this.account = account;
         this.session = new BitchatSession(platform.proximityTransport, this.identity, name, {
@@ -42,7 +77,7 @@ class BitchatService {
             if (index < 0) peers.push({ ...peer }); else peers[index] = { ...peer };
             return { peers };
           }),
-          message: (message) => bitchatSessionStore.setState((state) => ({ messages: [...state.messages.slice(-499), message] })),
+          message: (message) => bitchatSessionStore.setState((state) => ({ messages: state.messages.some(m => m.id === message.id && m.peer === message.peer) ? state.messages : [...state.messages.slice(-499), message] })),
           receipt: (id, sender, delivery) => bitchatSessionStore.setState((state) => ({ messages: state.messages.map((m) =>
             m.outgoing && m.id === id && m.recipient === sender &&
             (delivery === 'read' || (delivery === 'delivered' && m.delivery !== 'read') ||
@@ -50,22 +85,21 @@ class BitchatService {
           error: () => bitchatSessionStore.setState({ error: true }),
         }, randomBytes);
         await this.session.start();
+        this.connection = { account, name };
         bitchatSessionStore.setState({ active: true, busy: false, id: this.session.id, account });
-        this.removeAppListener = platform.appState.addChangeListener((state) => {
-          if (state === 'background') void this.stop().catch(() => {});
-        });
+
       } catch (error) { await this.stopInternal(); bitchatSessionStore.setState({ error: true }); throw error; }
     });
   }
   stop(): Promise<void> { return this.transition(() => this.stopInternal()); }
   private async stopInternal(): Promise<void> {
-    this.removeAppListener?.(); this.removeAppListener = undefined;
+    this.connection = undefined;
     const session = this.session; this.session = undefined;
     try { if (session) await session.stop(); }
     finally {
       this.identity?.noiseSeed.fill(0); this.identity?.signingSeed.fill(0);
       this.identity = undefined; this.account = undefined;
-      bitchatSessionStore.setState(empty, true);
+      bitchatSessionStore.setState(state => ({ active: false, busy: false, peers: [], messages: state.messages.map(message => message.delivery === 'sending' ? { ...message, delivery: 'failed' as const } : message) }));
     }
   }
   async send(content: string, peer?: string): Promise<void> {

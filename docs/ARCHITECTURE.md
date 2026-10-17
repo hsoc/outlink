@@ -30,9 +30,13 @@ can still link activity; derived keys are not an anonymity guarantee.
 
 Both transports stop on background. Pending operations are cancelled or rejected,
 connections/timers are released, private session key material is cleared, and
-visible message state is reset. Foreground resumption requires rejoining. There
-is no permanent message database, automatic subscription to previous channels,
-or background delivery promise.
+message history is retained. Foreground resumption reconnects sessions that were
+active before backgrounding. Cold launch restores history and selections without
+opening a transport until Join. History uses an asynchronous SQLite platform port,
+indexed by room and insertion sequence, with 200-record pages and a 500-record
+visible window. Writes are incremental and serialized with reads and deletion.
+Drafts are keyed per public/private mesh conversation or geohash. Settings provides
+explicit deletion. There is no background delivery promise.
 
 Historical third-party notice snapshots are retained in source for provenance.
 The mobile notice generator selects the locked mobile dependency closure and

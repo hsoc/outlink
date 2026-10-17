@@ -21,8 +21,12 @@ are not stored or included in events. Manual area entry does not need location
 permission. Foreground location and Bluetooth may still be subject to platform
 permissions and radio metadata.
 
-There is no internet push registration or background messaging. Sessions stop
-and in-memory messages clear on background or leave. Relays, recipients, device
+There is no internet push registration or background delivery guarantee. Connections
+pause in the background and reconnect on return within the same app process.
+Messages are stored in a local SQLite database, and drafts/channel selections
+in local preferences. Outlink does not encrypt this local history; device protection
+and backup policy apply. Settings → Clear local history deletes saved messages
+and drafts, not identity keys, other participants’ copies, or relay copies. Relays, recipients, device
 backups, and screenshots may retain data after local clearing. Old app databases
 are not automatically imported or deleted by this redesign.
 

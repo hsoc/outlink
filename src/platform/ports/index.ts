@@ -1,3 +1,4 @@
+import type { HistoryPort } from './history';
 import type { UrlOpenerPort } from './url-opener';
 import type { PreferencesPort, LocationPort } from './mobile';
 import type { AppStatePort } from './app-state';
@@ -9,6 +10,8 @@ export type { PreferencesPort, LocationPort } from './mobile';
 export type { AppStatePort, AppStateStatus } from './app-state';
 export type { ProximityTransportPort, ProximityTransportSubscription } from './proximity-transport';
 export interface PlatformAdapters {
+  history: HistoryPort;
+  confirmationDialog: { confirm(title: string, message: string, cancel: string, confirm: string): Promise<boolean> };
   notices: { readText(id: string): Promise<string> };
   urlOpener: UrlOpenerPort;
   preferences: PreferencesPort; location: LocationPort; appState: AppStatePort;

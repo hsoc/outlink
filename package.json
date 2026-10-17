@@ -80,7 +80,7 @@
     "licenses:check": "node scripts/generate-mobile-licenses.mjs --check",
     "licenses:test": "node --test scripts/licenses/*.test.mjs",
     "android:apk": "node scripts/mobile-android-build.mjs",
-    "check:mobile": "node --test scripts/mobile-config.test.mjs",
+    "check:mobile": "node --test scripts/mobile-config.test.mjs scripts/history-storage.test.mjs",
     "export:mobile": "expo export --platform android --platform ios --output-dir dist/mobile"
   },
   "jest": {

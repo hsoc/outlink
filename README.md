@@ -14,7 +14,8 @@ phone numbers, wallets, or username registration.
 Location channels require internet access and are public. They are separate
 from encrypted Bluetooth private chats. There is no Tor integration, internet
 private-message fallback, push delivery, file transfer, or background messaging.
-Sessions stop and in-memory messages clear when the app backgrounds or you leave.
+Connections pause in the background and reconnect on return. Messages, drafts,
+and channel selections survive restarts; Settings offers explicit local-history deletion.
 Ephemeral Nostr events do not guarantee historical message retrieval.
 
 ## Build

@@ -7,8 +7,8 @@ manual area entry works without location permission.
 
 No accounts, phone numbers, wallets, or registered usernames. Public mesh and
 location-channel messages are visible to others. Location channels use internet
-relays and are not encrypted private chats. Session messages clear when you
-leave or background the application. No background delivery or push is enabled.
+relays and are not encrypted private chats. Chat history and drafts are saved on your device until explicitly cleared.
+Connections pause in the background and reconnect on return. No background delivery or push is enabled.
 
 Website: https://github.com/hsoc/outlink
 Privacy: https://github.com/hsoc/outlink/blob/master/docs/PRIVACY.md

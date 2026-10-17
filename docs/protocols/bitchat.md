@@ -185,8 +185,10 @@ stricter than Bitchat's media limits.
 Additional limits: 64 transport links, 256 discovered peers, 16 simultaneous
 handshakes, 128 queued inbound packets, 128 scheduled relays, and 64 inbound
 frames per second per admitted link. Invalid inbound radio traffic is discarded
-without injecting it into the user timeline. Local timelines retain the last
-500 messages and are cleared when the room closes.
+without injecting it into the user timeline. Local history persists until explicitly deleted in Settings. The visible
+timeline is bounded to 500 messages; older records are loaded in indexed
+200-message pages. Closing a room releases transport/session keys without
+deleting its history.
 
 ## Privacy boundaries
 

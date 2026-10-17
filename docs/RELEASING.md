@@ -49,7 +49,9 @@ Xcode for device development or configure the signing script for export.
 Before release, test two physical devices across both operating systems,
 Bluetooth permissions and reconnection, private fingerprints and receipts,
 public channel interoperation with another Bitchat client, location denial,
-background/foreground transitions, and installation over an existing Outlink
+background/foreground transitions, retained public/private history after force-close,
+independent conversation drafts, paged history, explicit local-history deletion,
+and installation over an existing Outlink
 build. Bundle export and protocol unit tests do not establish radio-level or
 signed binary interoperability.
 
