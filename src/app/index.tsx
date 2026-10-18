@@ -95,11 +95,13 @@ export default function Chats() {
     else await geohashService.send(draft);
     workspaceStore.setState(state => state.drafts[draftKey] === draft ? { drafts: { ...state.drafts, [draftKey]: '' }, ...(mode === 'mesh' && !recipient ? { nearbyOnly: false } : {}) } : state);
   }
-  const hasMeshPeers = mesh.peers.some(p => p.lastSeen > 0 && Date.now() - p.lastSeen < 60_000);
+  // Disconnected peers are marked lastSeen=0 by BitchatSession; avoid a clock read during render.
+  const onlinePeerCount = mesh.peers.filter(p => p.lastSeen > 0).length;
+  const hasMeshPeers = onlinePeerCount > 0;
   const canSendPublicMesh = hasMeshPeers || (workspace.bridge && !workspace.nearbyOnly);
   const isComposing = active || (mode === 'mesh' ? mesh.messages.length > 0 || contacts.length > 0 : geo.messages.length > 0);
   const transportHint = mode === 'mesh'
-    ? `Bluetooth · ${mesh.active ? (hasMeshPeers ? t('mobile.mesh_connected', { count: mesh.peers.filter(p => p.lastSeen > 0 && Date.now() - p.lastSeen < 60_000).length }) : t('mobile.mesh_searching')) : t('mobile.disconnected')}`
+    ? `Bluetooth · ${mesh.active ? (hasMeshPeers ? t('mobile.mesh_connected', { count: onlinePeerCount }) : t('mobile.mesh_searching')) : t('mobile.disconnected')}`
     : `Internet · ${geo.connected > 0 ? t('mobile.relays_connected', { count: geo.connected }) : t('mobile.relays_disconnected')}`;
   if (!ready) return <AppScreen><AppText>Outlink</AppText></AppScreen>;
   return <AppScreen edges={['bottom']}>
