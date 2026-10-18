@@ -159,6 +159,13 @@
     "mesh_join_failed": "Could not start Bluetooth. Check that Bluetooth is enabled and Nearby devices permission is granted.",
     "geo_join_failed": "Could not join this area. Check the area code and internet relay settings.",
     "operation_failed": "Operation failed. Please try again.",
-    "storage_failed": "Could not save local preferences. Check available device storage."
+    "storage_failed": "Could not save local preferences. Check available device storage.",
+    "geo_area_people": "#{{hash}} · {{people}} recently seen",
+    "geo_public_notice": "Public internet channel. Relay operators and anyone listening can read messages and nicknames.",
+    "geo_private_active_notice": "Encrypted private conversation. Verify the public key with your contact before sharing sensitive information.",
+    "channel_rotation_short": "Public identity rotates daily; your nickname may still identify you.",
+    "bridge_relay_status": "Bridge/gateway · {{count}} relay connection(s)",
+    "private_relay_status": "Private mailbox · {{count}} relay connection(s)",
+    "relay_accepted": "Relay accepted"
   }
 }
