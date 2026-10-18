@@ -36,3 +36,19 @@ it('serves only missing public packets and expires history without persisting pr
   expect(cache.entries(now + 21600001)).toHaveLength(0);
   expect(changes).toHaveBeenCalledTimes(4);
 });
+
+it('does not advertise an announcement-only time cursor that would exclude all earlier public history', () => {
+  const cache = new GossipCache(), now = Date.now();
+  cache.add({ version: 2, type: 1, ttl: 7, timestamp: now, sender: '01'.repeat(8), payload: new Uint8Array([1]) });
+  expect(decodeSync(cache.request(now)).since).toBeUndefined();
+});
+
+it('keeps the newest signed generation per prekey owner and caps the prekey gossip cache', () => {
+  const cache = new GossipCache(), now = Date.now();
+  const payload = (generated: number) => { const body = new Uint8Array(11); body.set([3, 0, 8]); new DataView(body.buffer).setBigUint64(3, BigInt(generated)); return body; };
+  for (let i = 0; i < 205; ++i) cache.add({ version: 1, type: 36, ttl: 7, timestamp: now, sender: i.toString(16).padStart(16, '0'), payload: payload(now) });
+  expect(cache.entries(now)).toHaveLength(200);
+  const latest = { version: 1 as const, type: 36, ttl: 7, timestamp: now, sender: '00'.repeat(8), payload: payload(now + 1) };
+  cache.add(latest); cache.add({ ...latest, timestamp: now + 10, payload: payload(now) });
+  expect(cache.entries(now).find(packet => packet.sender === latest.sender)?.payload).toEqual(latest.payload);
+});

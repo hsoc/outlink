@@ -3,7 +3,7 @@ import { createGeohashEvent, normalizeGeoRelays, validateGeohashEvent } from './
 import { normalizeGeohash } from './geohash';
 
 export type GeoMessage = { id: string; pubkey: string; name: string; content: string; timestamp: number;
-  outgoing: boolean; delivery: 'sending' | 'sent' | 'failed' };
+  outgoing: boolean; delivery: 'queued' | 'sending' | 'sent' | 'failed' };
 export interface GeoSocket {
   readyState: number;
   onopen: (() => void) | null; onclose: (() => void) | null; onerror: (() => void) | null;
@@ -11,7 +11,7 @@ export interface GeoSocket {
   send(data: string): void; close(): void;
 }
 export type RelayMode = { subscription: string; filters(): Record<string, unknown>[]; event(value: unknown): void };
-type Callbacks = { message(message: GeoMessage): void; delivery(id: string, status: 'sent' | 'failed'): void;
+type Callbacks = { message(message: GeoMessage): void; delivery(id: string, status: 'queued' | 'sent' | 'failed'): void;
   connection(count: number): void; presence(count: number): void; error(): void };
 type Link = { socket?: GeoSocket; timeout?: ReturnType<typeof setTimeout>; retry?: ReturnType<typeof setTimeout>; opened: boolean; attempts: number;
   rateAt: number; rate: number };
@@ -30,7 +30,7 @@ export class GeohashSession {
   constructor(hash: string, private readonly key: Uint8Array, private readonly name: string,
     private readonly relays: string[], private readonly callbacks: Callbacks,
     private readonly socket: (url: string) => GeoSocket = url => new WebSocket(url) as unknown as GeoSocket,
-    private readonly mode?: RelayMode) {
+    private readonly mode?: RelayMode, private readonly fallback?: (event: Event) => Promise<boolean>) {
     this.hash = normalizeGeohash(hash); this.relays = normalizeGeoRelays(relays);
     this.publicKey = getPublicKey(key);
     if (!name.trim() || new TextEncoder().encode(name).length > 64) throw new Error('Invalid nickname');
@@ -46,6 +46,16 @@ export class GeohashSession {
       for (const [pubkey, at] of this.present) if (at < cutoff) this.present.delete(pubkey);
       this.callbacks.presence(this.present.size);
     }, 60_000);
+  }
+  private previousFilters = '';
+  resubscribe(): void {
+    if (!this.mode || this.stopped) return;
+    const requested = this.mode.filters();
+    const filters = JSON.stringify(requested.map(({ since: _since, until: _until, ...filter }) => filter)); if (filters === this.previousFilters) return;
+    this.previousFilters = filters;
+    for (const link of this.links) if (link.opened && link.socket && requested.length) {
+      try { link.socket.send(JSON.stringify(['REQ', this.mode.subscription, ...requested])); } catch { this.callbacks.error(); }
+    }
   }
   private connections(): void { this.callbacks.connection(this.links.filter(l => l.opened).length); }
   private connect(link: Link, url: string): void {
@@ -67,15 +77,15 @@ export class GeohashSession {
       if (link.retry) { clearTimeout(link.retry); link.retry = undefined; }
       link.opened = true; link.attempts = 0; this.connections();
       try {
-        socket.send(JSON.stringify(['REQ', this.mode?.subscription ?? 'geohash', ...(this.mode?.filters() ?? [{ kinds: [20000, 20001], '#g': [this.hash],
-          since: Math.floor(Date.now() / 1000) - 900, limit: 200 }])]));
+        const filters = this.mode?.filters() ?? [{ kinds: [20000, 20001], '#g': [this.hash], since: Math.floor(Date.now() / 1000) - 900, limit: 200 }];
+        if (filters.length) socket.send(JSON.stringify(['REQ', this.mode?.subscription ?? 'geohash', ...filters]));
         if (!this.mode) this.presence(socket);
       } catch { socket.close(); retry(); }
     };
     socket.onclose = () => { if (current()) retry(); };
     socket.onerror = () => { if (current()) { socket.close(); retry(); } };
     socket.onmessage = ({ data }) => {
-      if (!current() || !link.opened || typeof data !== 'string' || data.length > (this.mode ? 131072 : 16384)) return;
+      if (!current() || !link.opened || typeof data !== 'string' || data.length > (this.mode ? 131072 : 32768)) return;
       const now = Date.now();
       if (now - link.rateAt >= 1000) { link.rateAt = now; link.rate = 0; }
       if (++link.rate > 32) return;
@@ -91,17 +101,16 @@ export class GeohashSession {
       }
       if (frame[0] !== 'EVENT' || frame[1] !== (this.mode?.subscription ?? 'geohash')) return;
       if (this.mode) { try { this.mode.event(frame[2]); } catch { this.callbacks.error(); } return; }
-      const event = validateGeohashEvent(frame[2], this.hash);
-      if (!event || this.seen.has(event.id)) return;
-      this.seen.add(event.id);
-      if (this.seen.size > 2048) this.seen.delete(this.seen.values().next().value!);
-      if (!this.present.has(event.pubkey) && this.present.size >= 256) this.present.delete(this.present.keys().next().value!);
-      this.present.set(event.pubkey, now); this.callbacks.presence(this.present.size);
-      if (event.kind === 20000) {
-        const message = this.message(event, event.pubkey === this.publicKey);
-        message.delivery = 'sent'; this.callbacks.message(message);
-      }
+      this.acceptEvent(frame[2]);
     };
+  }
+  acceptEvent(value: unknown): void {
+    if (this.stopped || this.mode) return;
+    const event = validateGeohashEvent(value, this.hash); if (!event || this.seen.has(event.id)) return;
+    this.seen.add(event.id); if (this.seen.size > 2048) this.seen.delete(this.seen.values().next().value!);
+    if (!this.present.has(event.pubkey) && this.present.size >= 256) this.present.delete(this.present.keys().next().value!);
+    this.present.set(event.pubkey, Date.now()); this.callbacks.presence(this.present.size);
+    if (event.kind === 20000) { const message = this.message(event, event.pubkey === this.publicKey); message.delivery = 'sent'; this.callbacks.message(message); }
   }
   private message(event: Event, outgoing: boolean): GeoMessage {
     return { id: event.id, pubkey: event.pubkey, name: event.tags.find(t => t[0] === 'n')?.[1]?.slice(0, 64) || event.pubkey.slice(0, 8),
@@ -117,7 +126,7 @@ export class GeohashSession {
   async send(content: string): Promise<void> {
     if (this.stopped || this.pending.size >= 8) throw new Error('Channel is not ready');
     const sockets = this.links.filter(l => l.opened && l.socket?.readyState === 1).map(l => l.socket!);
-    if (!sockets.length) throw new Error('No relay is connected');
+    if (!sockets.length && !this.fallback) throw new Error('No relay is connected');
     const event = createGeohashEvent(this.key, this.hash, this.name, content);
     this.seen.add(event.id);
     if (this.seen.size > 2048) this.seen.delete(this.seen.values().next().value!);
@@ -125,7 +134,10 @@ export class GeohashSession {
     try {
       await this.publish(event);
       this.callbacks.delivery(event.id, 'sent');
-    } catch (error) { this.callbacks.delivery(event.id, 'failed'); throw error; }
+    } catch (error) {
+      if (this.fallback && await this.fallback(event)) { this.callbacks.delivery(event.id, 'queued'); return; }
+      this.callbacks.delivery(event.id, 'failed'); throw error;
+    }
   }
   async publish(event: Event): Promise<void> {
     if (this.stopped || this.pending.size >= 8 || getEventHash(event) !== event.id || !verifyEvent(event)) throw new Error('Relay is not ready or event is invalid');

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
+import { NetworkSettings } from '@/components/bitchat/NetworkSettings';
 import { ContactSettings } from '@/components/bitchat/ContactSettings';
 import { panicWipe } from '@/services/bitchat/panic';
 import { restoreWorkspace, workspaceStore } from '@/services/history/workspace';
@@ -18,7 +19,7 @@ import { useThemeStore } from '@/stores/theme.store';
 import { spacing, ACCENT_KEYS } from '@/theme';
 export default function Settings() {
   const workspace = useStore(workspaceStore);
-  const [erased, setErased] = useState(false), [contactsBusy, setContactsBusy] = useState(false);
+  const [erased, setErased] = useState(false), [contactsBusy, setContactsBusy] = useState(false), [networkBusy, setNetworkBusy] = useState(false);
   const [clearing, setClearing] = useState(false), [failed, setFailed] = useState(false);
   useEffect(() => { void restoreWorkspace().catch(() => setFailed(true)); }, []);
   const { t } = useTranslation(), top = useScreenHeaderClearance();
@@ -30,15 +31,16 @@ export default function Settings() {
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>{ACCENT_KEYS.map(value => <AppButton key={value} label={t(`appearance.colors.${value}`)} variant="secondary"
       fullWidth={false} selected={accent === value} onPress={() => useThemeStore.getState().setAccent(value)} />)}</View>
     <ContactSettings key={erased ? 'fresh' : 'current'} onBusyChange={setContactsBusy} />
+    <NetworkSettings disabled={clearing || contactsBusy} onBusyChange={setNetworkBusy} />
     <AppText variant="subtitle">{t('mobile.internet_private')}</AppText>
     <AppText tone="muted">{t('mobile.internet_private_hint')}</AppText>
-    <AppButton label={t(workspace.internet ? 'mobile.disable' : 'mobile.enable')} variant="secondary" disabled={clearing || contactsBusy || !workspace.ready} onPress={() => void (async () => {
+    <AppButton label={t(workspace.internet ? 'mobile.disable' : 'mobile.enable')} variant="secondary" disabled={clearing || contactsBusy || networkBusy || !workspace.ready} onPress={() => void (async () => {
       setClearing(true); setFailed(false);
       try { const enabled = !workspace.internet; await bitchatService.enableInternet(enabled, workspace.relays.split(/\s+/).filter(Boolean)); workspaceStore.setState({ internet: enabled }); }
       catch { setFailed(true); } finally { setClearing(false); }
     })()} />
     <AppText tone="muted">{t('mobile.storage_note')}</AppText>
-    <AppButton label={t('mobile.clear_history')} variant="secondary" disabled={clearing || contactsBusy} onPress={() => void (async () => {
+    <AppButton label={t('mobile.clear_history')} variant="secondary" disabled={clearing || contactsBusy || networkBusy} onPress={() => void (async () => {
       if (!await platform.confirmationDialog.confirm(t('mobile.clear_history'), t('mobile.clear_confirm'), t('mobile.cancel'), t('mobile.clear_history'))) return;
       setClearing(true); setFailed(false);
       bitchatService.clearMessages(); geohashService.clearMessages();
@@ -46,7 +48,7 @@ export default function Settings() {
       try { await clearHistory(); } catch { setFailed(true); } finally { setClearing(false); }
     })()} />
     <AppText variant="caption" tone="muted">{t('mobile.queue_retention_note')}</AppText>
-    <AppButton label={t('mobile.wipe_identity')} variant="secondary" disabled={clearing || contactsBusy} onPress={() => void (async () => {
+    <AppButton label={t('mobile.wipe_identity')} variant="secondary" disabled={clearing || contactsBusy || networkBusy} onPress={() => void (async () => {
       if (!await platform.confirmationDialog.confirm(t('mobile.wipe_identity'), t('mobile.wipe_confirm'), t('mobile.cancel'), t('mobile.wipe_identity'))) return;
       setClearing(true); setFailed(false);
       try { await panicWipe(); setErased(value => !value); } catch { setFailed(true); } finally { setClearing(false); }

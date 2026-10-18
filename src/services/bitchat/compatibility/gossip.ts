@@ -94,22 +94,30 @@ export class GossipCache {
   private remove(id: string) { const old = this.packets.get(id); if (old) { this.total -= old.payload.length; this.packets.delete(id); this.onChange?.(id); } }
   add(packet: BitchatPacket, persist = true) {
     if (!isBroadcast(packet) || ![1, 2, 32, 34, 35, 36, 37].includes(packet.type) || packet.payload.length > 8 * 1024 * 1024) return;
+    if (packet.type === 36) {
+      const generated = number(required(fields16(packet.payload, 1024), 3), 8);
+      for (const old of this.packets.values()) if (old.type === 36 && old.sender === packet.sender && number(required(fields16(old.payload, 1024), 3), 8) >= generated) return;
+    }
     const id = bytesToHex(gossipId(packet));
     if (this.packets.has(id)) return;
-    if (packet.type === 1) for (const [key, old] of this.packets) if (old.type === 1 && old.sender === packet.sender) this.remove(key);
+    if (packet.type === 1 || packet.type === 36) for (const [key, old] of this.packets) if (old.type === packet.type && old.sender === packet.sender) this.remove(key);
     this.packets.set(id, packet); this.total += packet.payload.length;
     if (persist) this.onChange?.(id, packet);
+    if (packet.type === 36) {
+      const bundles = [...this.packets].filter(([, value]) => value.type === 36).sort(([, a], [, b]) => a.timestamp - b.timestamp);
+      while (bundles.length > 200) this.remove(bundles.shift()![0]);
+    }
     while (this.packets.size > 1000 || this.total > 8 * 1024 * 1024) this.remove(this.packets.keys().next().value!);
   }
   request(now = Date.now()): Uint8Array {
-    const packets = this.entries(now).filter(packet => [1, 2].includes(packet.type)).sort((a, b) => b.timestamp - a.timestamp);
+    const packets = this.entries(now).filter(packet => [1, 2, 36].includes(packet.type)).sort((a, b) => b.timestamp - a.timestamp);
     const filter = buildFilter(packets.map(gossipId));
-    return encodeSync({ ...filter, types: 3, since: filter.included ? packets[filter.included - 1].timestamp : undefined });
+    return encodeSync({ ...filter, types: 515, since: filter.included && filter.included < packets.length ? packets[filter.included - 1].timestamp : undefined });
   }
   missing(request: SyncRequest, now = Date.now()): BitchatPacket[] {
     const known = new Set(decodeFilter(request.p, request.m, request.data));
     return this.entries(now).filter(packet => syncIncludes(request.types, packet.type) &&
-      (packet.type === 1 || request.since === undefined || packet.timestamp >= request.since) && !known.has(bucket(gossipId(packet), request.m)))
+      ([1, 36].includes(packet.type) || request.since === undefined || packet.timestamp >= request.since) && !known.has(bucket(gossipId(packet), request.m)))
       .sort((a, b) => (a.type === 1 ? 0 : 1) - (b.type === 1 ? 0 : 1) || a.timestamp - b.timestamp);
   }
 }

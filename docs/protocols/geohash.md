@@ -36,23 +36,26 @@ history. Signed timestamps beyond 60 seconds in the future or older than the
 lookback, expired events, invalid canonical IDs/signatures, malformed tags,
 and wrong/duplicate channel tags are rejected. Relays remain untrusted.
 
-Messages are limited to 4096 UTF-8 bytes. JSON frames are capped at 16 KiB and
+Messages are limited to 16000 UTF-8 bytes. JSON frames are capped at 32 KiB and
 32 frames per second per relay before signature work. There are at most six
-relays, eight pending publishes, 500 visible messages, and 2048 deduplication IDs.
+relays per session, eight pending publishes, 500 visible messages, and 2048 deduplication IDs.
 Relays reconnect with bounded exponential delay while the channel is open.
 Duplicate events from multiple relays are shown once. Late callbacks after
 leaving cannot reactivate the session.
 
 Publish waits up to eight seconds for an affirmative NIP-01 OK from any connected
 relay. Negative replies from every attempted relay, timeout, or leave fail the
-send. Sent means a relay acknowledged acceptance, not that another person read
+send unless an advertised Bluetooth gateway accepts a fallback handoff. That
+handoff stays queued because it does not prove relay acceptance. Sent means a relay acknowledged acceptance, not that another person read
 it. Bluetooth delivery/read receipts are independent.
 
 ## Deliberate omissions
 
-No high-difficulty proof-of-work mining, georelay directory/map, location notes,
-Nostr private envelopes, cross-transport mesh bridging, media, moderation lists,
-Tor, or background/push delivery is included. A relay requiring positive proof
+A pinned public directory selects up to five nearby area relays by default;
+custom relay addresses remain available. The [courier and bridge runtime](courier-and-bridge.md)
+adds optional public gateway/bridge forwarding and encrypted courier mailboxes.
+No high-difficulty proof-of-work mining, live directory refresh/map, location
+notes, media, moderation lists, Tor, or background/push delivery is included. A relay requiring positive proof
 of work may reject a publish; rejection is surfaced rather than shown as sent.
 Do not treat a geohash tag, nickname, or signature as proof of physical location
 or real-world identity. Channel contents and metadata are public.

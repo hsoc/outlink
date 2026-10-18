@@ -1,3 +1,4 @@
+import type { Event } from 'nostr-tools/pure';
 import { loadMessages, saveMessage } from '@/services/history/history';
 import { createStore } from 'zustand/vanilla';
 import { hexToBytes } from '@noble/hashes/utils.js';
@@ -19,6 +20,8 @@ geohashStore.subscribe((state, previous) => {
   }
 });
 class GeohashService {
+  meshFallback?: (event: Event, hash: string) => Promise<boolean>;
+  acceptCarrier(event: Event, hash: string) { if (this.connection?.hash === hash) this.session?.acceptEvent(event); }
   connection?: { hash: string; name: string; relays: string[] };
   private historyVersion = 0;
   clearMessages(): void {
@@ -71,7 +74,7 @@ class GeohashService {
         connection: connected => { if (current()) geohashStore.setState({ connected }); },
         presence: present => { if (current()) geohashStore.setState({ present }); },
         error: () => { if (current()) geohashStore.setState({ error: true }); },
-      });
+      }, undefined, undefined, event => this.meshFallback?.(event, hash) ?? Promise.resolve(false));
       this.connection = { hash, name, relays };
       this.session.start(); geohashStore.setState({ active: true, busy: false });
     } catch (error) { if (revision === this.revision) { this.stop(); geohashStore.setState({ error: true }); } throw error; }

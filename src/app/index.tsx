@@ -1,3 +1,5 @@
+import { sessionIntent } from '@/services/history/lifecycle';
+import { areaRelays } from '@/services/geohash/relay-directory';
 import { contactsStore, contactsService } from '@/services/bitchat/compatibility/contacts';
 import { workspaceStore, restoreWorkspace } from '@/services/history/workspace';
 import { useEffect, useState, useMemo } from 'react';
@@ -72,14 +74,17 @@ export default function Chats() {
     try { await task(); } catch { setError(true); } finally { setWorking(false); }
   }
   async function join() {
+    const intent = sessionIntent();
     await setDevicePreference('mobile.nickname', name.trim());
-    if (mode === 'mesh') await bitchatService.start(await mobileIdentity(), name.trim());
-    else await geohashService.join(hash, name.trim(), relays.split(/\s+/).filter(Boolean));
+    const identity = mode === 'mesh' ? await mobileIdentity() : undefined;
+    if (intent !== sessionIntent()) throw new Error('Join canceled');
+    if (identity) await bitchatService.start(identity, name.trim());
+    else { await geohashService.join(hash, name.trim(), workspace.autoAreaRelays ? areaRelays(hash) : relays.split(/\s+/).filter(Boolean)); await bitchatService.refreshNetwork(); }
   }
   async function send() {
-    if (mode === 'mesh') await bitchatService.send(draft, recipient);
+    if (mode === 'mesh') await bitchatService.send(draft, recipient, workspace.nearbyOnly);
     else await geohashService.send(draft);
-    workspaceStore.setState(state => state.drafts[draftKey] === draft ? { drafts: { ...state.drafts, [draftKey]: '' } } : state);
+    workspaceStore.setState(state => state.drafts[draftKey] === draft ? { drafts: { ...state.drafts, [draftKey]: '' }, ...(mode === 'mesh' && !recipient ? { nearbyOnly: false } : {}) } : state);
   }
   if (!ready) return <AppScreen><AppText>Outlink</AppText></AppScreen>;
   return <AppScreen edges={['bottom']}>
@@ -103,7 +108,7 @@ export default function Chats() {
           <AppButton label={t('mobile.use_location')} variant="secondary" disabled={busy}
             onPress={() => void operate(async () => { setHash(await geohashService.nearby(precision)); })} />
           <AppText variant="caption" tone="muted">{t('mobile.location_hint')}</AppText>
-          <AppInput label={t('mobile.relays')} value={relays} onChangeText={setRelays} multiline autoCapitalize="none" autoCorrect={false} maxLength={1536} />
+          {workspace.autoAreaRelays ? <AppText variant="caption" tone="muted" selectable>{t('mobile.automatic_area_hint')}{'\n'}{(() => { try { return areaRelays(hash).join('\n'); } catch { return ''; } })()}</AppText> : <AppInput label={t('mobile.relays')} value={relays} onChangeText={setRelays} multiline autoCapitalize="none" autoCorrect={false} maxLength={1536} />}
         </>}
         <AppButton label={t('mobile.join')} loading={busy} disabled={!ready || !name.trim() || bytes(name.trim()).length > 64}
           onPress={() => void operate(join)} />
@@ -113,7 +118,7 @@ export default function Chats() {
           ListHeaderComponent={<AppButton label={t('bitchat.public')} variant="secondary" fullWidth={false} selected={!recipient} onPress={() => setRecipient(undefined)} />}
           renderItem={({ item: p }) => <AppButton label={p.name} variant="secondary" fullWidth={false}
             selected={recipient === p.id} onPress={() => setRecipient(p.id)} />} /> : <AppText variant="caption" tone="muted">{t('mobile.geo_status', { hash: geo.hash, count: geo.connected, people: geo.present })}</AppText>}
-        <AppText variant="caption" tone="muted">{t(mode === 'geo' ? 'mobile.geo_privacy' : recipient ? 'bitchat.private_notice' : 'bitchat.public_notice')}</AppText>
+        <AppText variant="caption" tone="muted">{t(mode === 'geo' ? 'mobile.geo_privacy' : recipient ? 'bitchat.private_notice' : workspace.bridge && !workspace.nearbyOnly ? 'mobile.bridge_notice' : 'bitchat.public_notice')}</AppText>
         {mode === 'mesh' && peer ? <AppText variant="caption" selectable tone="muted">{t('bitchat.fingerprint', { value: peer.fingerprint })}</AppText> : null}
         <AppButton label={t('mobile.older')} variant="text" disabled={busy} onPress={() => void operate(() => mode === 'mesh' ? bitchatService.older() : geohashService.older())} />
         <AppButton label={t('mobile.latest')} variant="text" disabled={busy} onPress={() => void operate(() => mode === 'mesh' ? bitchatService.latest() : geohashService.restore(geo.hash))} />
@@ -121,14 +126,16 @@ export default function Chats() {
           contentContainerStyle={{ gap: spacing.sm, paddingBottom: spacing.md }}
           renderItem={({ item }) => <View style={{ padding: spacing.md, borderRadius: radius.lg, backgroundColor: item.outgoing ? c.accentSoft : c.surface }}>
             <AppText variant="caption" tone="muted" selectable accessibilityLabel={item.name + ('pubkey' in item ? ' · ' + item.pubkey : '')}>{item.name}{'pubkey' in item ? ' · ' + item.pubkey.slice(0, 8) : ''}</AppText><AppText selectable>{item.content}</AppText>
+            {'bridge' in item && item.bridge && <AppText variant="caption" tone="muted">{t('mobile.via_bridge')}</AppText>}
             {item.outgoing && <AppText variant="caption" tone="muted">{t(`bitchat.${item.delivery}`)}</AppText>}
           </View>}
           ListEmptyComponent={<View style={{ gap: spacing.md, paddingVertical: spacing.lg }}>
             <Radar size={uiDensity.iconButtonSize} color={c.textMuted} /><AppText variant="subtitle">{t('bitchat.empty')}</AppText>
             <AppText tone="muted">{t(mode === 'geo' ? 'mobile.geo_empty_hint' : 'bitchat.empty_hint')}</AppText>
           </View>} />
+        {mode === 'mesh' && !recipient && workspace.bridge && <AppButton label={t('mobile.nearby_only')} variant="secondary" selected={workspace.nearbyOnly} disabled={busy} onPress={() => workspaceStore.setState({ nearbyOnly: !workspace.nearbyOnly })} />}
         <AppInput label={t('bitchat.message')} value={draft} onChangeText={setDraft} multiline maxLength={mode === 'mesh' ? 255 : MAX_GEO_CONTENT_BYTES} />
-        <AppButton label={t('bitchat.send')} loading={working} disabled={(!active && !(mode === 'mesh' && recipient && contactsService.get(recipient))) || busy || !draft.trim() || bytes(draft).length > (mode === 'mesh' ? 255 : MAX_GEO_CONTENT_BYTES) || (mode === 'geo' && !geo.connected)}
+        <AppButton label={t('bitchat.send')} loading={working} disabled={(!active && !(mode === 'mesh' && recipient && contactsService.get(recipient))) || busy || !draft.trim() || bytes(draft).length > (mode === 'mesh' ? 255 : MAX_GEO_CONTENT_BYTES) || (mode === 'geo' && !geo.connected && !bitchatService.hasGateway())}
           onPress={() => void operate(send)} />
         <AppButton label={t('bitchat.leave')} variant="text" disabled={busy} onPress={() => void operate(async () => {
           if (mode === 'mesh') await bitchatService.stop(); else geohashService.stop(); setRecipient(undefined);

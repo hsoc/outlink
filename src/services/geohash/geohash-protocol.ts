@@ -5,7 +5,7 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import { secp256k1 } from '@noble/curves/secp256k1.js';
 import { normalizeGeohash } from './geohash';
 
-export const MAX_GEO_CONTENT_BYTES = 4096;
+export const MAX_GEO_CONTENT_BYTES = 16000;
 const encoder = new TextEncoder();
 export function channelKey(master: Uint8Array, geohash: string): Uint8Array {
   const hash = normalizeGeohash(geohash);
@@ -18,7 +18,7 @@ export function createGeohashEvent(secret: Uint8Array, geohash: string, nickname
   content: string, presence = false, now = Math.floor(Date.now() / 1000)): Event {
   const hash = normalizeGeohash(geohash);
   if (!presence && (!content.trim() || encoder.encode(content).length > MAX_GEO_CONTENT_BYTES))
-    throw new Error('Message must fit 4096 UTF-8 bytes');
+    throw new Error('Message must fit 16000 UTF-8 bytes');
   if (!nickname.trim() || encoder.encode(nickname).length > 64) throw new Error('Invalid nickname');
   return finalizeEvent({ kind: presence ? 20001 : 20000, created_at: now,
     tags: presence ? [['g', hash]] : [['g', hash], ['n', nickname.trim()], ['nonce', BigInt('0x' + bytesToHex(randomBytes(8))).toString(), '0']], content: presence ? '' : content }, secret);

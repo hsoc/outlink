@@ -1,0 +1,7 @@
+{
+  "source": "https://github.com/permissionlesstech/bitchat/blob/5e9287fae1e5fea80ca741d4ea669829dc16f144/relays/online_relays_gps.csv",
+  "revision": "5e9287fae1e5fea80ca741d4ea669829dc16f144",
+  "sha256": "811523100064820b024714eaf3bbe0a9ba99a3c257e453e01bc1bc0f3bf8401a",
+  "entries": 441,
+  "note": "Public relay-address/location data only; no upstream implementation source."
+}

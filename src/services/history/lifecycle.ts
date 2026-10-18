@@ -1,5 +1,6 @@
 import type { AppStateStatus } from '@/platform/ports';
 let intentEpoch = 0;
+export const sessionIntent = () => intentEpoch;
 export const invalidateSessionIntent = () => { ++intentEpoch; };
 interface MeshConnection { account: string; name: string }
 interface GeoConnection { hash: string; name: string; relays: string[] }

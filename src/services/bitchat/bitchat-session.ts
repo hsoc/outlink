@@ -10,20 +10,24 @@ import { BitchatFragments, fragmentPacket } from './bitchat-fragments';
 import { BITCHAT_TTL, BitchatType, bytes, decodePacket, decodeTlv, encodeTlv, join,
   packetId, peerId, signPacket, text, verifyPacket, isBroadcast, type BitchatPacket } from './bitchat-wire';
 
+export type ExtensionContext = { link: string; boundPeer?: string; authenticated: boolean; noiseKey?: Uint8Array; signingKey?: Uint8Array };
 export type MeshPingResult = { rttMs: number; hops?: number };
 export type BitchatIdentity = { noiseSeed: Uint8Array; noisePublicKey: Uint8Array; signingSeed: Uint8Array };
-export type BitchatPeer = { id: string; name: string; fingerprint: string; lastSeen: number; secure: boolean; noisePublicKey?: string; signingPublicKey?: string };
+export type BitchatPeer = { id: string; name: string; fingerprint: string; lastSeen: number; secure: boolean; capabilities?: number; direct?: boolean; authenticatedLink?: boolean; noisePublicKey?: string; signingPublicKey?: string };
 export type BitchatMessage = { id: string; peer: string; recipient?: string; name: string; content: string;
-  timestamp: number; outgoing: boolean; delivery: 'queued' | 'carried' | 'sending' | 'sent' | 'delivered' | 'read' | 'failed' };
+  timestamp: number; bridge?: { pubkey: string; radioHint?: string }; outgoing: boolean; delivery: 'queued' | 'carried' | 'sending' | 'sent' | 'delivered' | 'read' | 'failed' };
 type KnownPeer = BitchatPeer & { ingress: string; noiseKey: Uint8Array; signingKey: Uint8Array };
 type Negotiation = { handshake: BitchatHandshake; at: number; promise: Promise<void>;
   resolve: () => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> };
-type Callbacks = { peer: (peer: BitchatPeer) => void; message: (message: BitchatMessage) => void;
+type Callbacks = { extension?(packet: BitchatPacket, context: ExtensionContext): Promise<boolean>; peer: (peer: BitchatPeer) => void; message: (message: BitchatMessage) => void;
   receipt: (id: string, sender: string, status: 'sent' | 'delivered' | 'read' | 'failed') => void; error: (error: Error) => void };
 
 /** MIT implementation of the Bitchat bearer/session rules, with bounded ephemeral state. */
 export class BitchatSession {
   readonly id: string;
+  private capabilities = 0;
+  private readonly pendingPrekeys = new Map<string, { packet: BitchatPacket; ingress: string }>();
+  private readonly authenticatedLinks = new Map<string, string>();
   private readonly pings = new Map<string, { peer: string; at: number; timer: ReturnType<typeof setTimeout>; resolve(result: MeshPingResult): void; reject(error: Error): void }>();
   private readonly pingResponses = new Map<string, number[]>();
   private readonly routing = new MeshRouting();
@@ -83,7 +87,7 @@ export class BitchatSession {
       }),
       this.transport.addListener('onConnection', (e) => {
         if (e.state !== 'disconnected' || typeof e.endpointId !== 'string') return;
-        this.links.delete(e.endpointId); this.pingResponses.delete(e.endpointId); this.directHints.delete(e.endpointId); this.refreshTopology(); this.outboundTimes.delete(e.endpointId);
+        this.links.delete(e.endpointId); this.authenticatedLinks.delete(e.endpointId); this.pingResponses.delete(e.endpointId); this.directHints.delete(e.endpointId); this.refreshTopology(); this.outboundTimes.delete(e.endpointId);
         this.syncRequests.delete(e.endpointId); this.syncResponses.delete(e.endpointId);
         const wait = this.sendWaits.get(e.endpointId);
         if (wait) { clearTimeout(wait.timer); wait.resolve(); this.sendWaits.delete(e.endpointId); }
@@ -103,7 +107,7 @@ export class BitchatSession {
         if (rate.count++ >= 64 || this.queued >= 128 || wire.length > 128 * 1024 + 512) return;
         if (this.rates.size < 64 || this.rates.has(endpoint)) this.rates.set(endpoint, rate);
         this.queued++;
-        this.queue = this.queue.then(async () => { if (this.running) await this.receive(wire, endpoint); })
+        this.queue = this.queue.then(async () => { await new Promise(resolve => setTimeout(resolve, 0)); if (this.running) await this.receive(wire, endpoint); })
           .catch(() => { /* Reject malformed or unauthenticated radio traffic silently. */ }).finally(() => { this.queued--; });
       }),
     ];
@@ -130,6 +134,34 @@ export class BitchatSession {
     for (const endpoint of this.links) void this.requestHistory(endpoint).catch(error => this.report(error));
     this.timer = setTimeout(() => this.tick(), this.links.size ? 15_000 : 4000);
   }
+  private capabilityBytes(): Uint8Array { return this.capabilities > 255 ? Uint8Array.of(this.capabilities & 255, this.capabilities >>> 8) : Uint8Array.of(this.capabilities); }
+  setCapabilities(value: number) {
+    if (!Number.isInteger(value) || value < 0 || value > 65535) throw new Error('Invalid capabilities');
+    this.capabilities = value;
+    if (this.running) void this.broadcast(this.announcement()).catch(error => this.report(error));
+  }
+  authenticatedDirect(peer: string): boolean { return [...this.authenticatedLinks].some(([link, id]) => id === peer && this.links.has(link) && this.directHints.get(link) === peer && this.ciphers.has(peer)); }
+  directPeers(): string[] { return [...new Set(this.directHints.values())]; }
+  async authenticateDirect(peer: string): Promise<void> {
+    if (!this.directLink(peer)) throw new Error('Peer is not directly connected');
+    if (this.authenticatedDirect(peer)) return;
+    const old = this.ciphers.get(peer); if (old) { old.cipher.destroy(); this.ciphers.delete(peer); }
+    await this.ensureCipher(peer);
+    if (!this.authenticatedDirect(peer)) throw new Error('Direct link authentication failed');
+  }
+  async sendExtension(type: number, payload: Uint8Array, peer?: string, direct = false): Promise<void> {
+    if (![BitchatType.courier, BitchatType.prekeys, BitchatType.carrier].includes(type as 4 | 36 | 40)) throw new Error('Unsupported extension');
+    const link = peer && direct ? [...this.authenticatedLinks].find(([link, id]) => id === peer && this.links.has(link) && this.directHints.get(link) === peer)?.[0] : undefined;
+    if (direct && (!peer || !link || !this.authenticatedDirect(peer))) throw new Error('Authenticated direct link required');
+    const packet = signPacket(this.packet(type, payload, peer), this.identity.signingSeed);
+    await this.broadcast(packet, undefined, link);
+    if (type === BitchatType.prekeys) this.gossip.add(packet);
+  }
+  async sendReceipt(peer: string, id: string, status: 'delivered' | 'read') {
+    if (!id || bytes(id).length > 255) throw new Error('Invalid receipt ID');
+    const cipher = await this.ensureCipher(peer);
+    await this.broadcast(this.packet(BitchatType.encrypted, cipher.seal(join(Uint8Array.of(status === 'read' ? 2 : 3), bytes(id))), peer));
+  }
   private packet(type: number, payload: Uint8Array, recipient?: string): BitchatPacket {
     return { version: 1, type, ttl: BITCHAT_TTL, timestamp: Date.now(), sender: this.id, recipient, payload };
   }
@@ -146,7 +178,7 @@ export class BitchatSession {
     this.refreshTopology();
     const packet = signPacket({ ...this.packet(BitchatType.announce, encodeTlv([
       [1, bytes(this.name)], [2, this.identity.noisePublicKey], [3, this.signingKey],
-      [4, join(...[...new Set(this.directHints.values())].slice(0, 10).map(hexToBytes))], [5, Uint8Array.of(0)],
+      [4, join(...[...new Set(this.directHints.values())].slice(0, 10).map(hexToBytes))], [5, this.capabilityBytes()],
     ])), version: 2 }, this.identity.signingSeed);
     this.gossip.add(packet); return packet;
   }
@@ -203,12 +235,14 @@ export class BitchatSession {
     }
     throw new Error('Bitchat link is stopped');
   }
-  async sendPublic(content: string): Promise<void> {
+  async sendPublic(content: string, allowIsolated = false): Promise<BitchatMessage> {
     if (!content.trim() || bytes(content).length > 255) throw new Error('Message must fit 255 UTF-8 bytes');
     const packet = signPacket(this.packet(BitchatType.message, bytes(content)), this.identity.signingSeed);
-    await this.broadcast(packet); this.remember(this.seen, packetId(packet)); this.gossip.add(packet);
-    this.callbacks.message({ id: packetId(packet), peer: this.id, name: this.name, content,
-      timestamp: packet.timestamp, outgoing: true, delivery: 'sent' });
+    if (this.links.size || !allowIsolated) await this.broadcast(packet);
+    this.remember(this.seen, packetId(packet)); this.gossip.add(packet);
+    const message: BitchatMessage = { id: packetId(packet), peer: this.id, name: this.name, content,
+      timestamp: packet.timestamp, outgoing: true, delivery: this.links.size ? 'sent' : 'queued' };
+    this.callbacks.message(message); return message;
   }
   private remember(cache: Map<string, number>, key: string): boolean {
     if (cache.has(key)) return false;
@@ -310,11 +344,15 @@ export class BitchatSession {
     const inflate = this.transport.inflateRawAsync?.bind(this.transport);
     let packet = await decodePacket(wire, inflate);
     if (!this.running) return;
-    if (packet.sender === this.id || Math.abs(Date.now() - packet.timestamp) > 6 * 3600_000) return;
+    const prekey = packet.type === BitchatType.prekeys || packet.type === BitchatType.fragment && packet.payload[12] === BitchatType.prekeys;
+    if (packet.sender === this.id || Math.abs(Date.now() - packet.timestamp) > (prekey ? 24 : 6) * 3600_000) return;
     const solicited = !!packet.rsr && (this.syncRequests.get(ingress) ?? 0) >= Date.now();
     if (packet.rsr && !solicited) return;
     const incomingId = packetId(packet);
-    const duplicate = !this.remember(this.seen, incomingId);
+    const duplicate = this.seen.has(incomingId);
+    // Only fragments enter dedup before final authentication; complete packets
+    // must remain retryable if their author's announcement has not arrived yet.
+    if (packet.type === BitchatType.fragment && !duplicate) this.remember(this.seen, incomingId);
     if (duplicate) {
       const scheduled = this.relays.get(incomingId);
       if (scheduled) { clearTimeout(scheduled); this.relays.delete(incomingId); }
@@ -327,7 +365,7 @@ export class BitchatSession {
       if (packet.ttl > 1 && packet.payload[12] !== BitchatType.sync) this.forward(packet, ingress);
       const complete = await this.fragments.accept(packet, Date.now(), inflate);
       if (!complete || !this.running) return; packet = complete;
-      if (!this.remember(this.seen, packetId(packet)) && (packet.type !== BitchatType.announce || solicited)) return;
+      if (this.seen.has(packetId(packet)) && (packet.type !== BitchatType.announce || solicited)) return;
     }
     if (packet.type === BitchatType.announce) {
       if (!solicited && Math.abs(Date.now() - packet.timestamp) > 60_000) return;
@@ -339,12 +377,13 @@ export class BitchatSession {
       if (pin && (pin.noiseKey !== bytesToHex(noiseKey) || pin.signingKey !== bytesToHex(signingKey))) return;
       const neighbors = f.get(4);
       if (neighbors && (neighbors.length > 80 || neighbors.length % 8)) return;
+      const capability = f.get(5); if (capability && (!capability.length || capability.length > 8)) return;
       const previous = this.peers.get(packet.sender);
       if (previous && (!previous.noiseKey.every((v, i) => v === noiseKey[i]) ||
           !previous.signingKey.every((v, i) => v === signingKey[i]))) return;
       if (!previous && this.peers.size >= 256) return;
       const peer: KnownPeer = { id: packet.sender, name, noiseKey, signingKey, ingress,
-        noisePublicKey: bytesToHex(noiseKey), signingPublicKey: bytesToHex(signingKey), fingerprint: bytesToHex(sha256(noiseKey)), lastSeen: solicited ? previous?.lastSeen ?? 0 : Date.now(), secure: this.ciphers.has(packet.sender) };
+        capabilities: (capability?.[0] ?? 0) | (capability?.[1] ?? 0) << 8, direct: packet.ttl === BITCHAT_TTL && !solicited, authenticatedLink: this.authenticatedDirect(packet.sender), noisePublicKey: bytesToHex(noiseKey), signingPublicKey: bytesToHex(signingKey), fingerprint: bytesToHex(sha256(noiseKey)), lastSeen: solicited ? previous?.lastSeen ?? 0 : Date.now(), secure: this.ciphers.has(packet.sender) };
       this.peers.set(packet.sender, peer); this.callbacks.peer(peer); this.gossip.add(packet);
       if (!solicited) {
         this.routing.update(peer.id, neighbors ? Array.from({ length: neighbors.length / 8 }, (_, index) => bytesToHex(neighbors.subarray(index * 8, index * 8 + 8))) : [], packet.version);
@@ -353,6 +392,11 @@ export class BitchatSession {
           this.directHints.set(ingress, peer.id); this.refreshTopology();
           if (!this.topologyTimer) this.topologyTimer = setTimeout(() => { this.topologyTimer = undefined; if (this.running) void this.broadcast(this.announcement()).catch(error => this.report(error)); }, 50);
         }
+      }
+      const pending = this.pendingPrekeys.get(peer.id); this.pendingPrekeys.delete(peer.id);
+      if (pending && Math.abs(Date.now() - pending.packet.timestamp) <= 86400000 && verifyPacket(pending.packet, signingKey)) {
+        const accepted = await this.callbacks.extension?.(pending.packet, { link: pending.ingress, boundPeer: this.directHints.get(pending.ingress), authenticated: false, noiseKey, signingKey });
+        if (accepted) { this.gossip.add(pending.packet); this.remember(this.seen, packetId(pending.packet)); if (!pending.packet.rsr && pending.packet.ttl > 1) this.forward(pending.packet, pending.ingress); }
       }
       if (!previous && !solicited) void this.requestHistory(ingress).catch(error => this.report(error));
     } else if ((packet.type === BitchatType.message || packet.type === BitchatType.leave)) {
@@ -371,6 +415,7 @@ export class BitchatSession {
       if (recent.length >= 8 || this.syncSending.has(ingress)) return;
       recent.push(now); this.syncResponses.set(ingress, recent);
       const missing = this.gossip.missing(decodeSync(packet.payload));
+      this.remember(this.seen, packetId(packet));
       this.syncSending.add(ingress);
       void (async () => {
         try {
@@ -382,6 +427,18 @@ export class BitchatSession {
         finally { this.syncSending.delete(ingress); }
       })();
       return;
+    } else if ([BitchatType.courier, BitchatType.prekeys, BitchatType.carrier].includes(packet.type as 4 | 36 | 40)) {
+      const known = this.peers.get(packet.sender);
+      if (packet.type === BitchatType.prekeys && !known) {
+        if (packet.payload.length <= 1024 && (this.pendingPrekeys.has(packet.sender) || this.pendingPrekeys.size < 32)) this.pendingPrekeys.set(packet.sender, { packet, ingress });
+        return;
+      }
+      const needsSignature = packet.type === BitchatType.prekeys || packet.type === BitchatType.carrier && packet.recipient === this.id;
+      if (needsSignature && (!known || !verifyPacket(packet, known.signingKey))) return;
+      const accepted = await this.callbacks.extension?.(packet, { link: ingress, boundPeer: this.directHints.get(ingress),
+        authenticated: this.authenticatedLinks.get(ingress) === packet.sender && this.authenticatedDirect(packet.sender), noiseKey: known?.noiseKey, signingKey: known?.signingKey });
+      if (!accepted) return;
+      if (packet.type === BitchatType.prekeys) this.gossip.add(packet);
     } else if (![BitchatType.handshake, BitchatType.encrypted, BitchatType.ping, BitchatType.pong].includes(packet.type as 16 | 17 | 38 | 39)) return;
     if (packet.route?.length && packet.type !== BitchatType.announce) {
       const known = this.peers.get(packet.sender); if (!known || !verifyPacket(packet, known.signingKey)) return;
@@ -390,10 +447,11 @@ export class BitchatSession {
     if (packet.signature && this.peers.has(packet.sender) && verifyPacket(packet, this.peers.get(packet.sender)!.signingKey)) this.routing.confirmed(packet.sender);
     if (packet.recipient === this.id) {
       if (packet.type === BitchatType.ping || packet.type === BitchatType.pong) await this.receiveProbe(packet, ingress);
-      if (packet.type === BitchatType.handshake) await this.receiveHandshake(packet);
+      if (packet.type === BitchatType.handshake) await this.receiveHandshake(packet, ingress);
       if (packet.type === BitchatType.encrypted) await this.receivePrivate(packet);
-      return;
+      this.remember(this.seen, packetId(packet)); return;
     }
+    this.remember(this.seen, packetId(packet));
     if (!duplicate && !solicited && !reassembled && packet.ttl > 1) this.forward(packet, ingress);
   }
   private forward(packet: BitchatPacket, ingress: string): void {
@@ -407,7 +465,7 @@ export class BitchatSession {
     }, timing.delay);
     this.relays.set(key, timer);
   }
-  private async receiveHandshake(packet: BitchatPacket): Promise<void> {
+  private async receiveHandshake(packet: BitchatPacket, ingressForHandshake: string): Promise<void> {
     const peer = this.peers.get(packet.sender); if (!peer) return;
     let entry = this.negotiations.get(peer.id);
     try {
@@ -430,9 +488,10 @@ export class BitchatSession {
       this.ciphers.get(peer.id)?.cipher.destroy();
       this.ciphers.set(peer.id, { cipher, at: Date.now() });
       clearTimeout(entry.timer); this.negotiations.delete(peer.id);
-      peer.secure = true; this.callbacks.peer(peer); entry.resolve();
+      if (packet.ttl === BITCHAT_TTL && !packet.route?.length && this.directHints.get(ingressForHandshake) === peer.id) this.authenticatedLinks.set(ingressForHandshake, peer.id);
+      peer.secure = true; peer.authenticatedLink = this.authenticatedDirect(peer.id); this.callbacks.peer(peer); entry.resolve();
       // Bind the signing key to the Noise-authenticated identity for newer clients.
-      const state = join(Uint8Array.of(0x21, 1), encodeTlv([[1, Uint8Array.of(0)], [2, this.signingKey]]));
+      const state = join(Uint8Array.of(0x21, 1), encodeTlv([[1, this.capabilityBytes()], [2, this.signingKey]]));
       await this.broadcast(this.packet(BitchatType.encrypted, cipher.seal(state), peer.id));
     } catch (error) { this.failHandshake(peer.id, error as Error); throw error; }
   }
@@ -467,7 +526,9 @@ export class BitchatSession {
       }
     } else if (plain[0] === 0x21) {
       if (plain[1] !== 1) return;
-      const key = decodeTlv(plain.subarray(2)).get(2);
+      const fields = decodeTlv(plain.subarray(2)), key = fields.get(2), capabilities = fields.get(1);
+      if (!capabilities || capabilities.length < 1 || capabilities.length > 8 || capabilities.length > 1 && capabilities.at(-1) === 0) throw new Error('Invalid authenticated capabilities');
+      peer.capabilities = capabilities[0] | (capabilities[1] ?? 0) << 8;
       if (!key || key.length !== 32) throw new Error('Invalid Bitchat authenticated signing key');
       // A self-signed public announcement cannot prove possession of its Noise
       // key. The encrypted state is authoritative after XX authenticates that key.
@@ -480,7 +541,7 @@ export class BitchatSession {
   async stop(): Promise<void> {
     this.running = false; if (this.timer) clearTimeout(this.timer);
     if (this.topologyTimer) clearTimeout(this.topologyTimer); this.topologyTimer = undefined;
-    this.directHints.clear(); this.routing.clear(); this.pingResponses.clear();
+    this.directHints.clear(); this.pendingPrekeys.clear(); this.authenticatedLinks.clear(); this.routing.clear(); this.pingResponses.clear();
     for (const ping of this.pings.values()) { clearTimeout(ping.timer); ping.reject(new Error('Bitchat stopped')); }
     this.pings.clear();
     this.relays.forEach(clearTimeout); this.relays.clear();

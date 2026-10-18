@@ -1,5 +1,7 @@
 import type { BitchatMessage } from '../bitchat-session';
-export type PendingMessage = { message: BitchatMessage; attempts: number; lastAttempt: number; expiresAt: number };
+export type CourierDispatch = { wire: string; deposited: string[]; dropAccepted?: boolean };
+export type DeliveryResult = { delivery: 'sent' | 'carried'; courier?: CourierDispatch };
+export type PendingMessage = { courier?: CourierDispatch; message: BitchatMessage; attempts: number; lastAttempt: number; expiresAt: number };
 export interface OutboxStorage {
   list(peer: string): Promise<PendingMessage[]>;
   put(peer: string, id: string, entry: PendingMessage): Promise<void>;
@@ -40,18 +42,18 @@ export class MessageOutbox {
     await this.storage.remove(peer, entry.message.id);
     this.changed({ ...entry.message, delivery: 'failed' });
   }
-  flush(peer: string, deliver: (entry: PendingMessage) => Promise<void>, available: () => boolean = () => true): Promise<void> {
+  flush(peer: string, deliver: (entry: PendingMessage) => Promise<void | DeliveryResult>, available: (entry: PendingMessage) => boolean = () => true): Promise<void> {
     const existing = this.flushing.get(peer); if (existing) return existing;
     const work = this.flushInternal(peer, deliver, available).finally(() => this.flushing.delete(peer));
     this.flushing.set(peer, work); return work;
   }
-  private async flushInternal(peer: string, deliver: (entry: PendingMessage) => Promise<void>, available: () => boolean) {
+  private async flushInternal(peer: string, deliver: (entry: PendingMessage) => Promise<void | DeliveryResult>, available: (entry: PendingMessage) => boolean) {
     const generation = this.generation;
     const pending = await this.storage.list(peer);
     for (const entry of pending.sort((a, b) => a.message.timestamp - b.message.timestamp)) {
       if (generation !== this.generation) break;
       if (entry.expiresAt <= this.now() || entry.attempts >= 8) { await this.mutate(peer, async () => { if (await this.storage.get(peer, entry.message.id)) await this.drop(peer, entry); }); continue; }
-      if (!available()) continue;
+      if (!available(entry)) continue;
       if (entry.lastAttempt && this.now() - entry.lastAttempt < 30000) continue;
       const next = await this.mutate(peer, async () => {
         const current = await this.storage.get(peer, entry.message.id);
@@ -61,8 +63,12 @@ export class MessageOutbox {
       });
       if (!next) continue;
       try {
-        await deliver(next);
-        await this.mutate(peer, async () => { if (await this.storage.get(peer, entry.message.id)) this.changed({ ...entry.message, delivery: 'sent' }); });
+        const result = await deliver(next);
+        await this.mutate(peer, async () => {
+          const current = await this.storage.get(peer, entry.message.id); if (!current) return;
+          const message = { ...entry.message, delivery: result?.delivery ?? 'sent' as const };
+          await this.storage.put(peer, entry.message.id, { ...current, courier: result?.courier ?? current.courier, message }); this.changed(message);
+        });
       } catch {
         await this.mutate(peer, async () => { if (await this.storage.get(peer, entry.message.id)) this.changed({ ...entry.message, delivery: 'queued' }); });
       }

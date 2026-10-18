@@ -1,0 +1,23 @@
+{
+  "u4pruy": [
+    "wss://aeon.libretechsystems.xyz/",
+    "wss://weboftrust.libretechsystems.xyz/",
+    "wss://nostr.nodesmap.com/",
+    "wss://relay.endfiat.money/",
+    "wss://relay.endfiat.money:443/"
+  ],
+  "dr5reg": [
+    "wss://bitchat.nostr1.com/",
+    "wss://fanfares.nostr1.com/",
+    "wss://fanfares.nostr1.com:443/",
+    "wss://relay.keykeeper.world/",
+    "wss://relay-us.zombi.cloudrodion.com/"
+  ],
+  "r3gx2f": [
+    "wss://chorus.mikedilger.com:444/",
+    "wss://relay-arg.zombi.cloudrodion.com/",
+    "wss://nostr-01.yakihonne.com/",
+    "wss://nostr-01.yakihonne.com:443/",
+    "wss://relay0.gfcom.info/"
+  ]
+}

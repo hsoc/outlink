@@ -34,3 +34,6 @@ frosted iOS chrome, opaque Android chrome, typography, spacing, and radii.
 16. Record durable design changes here, and implementation details in code/tests.
 
 Verification QR codes use fixed, high-contrast paper and ink theme tokens in both appearances. Camera previews mount only during an explicit scan on the focused, foreground screen.
+
+Internet bridging requires explicit consent. Mark public bridge messages clearly
+and provide a nearby-only choice when composing a bridged message.

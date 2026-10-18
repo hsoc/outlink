@@ -86,7 +86,7 @@ export function ContactSettings({ onBusyChange }: { onBusyChange?: (busy: boolea
         <AppButton label={t(contact.favorite ? 'mobile.unfavorite' : 'mobile.favorite')} variant="text" fullWidth={false} disabled={busy}
           onPress={() => void operate(() => bitchatService.favorite(contact.id, !contact.favorite))} />
         <AppButton label={t(contact.blocked ? 'mobile.unblock' : 'mobile.block')} variant="text" fullWidth={false} disabled={busy}
-          onPress={() => void operate(() => contactsService.save({ ...contact, blocked: !contact.blocked }))} />
+          onPress={() => void operate(() => contactsService.upsert(contact.id, current => ({ ...(current ?? contact), blocked: !contact.blocked })))} />
       </View>
     </View>)}
   </View>;

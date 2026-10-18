@@ -1,8 +1,13 @@
 /** @jest-environment node */
-import { x25519 } from '@noble/curves/ed25519.js';
+import { bytesToHex } from '@noble/hashes/utils.js';
+import { PrekeyRuntime } from '../compatibility/prekey-runtime';
+import { CourierRuntime } from '../compatibility/courier-runtime';
+import { decodeCourier, encodeCourier, courierTags, openCourier, sealCourier } from '../compatibility/courier';
+import { memoryStorage } from '../test-support/protocol-storage';
+import { ed25519, x25519 } from '@noble/curves/ed25519.js';
 import type { ProximityTransportPort } from '@/platform';
-import { BitchatSession, type BitchatMessage, type BitchatPeer } from '../bitchat-session';
-import { bytes, decodePacket, encodePacket, BitchatType, signPacket } from '../bitchat-wire';
+import { BitchatSession, type BitchatMessage, type BitchatPeer, type ExtensionContext } from '../bitchat-session';
+import { bytes, decodePacket, encodePacket, BitchatType, signPacket, join, encodeTlv, decodeTlv, text, peerId, type BitchatPacket } from '../bitchat-wire';
 
 type Radio = { port: ProximityTransportPort; listeners: Map<string, Set<(event: Record<string, unknown>) => void>>;
   neighbors: Map<string, Radio>; id: string; wire: Uint8Array[] };
@@ -43,17 +48,17 @@ async function until(check: () => boolean) {
   while (!check()) { if (Date.now() > deadline) throw new Error('Mesh test timed out'); await new Promise((r) => setTimeout(r, 10)); }
 }
 const sessions: BitchatSession[] = [];
-function node(id: string, n: number, frameSize = 185) {
+function node(id: string, n: number, frameSize = 185, extension?: (packet: BitchatPacket, context: ExtensionContext) => Promise<boolean>) {
   const r = radio(id, frameSize), peers = new Map<string, BitchatPeer>(), messages: BitchatMessage[] = [];
   const receipts: [string, string, string][] = [];
   const noiseSeed = new Uint8Array(32).fill(n);
   let counter = 1;
-  const session = new BitchatSession(r.port,
-    { noiseSeed, noisePublicKey: x25519.getPublicKey(noiseSeed), signingSeed: new Uint8Array(32).fill(n + 10) }, id,
-    { peer: (p) => peers.set(p.id, { ...p }), message: (m) => messages.push(m),
+  const identity = { noiseSeed, noisePublicKey: x25519.getPublicKey(noiseSeed), signingSeed: new Uint8Array(32).fill(n + 10) };
+  const session = new BitchatSession(r.port, identity, id,
+    { extension, peer: (p) => peers.set(p.id, { ...p }), message: (m) => messages.push(m),
       receipt: (message, sender, status) => receipts.push([message, sender, status]), error: jest.fn() },
     (length) => new Uint8Array(length).fill(counter++));
-  sessions.push(session); return { r, session, peers, messages, receipts };
+  sessions.push(session); return { r, session, peers, messages, receipts, identity };
 }
 afterEach(async () => { await Promise.all(sessions.splice(0).map((s) => s.stop())); });
 it('discovers signed identities through a relay and delivers a public message once across a cycle', async () => {
@@ -217,4 +222,61 @@ it('budgets unsigned ping replies per ingress even if a sender rotates claimed I
   await until(() => b.r.wire.filter(wire => wire[1] === BitchatType.pong).length === 5);
   await new Promise(resolve => setTimeout(resolve, 100));
   expect(b.r.wire.filter(wire => wire[1] === BitchatType.pong)).toHaveLength(5);
+});
+
+it('delivers prekey-sealed private mail through a restarted courier after its sender has left', async () => {
+  const carried = memoryStorage(), recipientStorage = memoryStorage(), senderStorage = memoryStorage(), delivered: string[] = [];
+  let secret: string | null = null;
+  const a = node('Alice', 1, 512);
+  let receiver!: PrekeyRuntime;
+  const b = node('Bob', 2, 512, async packet => {
+    if (packet.type !== BitchatType.courier || packet.recipient !== b.session.id) return false;
+    const envelope = decodeCourier(packet.payload), opened = await receiver.open(envelope.ciphertext, envelope.prekeyId);
+    expect(peerId(opened.sender)).toBe(a.session.id);
+    const fields = decodeTlv(opened.payload.subarray(1)), content = text(fields.get(1)!);
+    if (!delivered.includes(content)) delivered.push(content); return true;
+  });
+  const bag = new CourierRuntime(carried);
+  const c = node('Carrier', 3, 512, async (packet, context) => {
+    if (packet.type !== BitchatType.courier || packet.recipient !== c.session.id || !context.authenticated || context.boundPeer !== packet.sender) return false;
+    return bag.deposit(decodeCourier(packet.payload), bytesToHex(context.noiseKey!), 'verified');
+  });
+  receiver = new PrekeyRuntime(b.identity, recipientStorage, { get: async () => secret, set: async value => { secret = value; } });
+  const sender = new PrekeyRuntime(a.identity, senderStorage, { get: async () => null, set: async () => {} });
+  await sender.ingest(await receiver.bundle(), ed25519.getPublicKey(b.identity.signingSeed));
+  const assigned = (await sender.assign(b.identity.noisePublicKey, 'offline-message'))!;
+  const plain = join(Uint8Array.of(1), encodeTlv([[0, bytes('offline-message')], [1, bytes('mail carried while Alice is gone')]]));
+  const envelope = { tag: courierTags(b.identity.noisePublicKey)[1], expiry: Date.now() + 86400000, copies: 4, prekeyId: assigned.id,
+    ciphertext: sealCourier(plain, a.identity.noiseSeed, assigned.publicKey, assigned.id) };
+  expect(() => openCourier(envelope.ciphertext, c.identity.noiseSeed, assigned.id)).toThrow();
+  await Promise.all([a.session.start(), c.session.start()]); connect(a.r, c.r);
+  await until(() => !!a.peers.get(c.session.id)?.lastSeen && !!c.peers.get(a.session.id)?.lastSeen);
+  await a.session.authenticateDirect(c.session.id);
+  await a.session.sendExtension(BitchatType.courier, encodeCourier(envelope), c.session.id, true);
+  await until(() => !!c.session.authenticatedDirect(a.session.id));
+  await new Promise(resolve => setTimeout(resolve, 30));
+  expect(await carried.list('courier', 40)).toHaveLength(1); await a.session.stop();
+  const restartedBag = new CourierRuntime(carried);
+  await b.session.start(); connect(b.r, c.r);
+  await until(() => !!c.peers.get(b.session.id)?.lastSeen && !!b.peers.get(c.session.id)?.lastSeen);
+  await c.session.authenticateDirect(b.session.id);
+  await restartedBag.encounter(b.identity.noisePublicKey, undefined, true, value => c.session.sendExtension(BitchatType.courier, encodeCourier(value), b.session.id, true));
+  await until(() => delivered.length === 1);
+  expect(delivered).toEqual(['mail carried while Alice is gone']); expect(await carried.list('courier', 40)).toHaveLength(0);
+  await c.session.sendExtension(BitchatType.courier, encodeCourier(envelope), b.session.id, true);
+  await new Promise(resolve => setTimeout(resolve, 30)); expect(delivered).toHaveLength(1);
+  expect(c.r.wire.every(wire => !Buffer.from(wire).includes(Buffer.from(delivered[0])))).toBe(true);
+});
+
+it('defers a signed prekey bundle that races its owner announcement, then authenticates and processes it', async () => {
+  const a = node('Alice', 1, 512), accepted = jest.fn(async () => true), b = node('Bob', 2, 512, accepted);
+  let saved: string | null = null;
+  const keys = new PrekeyRuntime(a.identity, memoryStorage(), { get: async () => saved, set: async value => { saved = value; } });
+  const packet = signPacket({ version: 1, type: BitchatType.prekeys, ttl: 7, timestamp: Date.now(), sender: a.session.id, payload: await keys.bundle() }, a.identity.signingSeed);
+  a.session.setCapabilities(1);
+  await Promise.all([a.session.start(), b.session.start()]); connect(a.r, b.r);
+  b.r.listeners.get('onMessage')!.forEach(fn => fn({ endpointId: a.r.id, payload: encodePacket(packet) }));
+  await until(() => accepted.mock.calls.length > 0);
+  expect(b.peers.get(a.session.id)?.capabilities).toBe(1);
+  expect(accepted).toHaveBeenCalledWith(expect.objectContaining({ type: BitchatType.prekeys }), expect.objectContaining({ noiseKey: a.identity.noisePublicKey, signingKey: ed25519.getPublicKey(a.identity.signingSeed) }));
 });

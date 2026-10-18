@@ -66,3 +66,20 @@ link-local sync suppression and TTL/jitter classes. A simulated three-node chain
 exchanges encrypted messages and receipts over signed originated v2 routes.
 Connection probes are tested across a relay, on stop, and against a burst of
 rotating forged sender IDs sharing one ingress link.
+
+
+Courier/prekey and gateway/bridge runtime checks now include secure batch
+publication, consumed-key persistence/grace, monotonic bundle replacement,
+concurrent assignments, fixed mailbag quotas, persistent/replay-resistant copy
+budgets, failed direct handover and remote cooldown. A simulated sender leaves,
+a carrier reloads its mailbag, and the recipient later receives prekey-sealed
+text without exposing content to the carrier. App-service checks verify carried
+status, recipient-bound outbox removal and deferred acknowledgments.
+
+Signed bridge events cross two simulated mesh islands through an emulated relay
+and reach a mesh-only receiver exactly once. Tests cover passive downlinks,
+consent/nearby-only, wrong directions/channels/signatures, loop suppression,
+positive versus rejected relay acceptance, retryable drop opens, persisted dedup,
+per-ingress budgets, bounded queues, gateway fallback status, and independent
+relay-directory rankings. A history-partition test also guards announcement-race
+and filter-cursor failures found during runtime integration.

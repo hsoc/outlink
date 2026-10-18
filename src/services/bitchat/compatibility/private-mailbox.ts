@@ -10,11 +10,11 @@ import { bytes, text, join, encodePacket, decodePacket, encodeTlv, decodeTlv } f
 import { createPrivateEnvelope, openPrivateEnvelope } from './nostr-private';
 export type InternetPayload = { kind: 'message'; id: string; content: string; senderId: string; recipientId?: string; timestamp: number } |
   { kind: 'receipt'; id: string; delivery: 'delivered' | 'read'; senderId: string; recipientId?: string; timestamp: number };
-export async function privateNostrKey(): Promise<Uint8Array> {
+export async function privateNostrKey(scope = 'private-nostr'): Promise<Uint8Array> {
   const root = hexToBytes(await mobileIdentity());
   try {
     for (let counter = 0; ; counter++) {
-      const key = hkdf(sha256, root, undefined, bytes(`outlink/bitchat/private-nostr/v1/${counter}`), 32);
+      const key = hkdf(sha256, root, undefined, bytes(`outlink/bitchat/${scope}/v1/${counter}`), 32);
       if (secp256k1.utils.isValidSecretKey(key)) return key;
       key.fill(0);
     }

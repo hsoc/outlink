@@ -50,3 +50,20 @@ See [local storage](security/local-storage.md) for the full protection boundary.
 
 No hosted Outlink naming or notification service is configured. Source and
 protocol details: https://github.com/hsoc/outlink.
+
+
+Courier and prekey delivery runs while Bluetooth is joined. Nearby authenticated
+phones may retain opaque private mail for up to 24 hours. Prekeys reduce exposure
+after their private keys are deleted; static-key fallback and the 48-hour duplicate
+grace do not provide that immediate protection. Relays/carriers can still observe
+traffic metadata. Keys and delivery state survive backgrounding, not active sessions.
+
+Gateway and public bridge forwarding are separate opt-in controls, disabled by
+default. A bridge publishes only the author's explicitly bridge-enabled public
+messages; Nearby only skips that message. Area relay selection defaults to the
+pinned Bitchat directory, using a geohash's center rather than publishing exact
+coordinates; selected addresses are displayed. Custom relays remain available.
+No live directory fetch or Tor support is introduced. Enabling the bridge also
+opens encrypted courier drop subscriptions; relays see rotating recipient tags
+and ciphertext. A gateway can retrieve drops for authenticated nearby peers.
+See [courier/bridge behavior](protocols/courier-and-bridge.md) for limits and consent.

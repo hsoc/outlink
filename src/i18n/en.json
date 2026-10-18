@@ -126,6 +126,22 @@
     "contact_code": "Contact verification QR",
     "queue_retention_note": "Clearing history keeps contacts and pending outgoing messages. Pending messages may still be sent. Use identity erasure to remove them too.",
     "check_connection": "Check connection",
-    "connection_result": "{{name}} replied in {{ms}} ms; {{hops}} link(s). This checks reachability, not identity."
+    "connection_result": "{{name}} replied in {{ms}} ms; {{hops}} link(s). This checks reachability, not identity.",
+    "network_reach": "Offline delivery and internet links",
+    "courier_hint": "Private text can travel through nearby phones as encrypted mail. Carriers cannot read it. Mail expires after 24 hours; delivery is not guaranteed.",
+    "gateway_area": "Public area to share with nearby phones (optional geohash)",
+    "bridge_area": "Bridge area (6-character geohash)",
+    "apply_network": "Apply area and relay settings",
+    "gateway": "Share internet messaging with the mesh",
+    "gateway_hint": "While Bluetooth is joined, publish signed public area messages for nearby phones and bring relay messages back to the mesh. This uses your internet connection.",
+    "bridge": "Connect separate nearby meshes",
+    "bridge_hint": "While Bluetooth is joined, publish your public mesh messages to this area’s internet bridge and receive messages from other meshes. You can choose Nearby only for individual messages. Also enables encrypted courier mailboxes on relays.",
+    "network_privacy": "Both options are off by default. Public bridge and area messages are readable by others. Relays can see your IP address and area code. Private messages stay encrypted. Connections pause in the background.",
+    "network_failed": "Could not apply network settings. Check the area codes and secure relay addresses.",
+    "bridge_notice": "Public chat crosses the internet bridge for your selected area. It is not encrypted.",
+    "nearby_only": "Nearby only for this message",
+    "via_bridge": "Via internet bridge",
+    "automatic_area_relays": "Use Bitchat area relays",
+    "automatic_area_hint": "Area chats and bridges use the five closest relays from the bundled Bitchat directory. Turn this off in Settings to use your custom list. Private courier mailboxes use the custom/default list below."
   }
 }

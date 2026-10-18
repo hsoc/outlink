@@ -27,11 +27,10 @@ Implemented:
 - Connection probes with nonce/sender binding and per-ingress response limits.
 
 The separate geohash transport is described in [geohash.md](geohash.md).
-Not yet emitted or consumed on this BLE transport: courier envelopes, groups,
-board posts, files, voice, prekeys, gateway carriers, or rotating-ID presence.
-Courier/prekey codecs have vector tests, but their runtime lifecycle remains
-unimplemented. The outbox retries when a route becomes available; delivery is
-not guaranteed. Optional favorite internet delivery uses the independent private
+Courier/prekey runtime and gateway/bridge carriers are implemented; see
+[courier and bridge](courier-and-bridge.md) for lifecycle, consent and limits.
+Groups, board posts, files, voice and rotating-ID presence remain unimplemented.
+The outbox retries when a route becomes available; delivery is not guaranteed. Optional favorite internet delivery uses the independent private
 envelope implementation described in the compatibility inventory.
 
 Packet tests and simulated meshes pass; **physical interoperability with Bitchat
@@ -108,7 +107,7 @@ Announcement (`0x01`) payload uses `[type:u8][length:u8][value]` TLVs:
 | `0x02` | 32-byte X25519 public key |
 | `0x03` | 32-byte Ed25519 public key |
 | `0x04` | Up to ten direct-neighbor IDs, eight bytes each; advisory topology claims |
-| `0x05` | Optional capability bits; Outlink advertises zero optional capabilities |
+| `0x05` | Optional capability bits; Outlink advertises prekeys, plus gateway/bridge when enabled |
 
 Unknown announcement TLVs are skipped; duplicates and malformed fields are
 rejected. The announcement must be signed and its Noise key must derive the
@@ -233,13 +232,13 @@ RequestSync (`0x21`) uses 16-bit-length TLVs for GCS Rice parameter, bucket rang
 filter data, little-endian type mask, and optional timestamp cursor/fragment IDs.
 Membership IDs hash type, sender, timestamp and decompressed payload. Requests
 are signed, link-local, and never forwarded, including fragmented requests.
-Outlink currently requests/serves only verified announcements and public text.
+Outlink requests/serves verified announcements, public text and latest signed prekey bundles.
 Responses retain original signatures, set mutable RSR, and use TTL zero; they
 are accepted only during a locally requested sync window. Cached announcements
 do not prove current reachability. Reply work runs outside the receive queue so
 history transfer cannot block a Noise handshake.
 
-The encrypted public cache retains at most 1000 packets/8 MiB; public text expires
+The encrypted public cache retains at most 1000 packets/8 MiB, including at most 200 prekey owners; public text expires
 after six hours and announcements after 15 minutes. Announcements are served
 before messages and bypass a message cursor. Each ingress permits eight requests
 per 30 seconds and at most one response task at a time.
@@ -254,3 +253,8 @@ Probes expire after ten seconds and stop cancels outstanding probes. At most
 sixteen local probes are pending. Replies are capped at five per incoming
 physical link per ten seconds; rotating unsigned sender IDs cannot reset this
 budget. These probes measure reachability, not authenticated identity.
+
+Complete packets are entered into dedup only after acceptance, so a valid public
+message arriving before its author announcement cannot poison later history
+backfill. A full GCS filter omits the timestamp cursor; a cursor is used only
+when the advertised newest prefix was truncated to its byte budget.

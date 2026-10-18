@@ -12,7 +12,7 @@ export function panicWipe(): Promise<void> {
     invalidateSessionIntent();
     await bitchatService.stop(); geohashService.stop();
     bitchatSessionStore.setState({ busy: true });
-    workspaceStore.setState({ ready: false, drafts: {}, recipient: undefined, internet: false, mode: 'mesh', hash: '' });
+    workspaceStore.setState({ ready: false, drafts: {}, recipient: undefined, internet: false, autoAreaRelays: true, gateway: false, bridge: false, bridgeCell: '', nearbyOnly: false, mode: 'mesh', hash: '' });
     await historyOperation(async () => {
       await platform.wipeLocalData();
       await resetMobileIdentity();

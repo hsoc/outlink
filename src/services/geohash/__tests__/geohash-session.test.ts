@@ -50,3 +50,13 @@ it('retries a stalled connection and ignores late messages from replaced sockets
   late({ data: JSON.stringify(['EVENT','geohash',event]) });
   expect(callbacks.message).not.toHaveBeenCalled(); session.stop(); expect(jest.getTimerCount()).toBe(0);
 });
+
+it('hands offline signed messages to an available mesh gateway without claiming relay delivery', async () => {
+  const delivered = jest.fn(), fallback = jest.fn(async () => true);
+  const session = new GeohashSession('ezs42', new Uint8Array(32).fill(1), 'Alice', ['wss://one.example'], {
+    message: jest.fn(), delivery: delivered, connection: jest.fn(), presence: jest.fn(), error: jest.fn(),
+  }, () => ({ readyState: 0, onopen: null, onclose: null, onerror: null, onmessage: null, send: jest.fn(), close: jest.fn() }), undefined, fallback);
+  session.start(); await session.send('offline uplink');
+  expect(fallback).toHaveBeenCalledWith(expect.objectContaining({ kind: 20000, content: 'offline uplink', tags: expect.arrayContaining([['g', 'ezs42']]) }));
+  expect(delivered).toHaveBeenCalledWith(expect.any(String), 'queued'); session.stop();
+});

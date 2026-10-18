@@ -13,8 +13,9 @@ BLE port rather than suspending an unrelated messaging service.
 `src/services/geohash/` implements geohash encoding/bounds, per-channel signing
 keys, signed public events, and bounded WebSocket relay sessions. Public
 location channels and encrypted mesh private conversations are separate data
-paths. A user must explicitly join each transport. Relay endpoints are limited
-to six secure WebSocket URLs. No location lookup or relay connection occurs on
+paths. A user must explicitly join each transport. Each relay pool uses at most six secure WebSocket URLs. Gateway/bridge runtime
+shares matching area pools and bounds the area pool cache; private mail uses a
+separate configured/default pool. No location lookup or relay connection occurs on
 ordinary launch. Optional private favorite delivery reuses the relay session in
 a separate subscription mode; it is disabled by default and never bridges
 private content into public channels.
@@ -52,3 +53,14 @@ Historical third-party notice snapshots are retained in source for provenance.
 The mobile notice generator selects the locked mobile dependency closure and
 preserves complete mobile framework notices; only generated referenced assets
 are bundled. Copyright texts are not rewritten or replaced with app branding.
+
+
+Courier/prekey state and consented gateway/bridge routing live in the Bitchat
+compatibility services, reusing Noise, protected storage, the private outbox and
+relay session. Private prekey seeds stay behind the secure-storage port. An
+origin signs public carrier events; gateways verify and forward those completed
+events, never composing bridge copies of received radio chat. Public bridged
+rows are marked and keyed by Nostr event ID, with radio hints used only for
+replacement. Delivery receipts and contact updates are serialized so shutdown
+can wait for work before an identity wipe. Protocol details and resource limits
+belong in [courier and bridge](protocols/courier-and-bridge.md).

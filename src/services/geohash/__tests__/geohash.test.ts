@@ -31,7 +31,7 @@ it('rejects wrong channels, tampering, expiry, malformed bounds, and oversized c
   expect(validateGeohashEvent(event, 'ezs42', now + 901)).toBeNull();
   expect(validateGeohashEvent(event, 'ezs42', now - 61)).toBeNull();
   expect(validateGeohashEvent({ ...event, tags: [...event.tags, ['g','ezs42']] }, 'ezs42', now)).toBeNull();
-  expect(() => createGeohashEvent(key, 'ezs42', 'Alice', '💬'.repeat(1025))).toThrow();
+  expect(() => createGeohashEvent(key, 'ezs42', 'Alice', '💬'.repeat(4001))).toThrow();
   expect(normalizeGeoRelays(['wss://example.org', 'wss://example.org/'])).toEqual(['wss://example.org/']);
   for (const relay of ['ws://example.org','https://example.org','wss://user:pass@example.org']) expect(() => normalizeGeoRelays([relay])).toThrow();
 });
