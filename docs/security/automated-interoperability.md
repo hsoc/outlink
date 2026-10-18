@@ -83,3 +83,10 @@ positive versus rejected relay acceptance, retryable drop opens, persisted dedup
 per-ingress budgets, bounded queues, gateway fallback status, and independent
 relay-directory rankings. A history-partition test also guards announcement-race
 and filter-cursor failures found during runtime integration.
+
+Connection/internet regressions additionally cover reserved replacement failures,
+delayed old-key traffic, live authenticated capabilities and redundant links;
+area-private offline delivery, full-key receipt binding, durable read receipts
+after restart, and shutdown racing composition; directory validation, cache age,
+failure backoff, cancellation and relay replacement. See
+[implementation limits](../protocols/connection-and-internet.md).

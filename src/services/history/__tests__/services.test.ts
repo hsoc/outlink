@@ -6,6 +6,7 @@ import { historyOperation } from '../history';
 jest.mock('@/platform', () => ({ platform: {
   history: { save: jest.fn(async () => {}), load: jest.fn(async () => []), clear: jest.fn(async () => {}) },
   secureStorage: { getItem: jest.fn(async () => JSON.stringify({ noise: '01'.repeat(32), signing: '02'.repeat(32) })) },
+  records: { list: jest.fn(async () => []) },
   proximityTransport: {},
 } }));
 jest.mock('@/services/bitchat/bitchat-session', () => ({ BitchatSession: jest.fn().mockImplementation(() => ({

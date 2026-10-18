@@ -67,3 +67,12 @@ No live directory fetch or Tor support is introduced. Enabling the bridge also
 opens encrypted courier drop subscriptions; relays see rotating recipient tags
 and ciphertext. A gateway can retrieve drops for authenticated nearby peers.
 See [courier/bridge behavior](protocols/courier-and-bridge.md) for limits and consent.
+
+Optional area-private inboxes use the signed public channel identity. Their full
+Nostr keys identify accounts, not verified people; nicknames and short IDs do not
+authorize receipts. Keys remain stable within a channel and differ across
+channels; automatic rotation is not implemented. Private Nostr messages lack
+forward secrecy. Automatic area relay selection contacts the upstream HTTPS
+directory while its internet feature is joined, exposing the fetcher IP to that
+operator. Custom relay mode bypasses this download. Both use bounded foreground
+connections; no push service is introduced.

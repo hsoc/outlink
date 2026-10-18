@@ -10,6 +10,9 @@ import { platform } from '@/platform';
 import { BitchatType, bytes, peerId, text, decodeTlv, encodeTlv, join, signPacket } from '../bitchat-wire';
 import { courierTags, decodeCourier, encodeCourier, openCourier, sealCourier } from '../compatibility/courier';
 import type { PendingMessage } from '../compatibility/outbox';
+import { PrivateMailbox, type InternetPayload } from '../compatibility/private-mailbox';
+import { npubEncode } from 'nostr-tools/nip19';
+import { getPublicKey } from 'nostr-tools/pure';
 import { historyOperation } from '@/services/history/history';
 const root = 'aa'.repeat(32), recipientSeed = new Uint8Array(32).fill(2), recipientKey = x25519.getPublicKey(recipientSeed);
 const carrierSeed = new Uint8Array(32).fill(3), carrierKey = x25519.getPublicKey(carrierSeed), carrierId = peerId(carrierKey);
@@ -17,6 +20,12 @@ jest.mock('@/services/geohash/geohash.service', () => ({ geohashService: { accep
 jest.mock('@/platform', () => ({ platform: { proximityTransport: {}, records: { get: jest.fn(), set: jest.fn(), remove: jest.fn(), list: jest.fn() },
   history: { save: jest.fn(), load: jest.fn(async () => []), get: jest.fn() }, preferences: { getItem: jest.fn(async () => null) },
   secureStorage: { getItem: jest.fn(), setItem: jest.fn() }, deviceCrypto: { randomUUID: jest.fn(async () => 'outgoing-one') } } }));
+jest.mock('../compatibility/private-mailbox', () => {
+  const actual = jest.requireActual('../compatibility/private-mailbox');
+  return { ...actual, PrivateMailbox: jest.fn().mockImplementation((_key, _relays, callbacks) => ({
+    callbacks, start: () => callbacks.connection(1), stop: jest.fn(), settled: async () => {}, send: jest.fn(async () => {}),
+  })) };
+});
 jest.mock('../bitchat-session', () => {
   const { peerId } = jest.requireActual('../bitchat-wire');
   const { x25519, ed25519 } = jest.requireActual('@noble/curves/ed25519.js');
@@ -82,4 +91,21 @@ it('opens courier mail durably, deduplicates copies, queues a receipt, and rejec
   const deposit = signPacket({ ...packet, payload: encodeCourier(otherEnvelope) }, new Uint8Array(32).fill(13));
   expect(await session().callbacks.extension(deposit, { ...context, noiseKey: carrierKey, signingKey: ed25519.getPublicKey(new Uint8Array(32).fill(13)), boundPeer: carrierId })).toBe(false);
   expect(await records.list('courier', 40)).toHaveLength(0);
+});
+
+it('persists mesh-favorite internet receipts across a failed relay write and sends offline favorite notices', async () => {
+  const peer = peerId(recipientKey), npubKey = getPublicKey(new Uint8Array(32).fill(2));
+  await contactsService.upsert(peer, previous => ({ ...previous!, npub: npubEncode(npubKey) }));
+  await bitchatService.start(root, 'Alice'); await bitchatService.enableInternet(true);
+  const mailbox = jest.mocked(PrivateMailbox).mock.results.at(-1)!.value as { callbacks: { message(sender: string, payload: InternetPayload): Promise<void> }; send: jest.Mock };
+  mailbox.send.mockRejectedValueOnce(new Error('relay rejected'));
+  await mailbox.callbacks.message(npubKey, { kind: 'message', id: 'internet-incoming', content: 'offline hello', senderId: peer, recipientId: bitchatSessionStore.getState().id, timestamp: Date.now() });
+  expect(JSON.parse(history.get('mesh:internet-incoming' + peer)!)).toMatchObject({ content: 'offline hello' });
+  expect(await records.get('acks:' + peer, 'internet-incoming')).toMatchObject({ status: 'delivered' });
+  await bitchatService.read(peer, 'internet-incoming');
+  expect(await records.get('acks:' + peer, 'internet-incoming')).toBeNull();
+  expect(mailbox.send).toHaveBeenLastCalledWith(npubKey, expect.objectContaining({ kind: 'receipt', delivery: 'read' }), expect.any(String), peer);
+  await bitchatService.favorite(peer, false);
+  expect(mailbox.send).toHaveBeenLastCalledWith(npubKey, expect.objectContaining({ kind: 'message', content: expect.stringContaining('[UNFAVORITED]:') }), expect.any(String), peer);
+  expect(contactsService.get(peer)?.pendingFavorite).toBeUndefined();
 });

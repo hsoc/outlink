@@ -47,6 +47,22 @@ export class GeohashSession {
       this.callbacks.presence(this.present.size);
     }, 60_000);
   }
+  updateRelays(input: string[]): void {
+    const next = normalizeGeoRelays(input);
+    if (JSON.stringify(next) === JSON.stringify(this.relays)) return;
+    const old = new Map(this.relays.map((url, index) => [url, this.links[index]]));
+    const removed = [...old].filter(([url]) => !next.includes(url));
+    for (const [, link] of removed) if (link) {
+      if (link.retry) clearTimeout(link.retry); if (link.timeout) clearTimeout(link.timeout);
+      const socket = link.socket; link.socket = undefined; link.opened = false;
+      if (socket) { socket.onopen = null; socket.onclose = null; socket.onerror = null; socket.onmessage = null; socket.close(); }
+    }
+    this.relays.splice(0, this.relays.length, ...next);
+    if (this.stopped) return;
+    this.links = next.map(url => old.get(url) ?? { opened: false, attempts: 0, rateAt: 0, rate: 0 });
+    this.links.forEach((link, index) => { if (!link.socket && !link.retry) this.connect(link, next[index]); });
+    this.connections();
+  }
   private previousFilters = '';
   resubscribe(): void {
     if (!this.mode || this.stopped) return;

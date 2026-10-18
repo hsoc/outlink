@@ -137,7 +137,7 @@ it('reestablishes private encryption when the receiver returns with the same ide
   await until(() => a.messages.length === 1);
   await a.session.stop();
   const returned = node('Alice', 1); await returned.session.start(); connect(returned.r, b.r);
-  await until(() => returned.peers.has(b.session.id));
+  await until(() => returned.peers.has(b.session.id) && (b.peers.get(returned.session.id)?.lastSeen ?? 0) > 0);
   await b.session.sendPrivate(returned.session.id, 'after restart', 'after-restart');
   await until(() => returned.messages.length === 1);
   expect(returned.session.id).toBe(a.session.id);
@@ -279,4 +279,57 @@ it('defers a signed prekey bundle that races its owner announcement, then authen
   await until(() => accepted.mock.calls.length > 0);
   expect(b.peers.get(a.session.id)?.capabilities).toBe(1);
   expect(accepted).toHaveBeenCalledWith(expect.objectContaining({ type: BitchatType.prekeys }), expect.objectContaining({ noiseKey: a.identity.noisePublicKey, signingKey: ed25519.getPublicKey(a.identity.signingSeed) }));
+});
+
+it('keeps a working cipher when a reserved replacement cannot be transmitted', async () => {
+  const a = node('Alice', 1, 512), b = node('Bob', 2, 512);
+  await Promise.all([a.session.start(), b.session.start()]); connect(a.r, b.r);
+  await until(() => !!a.peers.get(b.session.id)?.lastSeen);
+  await a.session.sendPrivate(b.session.id, 'before replacement', 'reserve-before');
+  await until(() => b.messages.some(m => m.id === 'reserve-before'));
+  const send = a.r.port.sendAsync;
+  a.r.port.sendAsync = async () => { throw new Error('write unavailable'); };
+  await expect(a.session.rekey(b.session.id)).rejects.toThrow();
+  a.r.port.sendAsync = send;
+  expect(a.peers.get(b.session.id)?.secure).toBe(true);
+  await a.session.sendPrivate(b.session.id, 'old session still works', 'reserve-after');
+  await until(() => b.messages.some(m => m.id === 'reserve-after'));
+});
+it('promotes a completed replacement, accepts delayed old traffic once, and updates encrypted capabilities', async () => {
+  const a = node('Alice', 1, 512), b = node('Bob', 2, 512);
+  await Promise.all([a.session.start(), b.session.start()]); connect(a.r, b.r);
+  await until(() => !!a.peers.get(b.session.id)?.lastSeen);
+  await a.session.sendPrivate(b.session.id, 'establish', 'rekey-start');
+  await until(() => b.messages.some(m => m.id === 'rekey-start'));
+  let delayed: Uint8Array | undefined;
+  const send = a.r.port.sendAsync;
+  a.r.port.sendAsync = async (endpoint, payload) => { if ((await decodePacket(payload)).type === BitchatType.encrypted) { delayed = payload.slice(); return; } await send(endpoint, payload); };
+  await a.session.sendPrivate(b.session.id, 'in flight', 'rekey-delayed'); a.r.port.sendAsync = send;
+  const clock = Date.now; const shifted = jest.spyOn(Date, 'now').mockImplementation(() => clock() + 6000);
+  await a.session.rekey(b.session.id); shifted.mockRestore();
+  await until(() => !!a.peers.get(b.session.id)?.authenticatedCapabilities);
+  a.session.setCapabilities(133);
+  await until(() => b.peers.get(a.session.id)?.capabilities === 133 && !!b.peers.get(a.session.id)?.authenticatedCapabilities);
+  await send(b.r.id, delayed!); await send(b.r.id, delayed!);
+  await until(() => b.messages.some(m => m.id === 'rekey-delayed'));
+  expect(b.messages.filter(m => m.id === 'rekey-delayed')).toHaveLength(1);
+  await a.session.sendPrivate(b.session.id, 'new cipher works', 'rekey-new');
+  await until(() => b.messages.some(m => m.id === 'rekey-new'));
+});
+it('keeps an encrypted session usable when only one of two physical links disappears', async () => {
+  const a = node('Alice', 1, 512), b = node('Bob', 2, 512);
+  await Promise.all([a.session.start(), b.session.start()]); connect(a.r, b.r);
+  await until(() => !!a.peers.get(b.session.id)?.lastSeen);
+  // A second bearer endpoint to the same device is a real independent path.
+  a.r.neighbors.set('Bob-secondary', b.r);
+  a.r.listeners.get('onPeer')?.forEach(fn => fn({ endpointId: 'Bob-secondary', profile: new Uint8Array() }));
+  const announce = [...b.r.wire].reverse().find(wire => wire[1] === BitchatType.announce)!;
+  a.r.listeners.get('onMessage')?.forEach(fn => fn({ endpointId: 'Bob-secondary', payload: announce.slice() }));
+  await a.session.sendPrivate(b.session.id, 'two links', 'dual-start');
+  await until(() => b.messages.some(m => m.id === 'dual-start'));
+  a.r.neighbors.delete(b.r.id);
+  a.r.listeners.get('onConnection')?.forEach(fn => fn({ endpointId: b.r.id, state: 'disconnected' }));
+  await a.session.sendPrivate(b.session.id, 'remaining link', 'dual-after');
+  await until(() => b.messages.some(m => m.id === 'dual-after'));
+  expect(a.peers.get(b.session.id)?.secure).toBe(true);
 });

@@ -9,6 +9,7 @@ import { spacing } from '@/theme';
 import { workspaceStore } from '@/services/history/workspace';
 import { bitchatService } from '@/services/bitchat/bitchat.service';
 import { validHash } from '@/services/bitchat/compatibility/network-protocol';
+import { geohashService } from '@/services/geohash/geohash.service';
 import { normalizeGeoRelays } from '@/services/geohash/geohash-protocol';
 export function NetworkSettings({ disabled, onBusyChange }: { disabled: boolean; onBusyChange(busy: boolean): void }) {
   const { t } = useTranslation(), workspace = useStore(workspaceStore);
@@ -21,9 +22,10 @@ export function NetworkSettings({ disabled, onBusyChange }: { disabled: boolean;
     try {
       const next = { autoAreaRelays: change.autoAreaRelays ?? before.autoAreaRelays, gateway: change.gateway ?? before.gateway, bridge: change.bridge ?? before.bridge, bridgeCell: (cell ?? before.bridgeCell).trim().toLowerCase(), hash: (hash ?? before.hash).trim().toLowerCase().replace(/^#/, ''), relays: normalizeGeoRelays((relays ?? before.relays).split(/\s+/).filter(Boolean)).join('\n') };
       if (next.bridge && (!validHash(next.bridgeCell) || next.bridgeCell.length !== 6) || next.hash && !validHash(next.hash)) throw new Error('Invalid area code');
-      workspaceStore.setState(next); await bitchatService.refreshNetwork(); setCell(undefined); setHash(undefined); setRelays(undefined);
+      workspaceStore.setState(next); await geohashService.configureRelays(next.autoAreaRelays, next.relays.split(/\s+/).filter(Boolean)); await bitchatService.refreshNetwork(); setCell(undefined); setHash(undefined); setRelays(undefined);
     } catch {
       workspaceStore.setState({ autoAreaRelays: before.autoAreaRelays, gateway: before.gateway, bridge: before.bridge, bridgeCell: before.bridgeCell, hash: before.hash, relays: before.relays });
+      await geohashService.configureRelays(before.autoAreaRelays, before.relays.split(/\s+/).filter(Boolean)).catch(() => {});
       await bitchatService.refreshNetwork().catch(() => {}); setFailed(true);
     } finally { setBusy(false); onBusyChange(false); }
   }

@@ -60,3 +60,14 @@ it('hands offline signed messages to an available mesh gateway without claiming 
   expect(fallback).toHaveBeenCalledWith(expect.objectContaining({ kind: 20000, content: 'offline uplink', tags: expect.arrayContaining([['g', 'ezs42']]) }));
   expect(delivered).toHaveBeenCalledWith(expect.any(String), 'queued'); session.stop();
 });
+
+it('updates relay addresses without losing working links or accepting callbacks from removed links', () => {
+  const { session, sockets, callbacks } = setup(); session.start(); sockets.forEach(s => s.onopen!());
+  const stale = sockets[0].onmessage!;
+  session.updateRelays(['wss://two.example', 'wss://three.example']);
+  expect(sockets[0].close).toHaveBeenCalled(); expect(sockets[1].close).not.toHaveBeenCalled(); expect(sockets).toHaveLength(3);
+  const event = createGeohashEvent(new Uint8Array(32).fill(2), 'ezs42', 'Bob', 'late old relay');
+  stale({ data: JSON.stringify(['EVENT', 'geohash', event]) }); expect(callbacks.message).not.toHaveBeenCalled();
+  sockets[2].onopen!(); sockets[2].onmessage!({ data: JSON.stringify(['EVENT', 'geohash', event]) });
+  expect(callbacks.message).toHaveBeenCalledTimes(1); session.stop(); expect(jest.getTimerCount()).toBe(0);
+});

@@ -37,3 +37,6 @@ Verification QR codes use fixed, high-contrast paper and ink theme tokens in bot
 
 Internet bridging requires explicit consent. Mark public bridge messages clearly
 and provide a nearby-only choice when composing a bridged message.
+
+Private conversations opened from public channels show the full signed public key
+and stay visibly separate from public channel messages and verified mesh contacts.

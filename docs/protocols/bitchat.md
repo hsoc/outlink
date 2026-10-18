@@ -161,7 +161,9 @@ Decrypted payload begins with one type byte:
 | `0x11` | Verification response: same TLVs plus `3` Ed25519 signature[64] |
 | `0x21` | Version `1`, then TLVs: `0x01` capabilities, `0x02` signing key |
 
-Delivery/read receipts travel only inside the private session. Their sender
+On the BLE path, delivery/read receipts travel only inside the private session.
+Reserved session replacement and encrypted capability updates are detailed in
+[connection lifecycle](connection-and-internet.md). Their sender
 must match the outgoing message's intended recipient before updating its status.
 Private message IDs are deduplicated separately from outer encrypted packets.
 Unknown private payload types are ignored. Files/voice/group payloads are not

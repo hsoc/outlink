@@ -58,6 +58,7 @@ export class NetworkRuntime {
     }
     return filters;
   }
+  refreshRelays() { if (!this.stopped && this.config.autoAreaRelays) for (const [hash, area] of this.areas) area.transport.updateRelays(areaRelays(hash)); }
   private connections() { this.online = this.dropOnline + [...this.areas.values()].reduce((sum, area) => sum + area.online, 0); if (this.online && !this.stopped) { this.drain(); this.deps.connected(); } }
   private area(hash: string, _bridge: boolean) {
     const id = hash, existing = this.areas.get(id); if (existing) return existing.transport;

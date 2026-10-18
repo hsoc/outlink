@@ -13,7 +13,7 @@ jest.mock('../bitchat.service', () => {
 });
 jest.mock('@/services/geohash/geohash.service', () => {
   const { createStore } = jest.requireActual('zustand/vanilla');
-  return { geohashStore: createStore(() => ({ hash: 'old' })), geohashService: { stop: jest.fn(), clearMessages: jest.fn() } };
+  return { geohashStore: createStore(() => ({ hash: 'old' })), geohashService: { stop: jest.fn(), idle: jest.fn(async () => {}), clearMessages: jest.fn() } };
 });
 jest.mock('@/services/history/workspace', () => {
   const { createStore } = jest.requireActual('zustand/vanilla'); return { workspaceStore: createStore(() => ({ ready: true, drafts: { old: 'secret' }, internet: true })) };

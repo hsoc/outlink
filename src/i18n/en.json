@@ -117,7 +117,7 @@
     "block": "Block",
     "unblock": "Unblock",
     "internet_private": "Internet delivery for favorites",
-    "internet_private_hint": "Optional encrypted relay delivery. Uses internet access and shares your relay connection with the selected servers. Disabled by default. This is not push notifications.",
+    "internet_private_hint": "Optional encrypted internet delivery for saved mesh favorites and private conversations in joined public areas. Relays can observe your IP address and the recipient public key. No push notifications.",
     "enable": "Enable",
     "disable": "Disable",
     "wipe_identity": "Erase identity and all local data",
@@ -142,6 +142,9 @@
     "nearby_only": "Nearby only for this message",
     "via_bridge": "Via internet bridge",
     "automatic_area_relays": "Use Bitchat area relays",
-    "automatic_area_hint": "Area chats and bridges use the five closest relays from the bundled Bitchat directory. Turn this off in Settings to use your custom list. Private courier mailboxes use the custom/default list below."
+    "automatic_area_hint": "Area chats and bridges use the five closest relays from the bundled Bitchat directory. Turn this off in Settings to use your custom list. Private courier mailboxes use the custom/default list below.",
+    "private_message": "Private message",
+    "geo_private_notice": "Encrypted private conversation for this area. Public keys identify accounts, not people. Enable internet private messages in Settings to send and receive.",
+    "geo_private_disabled": "To start a private conversation from a public message, enable internet private messages in Settings."
   }
 }

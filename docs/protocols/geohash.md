@@ -51,11 +51,15 @@ it. Bluetooth delivery/read receipts are independent.
 
 ## Deliberate omissions
 
-A pinned public directory selects up to five nearby area relays by default;
+A bundled public directory with validated cached refresh selects up to five nearby area relays by default;
 custom relay addresses remain available. The [courier and bridge runtime](courier-and-bridge.md)
 adds optional public gateway/bridge forwarding and encrypted courier mailboxes.
-No high-difficulty proof-of-work mining, live directory refresh/map, location
+No high-difficulty proof-of-work mining, directory map, location
 notes, media, moderation lists, Tor, or background/push delivery is included. A relay requiring positive proof
 of work may reject a publish; rejection is surfaced rather than shown as sent.
 Do not treat a geohash tag, nickname, or signature as proof of physical location
 or real-world identity. Channel contents and metadata are public.
+
+Optional [area private conversations](connection-and-internet.md) reuse the
+channel identity and encrypted private envelope codec, with separate inboxes and
+history. Enable internet private messages in Settings before using them.

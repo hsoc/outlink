@@ -80,6 +80,7 @@ export class PrivateMailbox {
     if (this.stopped) throw new Error('Private mailbox is stopped');
     await this.transport.publish(createPrivateEnvelope(embeddedPrivate(payload, senderId, recipientId), this.key, recipient));
   }
+  updateRelays(relays: string[]) { this.transport.updateRelays(relays); }
   async settled() { await this.pending; }
   stop() { this.stopped = true; this.transport.stop(); this.key.fill(0); this.seen.clear(); }
 }

@@ -64,3 +64,11 @@ rows are marked and keyed by Nostr event ID, with radio hints used only for
 replacement. Delivery receipts and contact updates are serialized so shutdown
 can wait for work before an identity wipe. Protocol details and resource limits
 belong in [courier and bridge](protocols/courier-and-bridge.md).
+
+Session replacements preserve working ciphers until authenticated completion.
+Area-private conversations reuse envelope/outbox/storage services but are scoped
+to the area identity; mesh contacts and their verification state are not inferred
+from Nostr nicknames. Directory refresh is foreground and internet-consent bound,
+with validated persistent data and bundled fallback. Shutdown waits for private
+message and directory-cache work before identity erasure. See
+[connection and internet lifecycle](protocols/connection-and-internet.md).

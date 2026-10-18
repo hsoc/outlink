@@ -36,7 +36,7 @@ export default function Settings() {
     <AppText tone="muted">{t('mobile.internet_private_hint')}</AppText>
     <AppButton label={t(workspace.internet ? 'mobile.disable' : 'mobile.enable')} variant="secondary" disabled={clearing || contactsBusy || networkBusy || !workspace.ready} onPress={() => void (async () => {
       setClearing(true); setFailed(false);
-      try { const enabled = !workspace.internet; await bitchatService.enableInternet(enabled, workspace.relays.split(/\s+/).filter(Boolean)); workspaceStore.setState({ internet: enabled }); }
+      try { const enabled = !workspace.internet; await bitchatService.enableInternet(enabled, workspace.relays.split(/\s+/).filter(Boolean)); await geohashService.enableInternet(enabled); workspaceStore.setState({ internet: enabled }); }
       catch { setFailed(true); } finally { setClearing(false); }
     })()} />
     <AppText tone="muted">{t('mobile.storage_note')}</AppText>

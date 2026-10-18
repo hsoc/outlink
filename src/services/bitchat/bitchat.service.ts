@@ -1,3 +1,4 @@
+import { refreshAreaRelays } from '@/services/geohash/relay-refresh';
 import type { Event } from 'nostr-tools/pure';
 import { base64 } from '@scure/base';
 import { PrekeyRuntime, type ProtocolStorage } from './compatibility/prekey-runtime';
@@ -262,6 +263,8 @@ class BitchatService {
     const saved = await platform.preferences.getItem('mobile.workspace');
     const config = saved ? JSON.parse(saved) as { autoAreaRelays?: boolean; gateway?: boolean; bridge?: boolean; bridgeCell?: string; hash?: string; relays?: string } : {};
     const options: NetworkConfig = { autoAreaRelays: config.autoAreaRelays !== false, gateway: config.gateway === true, bridge: config.bridge === true, cell: config.bridgeCell ?? '', hash: config.hash?.trim().toLowerCase().replace(/^#/, '') ?? '', relays: config.relays?.split(/\s+/).filter(Boolean) ?? ['wss://relay.damus.io/', 'wss://nos.lol/'] };
+    if (options.autoAreaRelays && (options.gateway || options.bridge)) await refreshAreaRelays();
+    if (epoch !== this.networkEpoch || session !== this.session || !this.connection) return;
     const key = await privateNostrKey(`bridge/${options.cell}`);
     if (epoch !== this.networkEpoch || session !== this.session) { key.fill(0); return; }
     this.network = new NetworkRuntime(options, key, {
@@ -293,9 +296,12 @@ class BitchatService {
     if (await this.favoriteNotification(contact.id, payload.content)) return;
     const own = bitchatSessionStore.getState().id;
     const previous = await historyOperation(() => platform.history.get('mesh', payload.id + contact.id));
-    if (!previous) this.mergeMessage({ id: payload.id, peer: contact.id, recipient: own, name: contact.name, content: payload.content,
-      timestamp: payload.timestamp, outgoing: false, delivery: 'delivered' });
-    await this.mailbox?.send(sender, { kind: 'receipt', id: payload.id, delivery: 'delivered', senderId: own, recipientId: contact.id, timestamp: Date.now() }, own, contact.id);
+    if (!previous) {
+      const message: BitchatMessage = { id: payload.id, peer: contact.id, recipient: own, name: contact.name, content: payload.content, timestamp: payload.timestamp, outgoing: false, delivery: 'delivered' };
+      await saveMessage('mesh', payload.id + contact.id, message); this.mergeMessage(message);
+    }
+    await this.queueReceipt(contact.id, payload.id, previous && JSON.parse(previous).delivery === 'read' ? 'read' : 'delivered');
+    try { await this.flushReceipts(contact.id); } catch { /* Persisted receipts retry on reconnect. */ }
   }
   async enableInternet(enabled: boolean, relays = ['wss://relay.damus.io/', 'wss://nos.lol/']) {
     const epoch = ++this.internetEpoch, previous = this.mailbox;
@@ -384,6 +390,8 @@ class BitchatService {
         await this.refreshNetwork();
         if (preferences.internet) await this.enableInternet(true, preferences.relays?.split(/\s+/).filter(Boolean));
         this.outboxTimer = setInterval(() => {
+          const network = this.network;
+          if (network?.config.autoAreaRelays && (network.config.gateway || network.config.bridge)) void refreshAreaRelays().then(() => { if (this.network === network) network.refreshRelays(); });
           if (this.sweeping) return;
           this.sweeping = true;
           void (async () => {
@@ -441,8 +449,7 @@ class BitchatService {
   private readonly notifying = new Set<string>();
   private async sendFavoriteNotice(peer: string) {
     const contact = contactsService.get(peer);
-    if (!this.session || !contact || contact.blocked || contact.pendingFavorite === undefined || this.notifying.has(peer) ||
-      !bitchatSessionStore.getState().peers.some(p => p.id === peer && p.lastSeen > 0 && Date.now() - p.lastSeen < 60000)) return;
+    if (!this.session || !contact || contact.blocked || contact.pendingFavorite === undefined || this.notifying.has(peer)) return;
     this.notifying.add(peer);
     const session = this.session;
     let key: Uint8Array | undefined;
@@ -450,7 +457,13 @@ class BitchatService {
       key = await privateNostrKey();
       if (session !== this.session) return;
       const content = `${contact.pendingFavorite ? '[FAVORITED]:' : '[UNFAVORITED]:'}${npubEncode(getPublicKey(key))}`;
-      await session.sendPrivate(peer, content, await platform.deviceCrypto.randomUUID());
+      const id = await platform.deviceCrypto.randomUUID();
+      if (bitchatSessionStore.getState().peers.some(p => p.id === peer && p.lastSeen > 0 && Date.now() - p.lastSeen < 60000)) await session.sendPrivate(peer, content, id);
+      else {
+        if (!this.mailbox || !this.internetConnections || !contact.npub) return;
+        const target = decodeNpub(contact.npub); if (target.type !== 'npub') return;
+        await this.mailbox.send(target.data, { kind: 'message', id, content, senderId: session.id, recipientId: peer, timestamp: Date.now() }, session.id, peer);
+      }
       const current = contactsService.get(peer);
       if (current && current.pendingFavorite === contact.pendingFavorite) await contactsService.upsert(peer, latest => latest && latest.pendingFavorite === contact.pendingFavorite ? { ...latest, pendingFavorite: undefined } : latest ?? current);
     } finally { key?.fill(0); this.notifying.delete(peer); }
