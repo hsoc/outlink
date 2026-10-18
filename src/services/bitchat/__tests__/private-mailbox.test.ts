@@ -1,4 +1,9 @@
 /** @jest-environment node */
+import { hexToBytes } from '@noble/hashes/utils.js';
+import iosFixture from './fixtures/LegacyPrivateEnvelope733098bb.json';
+import iosKey from './fixtures/LegacyPrivateEnvelope733098bbRecipientKey.json';
+import androidFixture from './fixtures/AndroidLegacyPrivateEnvelopeB7f0b33d.json';
+import androidKey from './fixtures/AndroidLegacyPrivateEnvelopeB7f0b33dMetadata.json';
 import { getPublicKey } from 'nostr-tools/pure';
 import { PrivateMailbox, embeddedPrivate, decodeEmbedded, type InternetPayload } from '../compatibility/private-mailbox';
 import { createPrivateEnvelope, openPrivateEnvelope } from '../compatibility/nostr-private';
@@ -47,4 +52,24 @@ it('reports application/storage failures and allows the same authentic event to 
     f.receive(event); await f.mailbox.settled(); expect(f.callbacks.error).toHaveBeenCalledTimes(1);
     f.receive(event); await f.mailbox.settled(); expect(f.callbacks.message).toHaveBeenCalledTimes(2);
   } finally { f.mailbox.stop(); }
+});
+
+it.each([
+  ['iOS', iosFixture, iosKey.recipient_private_key],
+  ['Android', androidFixture, androidKey.recipient_private_key],
+] as const)('accepts the unchanged pinned official %s envelope through the private inbox runtime', async (_name, event, secret) => {
+  const key = hexToBytes(secret), opened = openPrivateEnvelope(event, key);
+  // Freeze reception time near the authenticated rumor, preserving fixture signatures.
+  const clock = jest.spyOn(Date, 'now').mockReturnValue(opened.timestamp * 1000 + 1000);
+  const callbacks = { message: jest.fn(async (_sender: string, _payload: InternetPayload) => {}), connection: jest.fn(), error: jest.fn() };
+  const socket: GeoSocket = { readyState: 1, onopen: null, onclose: null, onerror: null, onmessage: null, send: jest.fn(), close: jest.fn() };
+  const mailbox = new PrivateMailbox(key, ['wss://one.example'], callbacks, () => socket);
+  try {
+    mailbox.start(); socket.onopen!();
+    socket.onmessage!({ data: JSON.stringify(['EVENT', 'private-inbox', event]) }); await mailbox.settled();
+    socket.onmessage!({ data: JSON.stringify(['EVENT', 'private-inbox', event]) }); await mailbox.settled();
+    expect(callbacks.message).toHaveBeenCalledTimes(1);
+    expect(callbacks.message).toHaveBeenCalledWith(opened.sender, expect.objectContaining({ kind: 'message', content: opened.content }));
+    expect(callbacks.error).not.toHaveBeenCalled();
+  } finally { mailbox.stop(); await mailbox.settled(); clock.mockRestore(); }
 });

@@ -1,4 +1,4 @@
-# Automated interoperability checks — 2026-10-17
+# Automated interoperability checks — expanded 2026-10-18
 
 Scope: independent protocol/profile checks and simulated transports. Physical-device
 testing is omitted at the maintainer's request. These results do not establish
@@ -90,3 +90,28 @@ area-private offline delivery, full-key receipt binding, durable read receipts
 after restart, and shutdown racing composition; directory validation, cache age,
 failure backoff, cancellation and relay replacement. See
 [implementation limits](../protocols/connection-and-internet.md).
+
+## Fault-injection expansion — 2026-10-18
+
+- At simulated 64- and 185-byte MTUs, drop the first public-message fragment
+  during an outage. No incomplete message is displayed. A signed, fragmented,
+  link-local history request recovers the original signed text exactly once.
+- Drop a Noise XX replacement response, expire the reserved negotiation and
+  verify that the established cipher still delivers private text. Timeout events
+  are controlled by the test; the suite does not wait fifteen wall-clock seconds.
+- Disconnect both relay sockets during a pending send, reconnect replacements,
+  and inject an old socket's delayed positive acknowledgment. It cannot mark
+  the send accepted. The original times out; a new send succeeds on a live socket.
+- Drop private recipient acknowledgments while returning relay acceptance, then
+  retry the original saved message after its retry interval. Duplicate relay
+  deliveries create one recipient history row, and a previously read message
+  remains read while the sender's queue eventually clears.
+- Feed the unchanged pinned official iOS and Android private-envelope fixtures
+  through the real private inbox runtime at their authenticated fixture times.
+  Validate the full sender/content and duplicate suppression. Verify all fixture
+  file SHA-256 values against their pinned provenance.
+
+These tests use deterministic fault schedules and assert user-visible delivery
+states, history, privacy and cleanup. They exercise real Outlink codecs/sessions
+with simulated bearers/relays, not official executables. Existing CI runs them
+through the full Jest suite. No upstream implementation source was copied.

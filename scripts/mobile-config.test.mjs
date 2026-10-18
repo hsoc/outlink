@@ -23,3 +23,9 @@ test('QR scanning grants camera access without microphone or push permissions', 
   assert.ok(!app.android.blockedPermissions.includes('android.permission.CAMERA'));
   assert.ok(app.android.blockedPermissions.includes('android.permission.RECORD_AUDIO'));
 });
+
+test('unused SQLite full-text extensions are disabled in both native builds', async()=>{
+  const app=(await read('app.json')).expo;
+  const plugin=app.plugins.find(p=>Array.isArray(p)&&p[0]==='expo-sqlite');
+  assert.equal(plugin[1].enableFTS,false);
+});

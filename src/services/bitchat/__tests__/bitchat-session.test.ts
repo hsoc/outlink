@@ -1,5 +1,7 @@
 /** @jest-environment node */
 import { bytesToHex } from '@noble/hashes/utils.js';
+import { GossipCache } from '../compatibility/gossip';
+import { fragmentPacket } from '../bitchat-fragments';
 import { PrekeyRuntime } from '../compatibility/prekey-runtime';
 import { CourierRuntime } from '../compatibility/courier-runtime';
 import { decodeCourier, encodeCourier, courierTags, openCourier, sealCourier } from '../compatibility/courier';
@@ -332,4 +334,53 @@ it('keeps an encrypted session usable when only one of two physical links disapp
   await a.session.sendPrivate(b.session.id, 'remaining link', 'dual-after');
   await until(() => b.messages.some(m => m.id === 'dual-after'));
   expect(a.peers.get(b.session.id)?.secure).toBe(true);
+});
+
+it.each([64, 185])('recovers public text through signed history sync after a lost fragment at MTU %i', async frameSize => {
+  const a = node('Alice', 1, frameSize), b = node('Bob', 2, frameSize);
+  await Promise.all([a.session.start(), b.session.start()]); connect(a.r, b.r);
+  await until(() => !!a.peers.get(b.session.id)?.lastSeen && !!b.peers.get(a.session.id)?.lastSeen);
+  const send = a.r.port.sendAsync; let dropped = false;
+  a.r.port.sendAsync = async (endpoint, wire) => {
+    const packet = await decodePacket(wire);
+    if (packet.type === BitchatType.fragment && packet.payload[12] === BitchatType.message && new DataView(packet.payload.buffer, packet.payload.byteOffset).getUint16(8) === 0) { dropped = true; return; }
+    await send(endpoint, wire);
+  };
+  const content = '💬'.repeat(63) + 'abc'; await a.session.sendPublic(content);
+  await new Promise(resolve => setTimeout(resolve, 100)); expect(dropped).toBe(true); expect(b.messages).toHaveLength(0);
+  a.r.port.sendAsync = send;
+  const request = signPacket({ version: 1, type: BitchatType.sync, ttl: 0, sender: b.session.id, recipient: a.session.id,
+    timestamp: Date.now(), payload: new GossipCache().request() }, b.identity.signingSeed);
+  for (const wire of fragmentPacket(request, frameSize, new Uint8Array(8).fill(77))) { expect(wire.length).toBeLessThanOrEqual(frameSize); await b.r.port.sendAsync(a.r.id, wire); }
+  await until(() => b.messages.some(message => message.content === content));
+  expect(b.messages.filter(message => message.content === content)).toHaveLength(1);
+});
+it('times out a lost replacement response while preserving the established encrypted session', async () => {
+  const a = node('Alice', 1, 512), b = node('Bob', 2, 512);
+  await Promise.all([a.session.start(), b.session.start()]); connect(a.r, b.r);
+  await until(() => !!a.peers.get(b.session.id)?.lastSeen && !!b.peers.get(a.session.id)?.lastSeen);
+  await a.session.sendPrivate(b.session.id, 'before lost handshake', 'loss-before');
+  await until(() => b.messages.some(m => m.id === 'loss-before'));
+  const send = b.r.port.sendAsync; let dropped = false;
+  b.r.port.sendAsync = async (endpoint, wire) => {
+    const packet = await decodePacket(wire);
+    if (packet.type === BitchatType.handshake && packet.payload.length === 96) { dropped = true; return; }
+    await send(endpoint, wire);
+  };
+  const clock = Date.now, shifted = jest.spyOn(Date, 'now').mockImplementation(() => clock() + 6000);
+  const schedule = global.setTimeout, deadlines: (() => void)[] = [];
+  const timers = jest.spyOn(global, 'setTimeout').mockImplementation(((handler: () => void, delay?: number, ...args: unknown[]) => {
+    if (delay === 15000) deadlines.push(handler);
+    return schedule(handler, delay, ...args);
+  }) as typeof setTimeout);
+  try {
+    const rekey = a.session.rekey(b.session.id), rejection = expect(rekey).rejects.toThrow('timed out');
+    await until(() => dropped); expect(deadlines.length).toBeGreaterThanOrEqual(1);
+    deadlines[0](); await rejection;
+    timers.mockRestore(); shifted.mockRestore(); b.r.port.sendAsync = send;
+    await a.session.sendPrivate(b.session.id, 'still encrypted', 'loss-after');
+    await until(() => b.messages.some(m => m.id === 'loss-after'));
+    expect(a.peers.get(b.session.id)?.secure).toBe(true);
+  } finally { timers.mockRestore(); shifted.mockRestore(); }
+
 });

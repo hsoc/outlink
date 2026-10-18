@@ -71,3 +71,17 @@ it('updates relay addresses without losing working links or accepting callbacks 
   sockets[2].onopen!(); sockets[2].onmessage!({ data: JSON.stringify(['EVENT', 'geohash', event]) });
   expect(callbacks.message).toHaveBeenCalledTimes(1); session.stop(); expect(jest.getTimerCount()).toBe(0);
 });
+
+it('ignores a delayed acceptance from disconnected sockets and recovers on new relay connections', async () => {
+  const { session, sockets, callbacks } = setup(); session.start(); sockets.forEach(s => s.onopen!());
+  const sent = session.send('before outage'), rejected = expect(sent).rejects.toThrow('timed out');
+  const event = sockets[0].sent.at(-1)![1] as { id: string };
+  const late = sockets[0].onmessage!; sockets.slice(0, 2).forEach(s => s.onclose!());
+  jest.advanceTimersByTime(1000); sockets.slice(2).forEach(s => s.onopen!());
+  late({ data: JSON.stringify(['OK', event.id, true, 'late']) });
+  expect(callbacks.delivery).not.toHaveBeenCalled();
+  jest.advanceTimersByTime(7000); await rejected;
+  const resumed = session.send('after outage'), replacement = sockets[2].sent.at(-1)![1] as { id: string };
+  sockets[2].onmessage!({ data: JSON.stringify(['OK', replacement.id, true, '']) }); await resumed;
+  expect(callbacks.delivery).toHaveBeenLastCalledWith(replacement.id, 'sent'); session.stop(); expect(jest.getTimerCount()).toBe(0);
+});

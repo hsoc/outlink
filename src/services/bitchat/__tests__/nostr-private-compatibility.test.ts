@@ -1,4 +1,8 @@
 /** @jest-environment node */
+import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { join as pathJoin } from 'node:path';
+import provenance from './fixtures/provenance.json';
 import { getPublicKey, finalizeEvent } from 'nostr-tools/pure';
 import { hexToBytes } from '@noble/hashes/utils.js';
 import legacy from './fixtures/LegacyPrivateEnvelope733098bb.json';
@@ -36,4 +40,12 @@ it('rejects forged inner identity, signed rumors, and alternate recipient tags e
 });
 it('does not accept standard NIP-44 or unauthenticated malformed content as the custom envelope format', () => {
   expect(() => decryptPrivateContent('not-v2', hexToBytes('02'.repeat(32)), getPublicKey(hexToBytes('01'.repeat(32))))).toThrow();
+});
+
+it('retains the exact published fixture bytes recorded at the pinned upstream revision', () => {
+  expect(provenance.revision).toBe('5e9287fae1e5fea80ca741d4ea669829dc16f144');
+  for (const fixture of provenance.fixtures) {
+    const data = readFileSync(pathJoin(__dirname, 'fixtures', fixture.file));
+    expect(createHash('sha256').update(data).digest('hex')).toBe(fixture.sha256);
+  }
 });

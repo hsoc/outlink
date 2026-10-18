@@ -1,12 +1,12 @@
-# Dependency review — 2026-10-17
+# Dependency review — refreshed 2026-10-18
 
-The review used the committed npm lockfile, installed callers, and the npm/GitHub
-advisory data. Counts describe affected package entries, including parent chains;
+The review used the committed npm lockfile, installed callers, and fresh npm/GitHub
+advisory data on 2026-10-18. The original patch review was on 2026-10-17. Counts describe affected package entries, including parent chains;
 they are not counts of independently exploitable app flaws.
 
 `npm audit --omit=dev` changed from **45 (29 high, 16 moderate)** to
-**43 (27 high, 16 moderate)** after compatible patches. The full audit, including
-dev dependencies, currently reports **68 (52 high, 16 moderate)**. The production
+**43 (27 high, 16 moderate)** after compatible patches. The fresh audit confirms these same production counts. The full audit, including
+dev dependencies, reports **68 (52 high, 16 moderate)**. The production
 closure includes Expo/Metro/project-generation tools as ordinary dependencies.
 This is not a clean audit or a production-security certification.
 
@@ -54,3 +54,40 @@ integrity-pinned override. Production npm audit remains 43 findings (27 high,
 16 moderate), with no reported advisory for the camera, QR encoder,
 barcode-detector or zxing-wasm additions. Existing unresolved findings above
 remain unresolved. Native compilation and native dependency audits are separate.
+
+## 2026-10-18 refresh
+
+Both npm audit endpoints were queried successfully against the unchanged lockfile.
+The five underlying advisory groups and severity totals remain unchanged. None
+is suppressed. No compatible patched dependency update was identified; automatic
+suggestions still include Expo 44.0.6, router 58.0.23 and React Native 0.88.0,
+which are unsuitable replacements for this Expo 57 application. The uuid fix is
+in a different major line. Package versions and the lockfile remain unchanged.
+
+The [machine-readable snapshot](dependency-audit-2026-10-18.json) records the
+lockfile SHA-256, installed affected versions, advisory links, npm totals, proposed
+incompatible fixes, and six native-version OSV queries. The JSON is evidence of
+this dated review, not a live health indicator or full native SBOM.
+
+The [native dependency review](native-dependencies.md) identifies a declared Okio
+version affected by CVE-2023-3635 and SQLite security-fix gaps outside npm's audit.
+Android release dependency resolution could not finish without an Android SDK;
+CocoaPods resolution is unavailable on this Linux host. These are open gaps,
+not clean scan results. Generated Android and iOS projects both confirm the new
+`enableFTS: false` SQLite configuration. This removes unused full-text extensions
+from the configured build; it does not upgrade SQLite or alter the npm totals.
+
+Expanded automated interoperability coverage includes lost public fragments with
+signed history recovery at small MTUs, a lost Noise replacement response with
+working-session preservation, disconnected-relay late acknowledgments, private
+retry after a lost acknowledgment with duplicate delivery/read monotonicity, and
+unchanged official frozen iOS/Android envelopes through the inbox runtime. A
+fixture SHA-256 check protects the published provenance boundary. Physical/native
+binary interoperability remains unverified.
+
+Validation for this refresh: 138 tests in 27 Jest suites, TypeScript, clean lint,
+mobile configuration/storage checks, 734-notice consistency, Android/iOS native
+project generation and both JavaScript/Hermes bundle exports passed. The offline
+Expo SDK version check reported dependencies up to date while warning that
+offline validation is less reliable; it is not a substitute for the live audit.
+Native compilation and full resolved native advisory scans remain outstanding.

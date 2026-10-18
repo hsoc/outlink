@@ -1,0 +1,187 @@
+{
+  "reviewedAt": "2026-10-18",
+  "baseCommit": "4cc1d0e12759efbb36bf924fd7a3354c51889221",
+  "lockfileSha256": "720884820cb7d8076d131d7a86cb189d2cfced136d5efb8eecf39032e0cbf55b",
+  "npm": {
+    "source": "https://registry.npmjs.org/-/npm/v1/security/advisories/bulk",
+    "production": {
+      "info": 0,
+      "low": 0,
+      "moderate": 16,
+      "high": 27,
+      "critical": 0,
+      "total": 43
+    },
+    "all": {
+      "info": 0,
+      "low": 0,
+      "moderate": 16,
+      "high": 52,
+      "critical": 0,
+      "total": 68
+    },
+    "advisoryGroups": [
+      {
+        "package": "braces",
+        "installedVersions": [
+          "3.0.3"
+        ],
+        "advisories": [
+          {
+            "id": 1240992,
+            "title": "braces vulnerable to stack-exhaustion denial of service through deeply nested patterns",
+            "url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+            "severity": "high",
+            "range": "<=3.0.3"
+          }
+        ],
+        "suggestedFix": {
+          "name": "expo",
+          "version": "44.0.6",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "package": "decode-uri-component",
+        "installedVersions": [
+          "0.2.2"
+        ],
+        "advisories": [
+          {
+            "id": 1147955,
+            "title": "decode-uri-component: Denial of service via exponential decoding of malformed percent-encoded input",
+            "url": "https://github.com/advisories/GHSA-vcc3-ghjq-m6fr",
+            "severity": "moderate",
+            "range": "<=0.4.2"
+          }
+        ],
+        "suggestedFix": {
+          "name": "expo-router",
+          "version": "58.0.23",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "package": "node-forge",
+        "installedVersions": [
+          "1.4.0"
+        ],
+        "advisories": [
+          {
+            "id": 1240912,
+            "title": "node-forge RSA PKCS#1 v1.5 signature verification accepts extra nested DigestAlgorithm elements",
+            "url": "https://github.com/advisories/GHSA-86w9-cpqp-85rv",
+            "severity": "high",
+            "range": "<=1.4.0"
+          }
+        ],
+        "suggestedFix": {
+          "name": "expo",
+          "version": "44.0.6",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "package": "sprintf-js",
+        "installedVersions": [
+          "1.0.3"
+        ],
+        "advisories": [
+          {
+            "id": 1241202,
+            "title": "sprintf-js vulnerable to denial of service through unbounded precision specifiers",
+            "url": "https://github.com/advisories/GHSA-hp3w-g68c-fv3c",
+            "severity": "moderate",
+            "range": "<=1.1.3"
+          }
+        ],
+        "suggestedFix": {
+          "name": "react-native",
+          "version": "0.88.0",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "package": "uuid",
+        "installedVersions": [
+          "7.0.3"
+        ],
+        "advisories": [
+          {
+            "id": 1119441,
+            "title": "uuid: Missing buffer bounds check in v3/v5/v6 when buf is provided",
+            "url": "https://github.com/advisories/GHSA-w5hq-g745-h8pq",
+            "severity": "moderate",
+            "range": "<11.1.1"
+          }
+        ],
+        "suggestedFix": {
+          "name": "expo",
+          "version": "44.0.6",
+          "isSemVerMajor": true
+        }
+      }
+    ]
+  },
+  "native": {
+    "scope": "Declared versions only; Android resolution failed without an SDK, CocoaPods resolution unavailable on this Linux host. Empty OSV results do not prove safety.",
+    "source": "https://api.osv.dev/v1/querybatch",
+    "queries": [
+      {
+        "package": {
+          "ecosystem": "Maven",
+          "name": "com.squareup.okhttp3:okhttp"
+        },
+        "version": "4.9.2",
+        "result": {}
+      },
+      {
+        "package": {
+          "ecosystem": "Maven",
+          "name": "com.squareup.okio:okio"
+        },
+        "version": "2.9.0",
+        "result": {
+          "vulns": [
+            {
+              "id": "GHSA-w33c-445m-f8w7",
+              "modified": "2026-09-10T03:49:54.860062Z"
+            }
+          ]
+        }
+      },
+      {
+        "package": {
+          "ecosystem": "Maven",
+          "name": "androidx.exifinterface:exifinterface"
+        },
+        "version": "1.4.2",
+        "result": {}
+      },
+      {
+        "package": {
+          "ecosystem": "Maven",
+          "name": "com.google.mlkit:barcode-scanning"
+        },
+        "version": "17.3.0",
+        "result": {}
+      },
+      {
+        "package": {
+          "ecosystem": "Maven",
+          "name": "com.google.android.gms:play-services-code-scanner"
+        },
+        "version": "16.1.0",
+        "result": {}
+      },
+      {
+        "package": {
+          "ecosystem": "Maven",
+          "name": "androidx.camera:camera-core"
+        },
+        "version": "1.6.0",
+        "result": {}
+      }
+    ]
+  }
+}

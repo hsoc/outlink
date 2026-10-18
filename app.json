@@ -47,7 +47,12 @@
         }
       ],
       "expo-secure-store",
-      "expo-sqlite",
+      [
+        "expo-sqlite",
+        {
+          "enableFTS": false
+        }
+      ],
       [
         "expo-localization",
         {

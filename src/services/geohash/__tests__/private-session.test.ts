@@ -11,21 +11,22 @@ import { embeddedPrivate, decodeEmbedded } from '@/services/bitchat/compatibilit
 type Socket = GeoSocket & { filter?: string; live: boolean };
 function relay() {
   const sockets: Socket[] = [], events: Event[] = [];
-  let accept = true;
+  let accept = true, dropFor: string | undefined;
+  let duplicate = false;
   const socket = (): GeoSocket => {
     const s: Socket = { live: true, readyState: 1, onopen: null, onclose: null, onerror: null, onmessage: null,
       close() { s.live = false; }, send(data) {
         const frame = JSON.parse(data);
         if (frame[0] === 'REQ') { s.filter = frame[2]['#p'][0]; for (const event of events) deliver(s, event); }
         if (frame[0] === 'EVENT') {
-          if (accept) { events.push(frame[1]); for (const target of sockets) deliver(target, frame[1]); }
+          if (accept && frame[1].tags.find((tag: string[]) => tag[0] === 'p')?.[1] !== dropFor) { events.push(frame[1]); for (const target of sockets) { deliver(target, frame[1]); if (duplicate) deliver(target, frame[1]); } }
           queueMicrotask(() => s.onmessage?.({ data: JSON.stringify(['OK', frame[1].id, accept, '']) }));
         }
       } };
     sockets.push(s); queueMicrotask(() => { if (s.live) s.onopen?.(); }); return s;
   };
   function deliver(s: Socket, event: Event) { if (s.live && s.filter === event.tags.find(t => t[0] === 'p')?.[1]) queueMicrotask(() => s.onmessage?.({ data: JSON.stringify(['EVENT', 'private-inbox', event]) })); }
-  return { socket, events, reject: () => { accept = false; }, accept: () => { accept = true; }, inject: (event: Event) => { events.push(event); sockets.forEach(s => deliver(s, event)); } };
+  return { socket, events, drop: (peer?: string) => { dropFor = peer; }, duplicates: () => { duplicate = true; }, reject: () => { accept = false; }, accept: () => { accept = true; }, inject: (event: Event) => { events.push(event); sockets.forEach(s => deliver(s, event)); } };
 }
 function storage() {
   const records = memoryStorage(), history = new Map<string, BitchatMessage>(), pending = new Map<string, PendingMessage>();
@@ -81,4 +82,22 @@ it('bounds content and cancels composition racing shutdown before outbox writes'
   await expect(a.session.send(peer, 'x'.repeat(4097))).rejects.toThrow();
   const pending = a.session.send(peer, 'cancel'); a.session.stop();
   await expect(pending).rejects.toThrow('stopped'); await a.session.idle(); expect(a.pending.size).toBe(0);
+});
+
+it('retries the original message after a lost acknowledgment without duplicate history or regressing read state', async () => {
+  const hub = relay(), a = client(1, hub), b = client(2, hub);
+  hub.drop(a.session.pubkey); hub.duplicates();
+  await a.session.send(b.session.pubkey, 'ack was lost');
+  await until(() => b.history.size === 1 && a.pending.size === 1 && hub.events.length > 0);
+  const message = [...b.history.values()][0];
+  await b.session.read(a.session.pubkey, message.id);
+  await until(() => [...b.history.values()][0].delivery === 'read');
+  await b.session.flush(); await new Promise(resolve => setTimeout(resolve, 20)); await b.session.flush();
+  expect(await b.records.list('geo-acks', 200)).toHaveLength(0); expect(a.pending.size).toBe(1);
+  hub.drop();
+  // Age the persisted attempt rather than replacing the outbox's captured clock.
+  for (const entry of a.pending.values()) entry.lastAttempt -= 31000;
+  await a.session.flush(); await until(() => a.pending.size === 0 && [...a.history.values()][0].delivery === 'read');
+  expect(b.history.size).toBe(1); expect([...b.history.values()][0].delivery).toBe('read');
+  expect(hub.events.filter(e => e.tags[0][1] === b.session.pubkey).length).toBeGreaterThanOrEqual(2);
 });
