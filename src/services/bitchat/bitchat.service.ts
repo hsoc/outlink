@@ -25,8 +25,8 @@ import { platform } from '@/platform';
 import { BitchatSession, type BitchatIdentity, type BitchatMessage, type BitchatPeer, type ExtensionContext } from './bitchat-session';
 
 export type BitchatState = { active: boolean; busy: boolean; id: string; account: string | null; peers: BitchatPeer[];
-  messages: BitchatMessage[]; error: boolean };
-const empty: BitchatState = { active: false, busy: false, id: '', account: null, peers: [], messages: [], error: false };
+  messages: BitchatMessage[]; bridgeRelays: number; privateRelays: number; error: boolean };
+const empty: BitchatState = { active: false, busy: false, id: '', account: null, peers: [], messages: [], bridgeRelays: 0, privateRelays: 0, error: false };
 export const bitchatSessionStore = createStore<BitchatState>(() => empty);
 const protocolStorage: ProtocolStorage = { get: readRecord, list: readRecords, put: putRecord, remove: removeRecord };
 const storageKey = (account: string) => `bitchat.identity.${account}`;
@@ -257,7 +257,9 @@ class BitchatService {
     const hint = bridgeHint(event); return !!hint && bitchatSessionStore.getState().messages.some(message => !message.recipient && !message.bridge && meshStableId(message.peer, message.timestamp, message.content) === hint);
   }
   async refreshNetwork() {
-    const epoch = ++this.networkEpoch, session = this.session, previous = this.network; previous?.stop(); await previous?.idle(); this.network = undefined;
+    const epoch = ++this.networkEpoch, session = this.session, previous = this.network;
+    previous?.stop(); await previous?.idle(); this.network = undefined;
+    bitchatSessionStore.setState({ bridgeRelays: 0 });
     if (!session || !this.identity || !this.connection) return;
     await historyOperation(async () => {});
     const saved = await platform.preferences.getItem('mobile.workspace');
@@ -283,7 +285,11 @@ class BitchatService {
         if (message?.delivery === 'queued') this.mergeMessage({ ...message, delivery: 'sent' });
       },
       open: envelope => this.openEnvelope(envelope), handover: (envelope, peer) => session.sendExtension(BitchatType.courier, encodeCourier(envelope), peer, true),
-      connected: () => { void this.flushAll().catch(() => bitchatSessionStore.setState({ error: true })); }, error: () => bitchatSessionStore.setState({ error: true }),
+      connected: count => {
+        if (epoch !== this.networkEpoch || session !== this.session) return;
+        bitchatSessionStore.setState({ bridgeRelays: count });
+        if (count > 0) void this.flushAll().catch(() => bitchatSessionStore.setState({ error: true }));
+      }, error: () => bitchatSessionStore.setState({ error: true }),
     }, protocolStorage);
     session.setCapabilities(1 | (options.gateway ? 4 : 0) | (options.bridge ? 128 : 0));
     await this.network.start();
@@ -306,12 +312,18 @@ class BitchatService {
   }
   async enableInternet(enabled: boolean, relays = ['wss://relay.damus.io/', 'wss://nos.lol/']) {
     const epoch = ++this.internetEpoch, previous = this.mailbox;
-    this.mailbox = undefined; this.internetConnections = 0; previous?.stop(); await previous?.settled();
+    this.mailbox = undefined; this.internetConnections = 0;
+    bitchatSessionStore.setState({ privateRelays: 0 });
+    previous?.stop(); await previous?.settled();
     if (!enabled || !this.connection || epoch !== this.internetEpoch) return;
     const key = await privateNostrKey();
     if (!this.connection || epoch !== this.internetEpoch) { key.fill(0); return; }
     this.mailbox = new PrivateMailbox(key, relays, { message: (sender, payload) => this.receiveInternet(sender, payload),
-      connection: count => { this.internetConnections = count; if (count) for (const contact of contactsStore.getState().contacts) if (contact.favorite) void this.flush(contact.id).catch(() => {}); },
+      connection: count => {
+        if (epoch !== this.internetEpoch) return;
+        this.internetConnections = count; bitchatSessionStore.setState({ privateRelays: count });
+        if (count) for (const contact of contactsStore.getState().contacts) if (contact.favorite) void this.flush(contact.id).catch(() => {});
+      },
       error: () => bitchatSessionStore.setState({ error: true }) });
     this.mailbox.start();
   }
@@ -423,7 +435,7 @@ class BitchatService {
     finally {
       this.identity?.noiseSeed.fill(0); this.identity?.signingSeed.fill(0);
       this.identity = undefined; this.account = undefined; this.prekeys = undefined; this.couriers = undefined; this.network = undefined; this.lastPrekeys = 0;
-      bitchatSessionStore.setState(state => ({ active: false, busy: false, peers: [], messages: state.messages.map(message => message.delivery === 'sending' ? { ...message, delivery: 'failed' as const } : message) }));
+      bitchatSessionStore.setState(state => ({ active: false, busy: false, peers: [], bridgeRelays: 0, privateRelays: 0, messages: state.messages.map(message => message.delivery === 'sending' ? { ...message, delivery: 'failed' as const } : message) }));
     }
   }
   private async localIdentity() {
