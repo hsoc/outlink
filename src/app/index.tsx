@@ -1,4 +1,5 @@
 import { sessionIntent } from '@/services/history/lifecycle';
+import { isChatAtLatest } from '@/lib/chat-scroll';
 import { areaRelays } from '@/services/geohash/relay-directory';
 import { contactsStore, contactsService } from '@/services/bitchat/compatibility/contacts';
 import { workspaceStore, restoreWorkspace } from '@/services/history/workspace';
@@ -172,7 +173,7 @@ export default function Chats() {
           scrollEventThrottle={100}
           onScroll={({ nativeEvent }) => {
             const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-            atLatest.current = layoutMeasurement.height + contentOffset.y >= contentSize.height - spacing.xl;
+            atLatest.current = isChatAtLatest(layoutMeasurement.height, contentOffset.y, contentSize.height, spacing.xl);
           }}
           onContentSizeChange={() => { if (atLatest.current) listRef.current?.scrollToEnd({ animated: false }); }}
           onLayout={() => { if (atLatest.current) listRef.current?.scrollToEnd({ animated: false }); }}
