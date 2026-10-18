@@ -16,6 +16,7 @@ function fixture(options: Partial<NetworkConfig> = {}) {
     socket = { readyState: 1, onopen: null, onclose: null, onmessage: null, onerror: null, send: data => { sent.push(JSON.parse(data)); }, close: () => {} }; return socket;
   });
   return { runtime, callbacks, storage, sent, async start(connect = true) { await runtime.start(); if (connect && socket) socket.onopen!(); },
+    disconnect() { socket.onclose?.(); },
     event(event: unknown) { socket.onmessage!({ data: JSON.stringify(['EVENT', 'mesh-network', event]) }); },
     accept(event: Event, accepted = true) { socket.onmessage!({ data: JSON.stringify(['OK', event.id, accepted, '']) }); },
   };
@@ -24,6 +25,15 @@ async function until(check: () => boolean) { const deadline = Date.now() + 3000;
 const fixtures: ReturnType<typeof fixture>[] = [];
 function setup(options: Partial<NetworkConfig> = {}) { const f = fixture(options); fixtures.push(f); return f; }
 afterEach(async () => { for (const f of fixtures.splice(0)) { f.runtime.stop(); await f.runtime.idle(); } });
+it('reports relay availability on connect and disconnect without claiming private delivery', async () => {
+  const f = setup();
+  await f.start();
+  expect(f.callbacks.connected).toHaveBeenLastCalledWith(1);
+  f.disconnect();
+  expect(f.callbacks.connected).toHaveBeenLastCalledWith(0);
+  expect(f.callbacks.published).not.toHaveBeenCalled();
+});
+
 it('publishes signed mesh-only geohash uplinks once and downlinks remote messages without internet/mesh echoes', async () => {
   const f = setup(); await f.start();
   const local = createGeohashEvent(other, 'u4pruy', 'Alice', 'local geo');
