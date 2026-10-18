@@ -135,7 +135,7 @@ export default function Chats() {
         {mode === 'mesh' ? <FlatList horizontal data={contacts} keyExtractor={p => p.id} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm }}
           ListHeaderComponent={<AppButton label={t('bitchat.public')} variant="secondary" fullWidth={false} selected={!recipient} onPress={() => setRecipient(undefined)} />}
           renderItem={({ item: p }) => <AppButton label={p.name} variant="secondary" fullWidth={false}
-            selected={recipient === p.id} onPress={() => setRecipient(p.id)} />} /> : <AppText variant="caption" tone="muted">{t('mobile.geo_status', { hash: geo.hash, count: geo.connected, people: geo.present })}</AppText>}
+            selected={recipient === p.id} onPress={() => setRecipient(p.id)} />} /> : <AppText variant="caption" tone="muted">{t('mobile.geo_area_people', { hash: geo.hash, people: geo.present })}</AppText>}
         {mode === 'geo' && <FlatList horizontal data={geo.privatePeers} keyExtractor={key => key} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm }}
           ListHeaderComponent={<AppButton label={t('bitchat.public')} variant="secondary" fullWidth={false} selected={!geoRecipient} onPress={() => setPrivateTarget(undefined)} />}
           renderItem={({ item: key }) => <AppButton label={key.slice(0, 8)} variant="secondary" fullWidth={false} selected={geoRecipient === key} onPress={() => setPrivateTarget({ hash: geo.hash, pubkey: key })} />} />}
