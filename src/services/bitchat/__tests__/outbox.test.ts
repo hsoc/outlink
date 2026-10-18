@@ -53,3 +53,12 @@ it('coalesces concurrent flushes and cancels the remaining batch on stop', async
   await Promise.all([f.outbox.flush('bob', deliver), f.outbox.flush('bob', deliver)]); await f.outbox.idle();
   expect(deliver).toHaveBeenCalledTimes(1); expect(f.records.get('bob:second')?.attempts).toBe(0);
 });
+
+it('keeps a stable conversation scope separate from full wire-recipient authorization', async () => {
+  const f = fixture(), message = { ...f.message('rotated'), channelThread: 'bob-original', recipient: 'bob-new' };
+  await f.outbox.enqueue('bob-original', message);
+  await expect(f.outbox.acknowledge('bob-original', message.id, 'read')).rejects.toThrow('identity mismatch');
+  await expect(f.outbox.acknowledge('bob-original', message.id, 'read', 'mallory')).rejects.toThrow('identity mismatch');
+  await expect(f.outbox.enqueue('bob-original', { ...message, recipient: 'bob-another' })).rejects.toThrow('reused');
+  await f.outbox.acknowledge('bob-original', message.id, 'read', 'bob-new'); expect(f.records.size).toBe(0);
+});

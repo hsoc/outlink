@@ -115,3 +115,11 @@ These tests use deterministic fault schedules and assert user-visible delivery
 states, history, privacy and cleanup. They exercise real Outlink codecs/sessions
 with simulated bearers/relays, not official executables. Existing CI runs them
 through the full Jest suite. No upstream implementation source was copied.
+
+Channel-rotation coverage adds durable random key rings, clock rollback and failed
+writes, bounded grace, concurrent manager creation and retryable key erasure;
+public signer/subscription replacement without reconnecting; signed private
+proof/acknowledgment binding, simultaneous rotations, cold restart with pending
+migration, original-key outbox receipts, expiry/recovery, and rejection of expired
+remote-key impersonation. This Outlink extension is not implemented by the
+pinned official client; see [the protocol boundary](../protocols/channel-identity-rotation.md).

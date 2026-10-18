@@ -20,19 +20,20 @@ type Pending = { resolve(): void; reject(error: Error): void; timer: ReturnType<
 /** Small NIP-01 transport for Bitchat kind-20000 chat and kind-20001 presence. */
 export class GeohashSession {
   readonly hash: string;
-  private readonly publicKey: string;
+  private publicKey: string;
+  private ownPublicKeys = new Set<string>();
   private links: Link[] = [];
   private stopped = true;
   private heartbeat?: ReturnType<typeof setInterval>;
   private readonly seen = new Set<string>();
   private readonly present = new Map<string, number>();
   private readonly pending = new Map<string, Pending>();
-  constructor(hash: string, private readonly key: Uint8Array, private readonly name: string,
+  constructor(hash: string, private key: Uint8Array, private readonly name: string,
     private readonly relays: string[], private readonly callbacks: Callbacks,
     private readonly socket: (url: string) => GeoSocket = url => new WebSocket(url) as unknown as GeoSocket,
     private readonly mode?: RelayMode, private readonly fallback?: (event: Event) => Promise<boolean>) {
     this.hash = normalizeGeohash(hash); this.relays = normalizeGeoRelays(relays);
-    this.publicKey = getPublicKey(key);
+    this.publicKey = getPublicKey(key); this.ownPublicKeys.add(this.publicKey);
     if (!name.trim() || new TextEncoder().encode(name).length > 64) throw new Error('Invalid nickname');
   }
   start(): void {
@@ -46,6 +47,13 @@ export class GeohashSession {
       for (const [pubkey, at] of this.present) if (at < cutoff) this.present.delete(pubkey);
       this.callbacks.presence(this.present.size);
     }, 60_000);
+  }
+  replaceIdentity(key: Uint8Array, previous: string[] = []) {
+    if (this.stopped || previous.length > 2) { key.fill(0); throw new Error('Channel identity unavailable'); }
+    const next = getPublicKey(key), changed = next !== this.publicKey;
+    this.key.fill(0); this.key = key; this.publicKey = next;
+    this.ownPublicKeys = new Set([this.publicKey, ...previous]);
+    if (!this.mode && changed) this.presence();
   }
   updateRelays(input: string[]): void {
     const next = normalizeGeoRelays(input);
@@ -126,7 +134,7 @@ export class GeohashSession {
     this.seen.add(event.id); if (this.seen.size > 2048) this.seen.delete(this.seen.values().next().value!);
     if (!this.present.has(event.pubkey) && this.present.size >= 256) this.present.delete(this.present.keys().next().value!);
     this.present.set(event.pubkey, Date.now()); this.callbacks.presence(this.present.size);
-    if (event.kind === 20000) { const message = this.message(event, event.pubkey === this.publicKey); message.delivery = 'sent'; this.callbacks.message(message); }
+    if (event.kind === 20000) { const message = this.message(event, this.ownPublicKeys.has(event.pubkey)); message.delivery = 'sent'; this.callbacks.message(message); }
   }
   private message(event: Event, outgoing: boolean): GeoMessage {
     return { id: event.id, pubkey: event.pubkey, name: event.tags.find(t => t[0] === 'n')?.[1]?.slice(0, 64) || event.pubkey.slice(0, 8),

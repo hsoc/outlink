@@ -15,7 +15,7 @@ export type MeshPingResult = { rttMs: number; hops?: number };
 export type BitchatIdentity = { noiseSeed: Uint8Array; noisePublicKey: Uint8Array; signingSeed: Uint8Array };
 export type BitchatPeer = { id: string; name: string; fingerprint: string; lastSeen: number; secure: boolean; authenticatedCapabilities?: boolean; capabilities?: number; direct?: boolean; authenticatedLink?: boolean; noisePublicKey?: string; signingPublicKey?: string };
 export type BitchatMessage = { id: string; peer: string; recipient?: string; name: string; content: string;
-  timestamp: number; bridge?: { pubkey: string; radioHint?: string }; outgoing: boolean; delivery: 'queued' | 'carried' | 'sending' | 'sent' | 'delivered' | 'read' | 'failed' };
+  timestamp: number; channelThread?: string; bridge?: { pubkey: string; radioHint?: string }; outgoing: boolean; delivery: 'queued' | 'carried' | 'sending' | 'sent' | 'delivered' | 'read' | 'failed' };
 type KnownPeer = BitchatPeer & { ingress: string; noiseKey: Uint8Array; signingKey: Uint8Array };
 type Negotiation = { handshake: BitchatHandshake; at: number; promise: Promise<void>;
   resolve: () => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> };

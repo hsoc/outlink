@@ -145,6 +145,10 @@
     "automatic_area_hint": "Area chats and bridges use the five closest relays from the bundled Bitchat directory. Turn this off in Settings to use your custom list. Private courier mailboxes use the custom/default list below.",
     "private_message": "Private message",
     "geo_private_notice": "Encrypted private conversation for this area. Public keys identify accounts, not people. Enable internet private messages in Settings to send and receive.",
-    "geo_private_disabled": "To start a private conversation from a public message, enable internet private messages in Settings."
+    "geo_private_disabled": "To start a private conversation from a public message, enable internet private messages in Settings.",
+    "channel_rotation_hint": "Your public identity changes daily. Old keys accept private delivery for 48 hours. Your nickname and message timing may still identify you.",
+    "channel_identity_expired": "This contact has not confirmed your identity change. The old key has expired. Continuing with the current identity may appear as a new conversation in their app.",
+    "channel_identity_recover": "Continue with current identity",
+    "channel_identity_pending": "Waiting for this contact to confirm your identity change. This conversation still uses its previous identity."
   }
 }

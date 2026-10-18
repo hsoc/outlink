@@ -40,3 +40,7 @@ and provide a nearby-only choice when composing a bridged message.
 
 Private conversations opened from public channels show the full signed public key
 and stay visibly separate from public channel messages and verified mesh contacts.
+
+Identity changes preserve private conversation selection and drafts. Expired,
+unconfirmed identity changes require a visible recovery action; never silently
+present a new identity as authenticated continuity in another client.

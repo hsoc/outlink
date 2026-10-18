@@ -63,12 +63,13 @@ an already-known Nostr address when Bluetooth is unavailable and internet delive
 is enabled. Notices remain pending on rejection; a positive relay acknowledgment
 clears that pending notice. This is relay acceptance, not recipient confirmation.
 
-Channel keys remain stable per channel to preserve queued conversations across
-restarts. They differ between channels and from the mesh-favorite internet key.
-Automatic channel identity rotation/migration remains a compatibility gap; no
-claim of unlinkability within a channel or forward secrecy for stored Nostr
-messages is made. The inbox is active only while the area is joined in the
-foreground. Push registration is absent.
+[Channel identities now rotate daily](channel-identity-rotation.md), with a
+48-hour old-key delivery window and authenticated private migration for Outlink
+peers. This is an additional Outlink privacy policy; the pinned upstream uses
+stable channel identities. Existing clients retain standard message-format
+compatibility but cannot confirm the migration extension. No claim of anonymity
+or per-message forward secrecy is made. The inbox is active only while the area
+is joined in the foreground. Push registration remains absent.
 
 ## Directory refresh
 

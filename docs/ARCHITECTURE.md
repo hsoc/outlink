@@ -27,9 +27,9 @@ module is retained because it supplies Bluetooth central/peripheral roles,
 framing, and compression needed by Bitchat.
 
 A new device identity is generated locally and kept in platform secure storage.
-Bluetooth Noise/Ed25519 keys remain stable. Location signing keys are derived
-separately for each exact channel. A shared nickname or public radio behaviour
-can still link activity; derived keys are not an anonymity guarantee.
+Bluetooth Noise/Ed25519 keys remain stable. Location signing keys are generated independently for each exact channel and
+rotate daily with a bounded private delivery window. A shared nickname or public
+radio behaviour can still link activity; rotation is not an anonymity guarantee.
 
 Both transports stop on background. Pending operations are cancelled or rejected,
 connections/timers are released, private session key material is cleared, and
@@ -72,3 +72,11 @@ from Nostr nicknames. Directory refresh is foreground and internet-consent bound
 with validated persistent data and bundled fallback. Shutdown waits for private
 message and directory-cache work before identity erasure. See
 [connection and internet lifecycle](protocols/connection-and-internet.md).
+
+Channel identity ownership belongs to a serialized secure-storage key-ring manager.
+The foreground geohash service commits random keys before swapping public signers
+and private inboxes, and drains maintenance before erasure. Private conversation
+roots are separate from wire identities, preserving indexed history and queues
+without whole-history rewrites. Only authenticated proof/acknowledgment changes
+peer routes and acknowledged local signing identities. See
+[channel identity lifecycle](protocols/channel-identity-rotation.md).

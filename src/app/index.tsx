@@ -35,7 +35,8 @@ export default function Chats() {
   const setRelays = (relays: string) => workspaceStore.setState({ relays });
   const setRecipient = (recipient?: string) => workspaceStore.setState({ recipient });
   const [privateTarget, setPrivateTarget] = useState<{ hash: string; pubkey: string }>();
-  const geoRecipient = privateTarget?.hash === geo.hash ? privateTarget.pubkey : undefined;
+  const geoRecipient = privateTarget?.hash === geo.hash ? geohashService.privatePeer(privateTarget.pubkey) : undefined;
+  const geoThread = geo.privateThreads.find(thread => thread.peer === geoRecipient);
   const draftKey = mode === 'mesh' ? `mesh:${recipient ?? 'public'}` : `geo:${hash.trim().toLowerCase().replace(/^#/, '')}${geoRecipient ? ':private:' + geoRecipient : ''}`;
   const draft = workspace.drafts[draftKey] ?? '';
   const setDraft = (value: string) => workspaceStore.setState(state => ({ drafts: { ...state.drafts, [draftKey]: value } }));
@@ -54,7 +55,7 @@ export default function Chats() {
     return [...found.values()];
   }, [mesh.peers, mesh.messages, recipient, savedContacts]);
   const peer = mesh.peers.find(p => p.id === recipient);
-  const messages = useMemo(() => mode === 'geo' ? geoRecipient ? geo.privateMessages.filter(m => m.peer === geoRecipient || m.recipient === geoRecipient) : geo.messages : mesh.messages.filter(m => recipient ?
+  const messages = useMemo(() => mode === 'geo' ? geoRecipient ? geo.privateMessages.filter(m => m.channelThread === geoRecipient || m.peer === geoRecipient || m.recipient === geoRecipient) : geo.messages : mesh.messages.filter(m => recipient ?
     m.recipient && (m.peer === recipient || m.recipient === recipient) : !m.recipient), [mode, recipient, mesh.messages, geo.messages, geo.privateMessages, geoRecipient]);
   useEffect(() => {
     let alive = true;
@@ -72,7 +73,7 @@ export default function Chats() {
   }, [mode, recipient, mesh.active, mesh.messages]);
   useEffect(() => {
     if (mode !== 'geo' || !geoRecipient || !geo.privateActive) return;
-    for (const message of geo.privateMessages) if (!message.outgoing && message.peer === geoRecipient && message.delivery === 'delivered') void geohashService.readPrivate(geoRecipient, message.id).catch(() => {});
+    for (const message of geo.privateMessages) if (!message.outgoing && (message.channelThread === geoRecipient || message.peer === geoRecipient) && message.delivery === 'delivered') void geohashService.readPrivate(geoRecipient, message.id, message.peer).catch(() => {});
   }, [mode, geoRecipient, geo.privateActive, geo.privateMessages]);
   async function operate(task: () => Promise<void>) {
     if (working) return;
@@ -129,7 +130,13 @@ export default function Chats() {
           ListHeaderComponent={<AppButton label={t('bitchat.public')} variant="secondary" fullWidth={false} selected={!geoRecipient} onPress={() => setPrivateTarget(undefined)} />}
           renderItem={({ item: key }) => <AppButton label={key.slice(0, 8)} variant="secondary" fullWidth={false} selected={geoRecipient === key} onPress={() => setPrivateTarget({ hash: geo.hash, pubkey: key })} />} />}
         {mode === 'geo' && !geo.privateActive && <AppText variant="caption" tone="muted">{t('mobile.geo_private_disabled')}</AppText>}
-        {mode === 'geo' && geoRecipient && <AppText variant="caption" selectable tone="muted">{geoRecipient}</AppText>}
+        {mode === 'geo' && geoRecipient && <AppText variant="caption" selectable tone="muted">{geoThread?.head ?? geoRecipient}</AppText>}
+        {mode === 'geo' && !geoRecipient && <AppText variant="caption" tone="muted">{t('mobile.channel_rotation_hint')}</AppText>}
+        {mode === 'geo' && geoRecipient && geoThread?.blocked && <>
+          <AppText variant="caption" tone="danger">{t('mobile.channel_identity_expired')}</AppText>
+          <AppButton label={t('mobile.channel_identity_recover')} variant="secondary" disabled={busy || !geo.privateActive} onPress={() => void operate(() => geohashService.useCurrentIdentity(geoRecipient))} />
+        </>}
+        {mode === 'geo' && geoRecipient && geoThread?.migrating && !geoThread.blocked && <AppText variant="caption" tone="muted">{t('mobile.channel_identity_pending')}</AppText>}
         <AppText variant="caption" tone="muted">{t(mode === 'geo' ? geoRecipient ? 'mobile.geo_private_notice' : 'mobile.geo_privacy' : recipient ? 'bitchat.private_notice' : workspace.bridge && !workspace.nearbyOnly ? 'mobile.bridge_notice' : 'bitchat.public_notice')}</AppText>
         {mode === 'mesh' && peer ? <AppText variant="caption" selectable tone="muted">{t('bitchat.fingerprint', { value: peer.fingerprint })}</AppText> : null}
         <AppButton label={t('mobile.older')} variant="text" disabled={busy} onPress={() => void operate(() => mode === 'mesh' ? bitchatService.older() : geoRecipient ? geohashService.olderPrivate() : geohashService.older())} />
@@ -148,7 +155,7 @@ export default function Chats() {
           </View>} />
         {mode === 'mesh' && !recipient && workspace.bridge && <AppButton label={t('mobile.nearby_only')} variant="secondary" selected={workspace.nearbyOnly} disabled={busy} onPress={() => workspaceStore.setState({ nearbyOnly: !workspace.nearbyOnly })} />}
         <AppInput label={t('bitchat.message')} value={draft} onChangeText={setDraft} multiline maxLength={mode === 'mesh' ? 255 : geoRecipient ? 4096 : MAX_GEO_CONTENT_BYTES} />
-        <AppButton label={t('bitchat.send')} loading={working} disabled={(!active && !(mode === 'mesh' && recipient && contactsService.get(recipient))) || busy || !draft.trim() || bytes(draft).length > (mode === 'mesh' ? 255 : geoRecipient ? 4096 : MAX_GEO_CONTENT_BYTES) || (mode === 'geo' && (geoRecipient ? !geo.privateActive : !geo.connected && !bitchatService.hasGateway()))}
+        <AppButton label={t('bitchat.send')} loading={working} disabled={(!active && !(mode === 'mesh' && recipient && contactsService.get(recipient))) || busy || !draft.trim() || bytes(draft).length > (mode === 'mesh' ? 255 : geoRecipient ? 4096 : MAX_GEO_CONTENT_BYTES) || (mode === 'geo' && (geoRecipient ? !geo.privateActive || geoThread?.blocked : !geo.connected && !bitchatService.hasGateway()))}
           onPress={() => void operate(send)} />
         <AppButton label={t('bitchat.leave')} variant="text" disabled={busy} onPress={() => void operate(async () => {
           if (mode === 'mesh') await bitchatService.stop(); else geohashService.stop(); setRecipient(undefined);

@@ -23,10 +23,11 @@ Presence refreshes every 60 seconds; the displayed recent participant count
 expires after three minutes and is bounded to 256 keys. It is not a verified
 count of people physically present in an area.
 
-Each channel uses a separate secp256k1 key derived from the locally secured
-random master using HKDF-SHA256 and a versioned Outlink domain. No account or
-username provider participates. Wire compatibility does not require another
-client to derive keys in the same way.
+Each channel uses independently generated secp256k1 identities, persisted in
+secure storage and rotated every 24 hours while active or on the next join.
+[Old-key delivery and private migration](channel-identity-rotation.md) preserve
+bounded delivery continuity. No account or username provider participates.
+Wire compatibility does not require clients to generate keys in the same way.
 
 ## Transport and validation
 

@@ -63,16 +63,18 @@ default. A bridge publishes only the author's explicitly bridge-enabled public
 messages; Nearby only skips that message. Area relay selection defaults to the
 pinned Bitchat directory, using a geohash's center rather than publishing exact
 coordinates; selected addresses are displayed. Custom relays remain available.
-No live directory fetch or Tor support is introduced. Enabling the bridge also
+Validated directory refresh is described below; Tor support is not implemented. Enabling the bridge also
 opens encrypted courier drop subscriptions; relays see rotating recipient tags
 and ciphertext. A gateway can retrieve drops for authenticated nearby peers.
 See [courier/bridge behavior](protocols/courier-and-bridge.md) for limits and consent.
 
 Optional area-private inboxes use the signed public channel identity. Their full
 Nostr keys identify accounts, not verified people; nicknames and short IDs do not
-authorize receipts. Keys remain stable within a channel and differ across
-channels; automatic rotation is not implemented. Private Nostr messages lack
-forward secrecy. Automatic area relay selection contacts the upstream HTTPS
+authorize receipts. Channel identities now rotate daily, with 48-hour grace inboxes and authenticated
+private migration for Outlink peers. Relay subscriptions can associate current
+and grace keys; public events do not publish the migration link. Nicknames and
+timing can still correlate activity. Private Nostr messages lack per-message
+forward secrecy. See [rotation policy](protocols/channel-identity-rotation.md). Automatic area relay selection contacts the upstream HTTPS
 directory while its internet feature is joined, exposing the fetcher IP to that
 operator. Custom relay mode bypasses this download. Both use bounded foreground
 connections; no push service is introduced.

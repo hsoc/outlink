@@ -290,6 +290,7 @@ class BitchatService {
     geohashService.meshFallback = (event, hash) => this.network?.uplinkGeo(event, hash) ?? Promise.resolve(false);
   }
   private async receiveInternet(sender: string, payload: InternetPayload) {
+    if (payload.kind === 'rotation' || payload.kind === 'rotation-ack') return;
     const contact = contactsStoreLookup(sender);
     if (!contact || contact.blocked || payload.senderId && payload.senderId !== contact.id || payload.recipientId && payload.recipientId !== bitchatSessionStore.getState().id) return;
     if (payload.kind === 'receipt') { await this.receipt(payload.id, contact.id, payload.delivery); return; }

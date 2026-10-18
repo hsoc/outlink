@@ -21,7 +21,7 @@ cryptographic primitives are reused rather than implementing ciphers.
 | Public history | Signed link-local RequestSync, GCS membership filters, durable encrypted announcement/text/prekey cache, rate-limited RSR backfill | Fragment/file/board/group sync caches and respective quotas/schedules |
 | Contacts and verification | Signed expiring QR/link import/export, encrypted pins, encrypted live nonce challenge/response, favorite/block controls | Vouch and mutual-verification coordination; verification remains pending when offline |
 | Outgoing private queue | Durable encrypted per-contact queue; bounded retries/expiry; authenticated receipt binding; offline composition | Official-client/native verification remains outstanding |
-| Internet private messages | Custom historical v2/XChaCha kind-1059 envelopes, frozen iOS/Android fixtures; opt-in favorite/area inboxes, durable private outboxes/receipts and offline favorite notices | Automatic per-channel identity rotation/migration; recipient-confirmed control delivery |
+| Internet private messages | Custom historical v2/XChaCha kind-1059 envelopes, frozen iOS/Android fixtures; opt-in favorite/area inboxes, durable private outboxes/receipts, offline favorite notices, daily area identity rotation and private Outlink migration | Official clients do not implement the migration extension; recipient-confirmed favorite control delivery |
 | Courier | Noise X seals, authenticated direct deposits, encrypted bounded mailbag, persistent spray budgets, direct/remote handover, recipient dedup and carried status | Official-client/native verification remains outstanding |
 | One-time prekeys | Secure batches, signed monotonic bundles, persistent assignment/consumption, 48-hour grace, replenishment and bounded gossip | Official-client/native verification remains outstanding |
 | Public geohash | Public kind-20000 messages, kind-20001 presence, relay ACK/reconnect, geohash selection, validated cached directory refresh | Full PoW policy and optional Tor behavior |
@@ -65,3 +65,6 @@ both. Routine backgrounding cancels in-flight work and preserves records.
 The implemented delivery paths and their limits are detailed in [courier and bridge](courier-and-bridge.md).
 
 See [connection and internet lifecycle](connection-and-internet.md) for replacement, area DMs and directory refresh limits.
+
+[Channel identity rotation](channel-identity-rotation.md) is an Outlink privacy extension,
+not an official Bitchat wire requirement. Standard message formats remain unchanged.

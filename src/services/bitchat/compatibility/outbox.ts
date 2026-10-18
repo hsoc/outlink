@@ -25,11 +25,11 @@ export class MessageOutbox {
     private readonly changed: (message: BitchatMessage) => void,
     private readonly now = Date.now) {}
   async enqueue(peer: string, message: BitchatMessage): Promise<void> {
-    if (message.recipient !== peer || !message.outgoing) throw new Error('Outbox recipient mismatch');
+    if (!message.recipient || (message.channelThread ?? message.recipient) !== peer || !message.outgoing) throw new Error('Outbox recipient mismatch');
     await this.mutate(peer, async () => {
     const existing = await this.storage.get(peer, message.id);
     if (existing) {
-      if (existing.message.content !== message.content) throw new Error('Outbox message ID reused');
+      if (existing.message.content !== message.content || existing.message.peer !== message.peer || existing.message.recipient !== message.recipient) throw new Error('Outbox message ID reused');
       return;
     }
     const pending = (await this.storage.list(peer)).sort((a, b) => a.message.timestamp - b.message.timestamp);
@@ -74,10 +74,10 @@ export class MessageOutbox {
       }
     }
   }
-  async acknowledge(peer: string, id: string, delivery: 'delivered' | 'read'): Promise<void> {
+  async acknowledge(peer: string, id: string, delivery: 'delivered' | 'read', authenticatedRecipient = peer): Promise<void> {
     await this.mutate(peer, async () => {
     const entry = await this.storage.get(peer, id); if (!entry) return;
-    if (entry.message.recipient !== peer) throw new Error('Outbox receipt identity mismatch');
+    if ((entry.message.channelThread ?? entry.message.recipient) !== peer || entry.message.recipient !== authenticatedRecipient) throw new Error('Outbox receipt identity mismatch');
     await this.storage.remove(peer, id); this.changed({ ...entry.message, delivery });
     });
   }
