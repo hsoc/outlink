@@ -17,7 +17,7 @@ type Props = {
   title?: string;
   /** Optional centered interactive title control. Takes precedence over
    * `title`; use an `AppButton variant="text"` with `labelVariant="subtitle"`
-   * (the wallet selector, DESIGN §8). */
+   * for an accessible interactive title. */
   titleControl?: React.ReactNode;
   /** Defaults to `backSafely()`. */
   onBack?: () => void;
@@ -88,7 +88,7 @@ export function ScreenHeader({
       }}
     >
       {overMedia ? null : (
-        <ChromeBackdrop frosted={bordered === true} scrollbarOcclusion="top" />
+        <ChromeBackdrop frosted={bordered === true} />
       )}
       <View
         style={[styles.passThrough, {

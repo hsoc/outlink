@@ -96,7 +96,7 @@ export async function refreshInventory(root, lock, oldInventory, texts) {
   const inventory = {
     reviewed: new Date().toISOString().slice(0, 10),
     lockfileSha256: sha256(await fs.readFile(path.join(root, 'package-lock.json'))),
-    scope: 'All locked non-development npm packages on all platforms, plus the shipped Electron runtime. Includes build utilities; not an exact binary inventory.',
+    scope: 'All locked non-development npm packages on all platforms. Includes build utilities; not an exact binary inventory.',
     packages,
   };
   await fs.writeFile(path.join(root, 'licenses/third-party/common/npm-inventory.json'), JSON.stringify(inventory, null, 2) + '\n');

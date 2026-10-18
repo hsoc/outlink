@@ -6,7 +6,7 @@ let lastHref: string | null = null;
 let lastAt = 0;
 
 /**
- * Ignore stale back events after a session gate unmounts the navigator, or
+ * Ignore stale back events after the navigator unmounts, or
  * after an earlier queued tap has already returned to the root. Check at
  * dispatch time; a value captured during render can outlive the navigator.
  */
@@ -16,8 +16,7 @@ export function backSafely(): void {
 
 /**
  * Push a route, collapsing rapid duplicate pushes of the **same** href into
- * one. When the JS thread is briefly busy (e.g. the gift-wrap replay burst on
- * launch), taps queue up and then all dispatch at once — without this guard
+ * one. When the JS thread is briefly busy, taps queue up and then all dispatch at once — without this guard
  * each one pushes another copy of the screen, so the user lands N screens deep
  * and has to back out N times. A short window is enough: the queued taps fire
  * within milliseconds of each other, while a legitimate re-open (go back, then

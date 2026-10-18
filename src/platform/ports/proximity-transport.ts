@@ -1,28 +1,14 @@
-/**
- * Port for the BLE duplex transport behind nearby (proximity) messaging:
- * advertising the local peer profile, scanning for peers, and exchanging
- * wire frames with connected endpoints. The session/peer-management business
- * logic lives in `services/proximity/proximity.service.ts`; this port exposes
- * only the native transport primitives it drives.
- *
- * Implementations must tolerate the capability being absent (Expo Go, a dev
- * client built before the native module was added, or a platform without
- * Bluetooth): `isAvailable()` returns false and every other method becomes a
- * no-op / resolves to a benign value, so the app boots normally regardless.
- * Callers that require the transport check `isAvailable()` first and surface
- * their own error, matching the previous null-module handling.
- *
- * Transport operations are async-first — see the module note in
- * `secure-storage.ts`. Listener registration (`addListener`) and the
- * availability check are non-I/O and stay synchronous.
+/** Mobile BLE duplex transport for Bitchat discovery and raw protocol frames.
+ * Check availability before starting; mode/frame-size/compression support is
+ * required by the session. Listener registration and availability are synchronous.
  */
 
 /** Handle returned by `addListener`; call `remove()` to unsubscribe. */
 export type ProximityTransportSubscription = { remove(): void };
 
 export interface ProximityTransportPort {
-  /** Optional bearer mode; switching requires a stopped transport session. */
-  configureProtocolAsync?(protocol: 'nearby' | 'bitchat'): Promise<void>;
+  /** Select Bitchat mode before starting the native transport. */
+  configureProtocolAsync?(protocol: 'bitchat'): Promise<void>;
   /** Negotiated GATT value size, excluding ATT overhead. */
   maximumFrameSizeAsync?(endpointId: string): Promise<number>;
   /** Bounded raw DEFLATE used by Bitchat peers; exact output size is required. */
@@ -37,10 +23,6 @@ export interface ProximityTransportPort {
   requestPermissions(): Promise<boolean>;
   /** Start advertising the given binary peer profile. */
   startAdvertisingAsync(profile: Uint8Array): Promise<void>;
-  /** Update the advertised profile of a running session. */
-  updateProfileAsync(profile: Uint8Array): Promise<void>;
-  /** Prefer the peripheral role for a duplicate endpoint connection. */
-  preferPeripheralAsync(endpointId: string): Promise<void>;
   /** Tear down one endpoint without suppressing its future rediscovery. */
   disconnectAsync?(endpointId: string): Promise<void>;
   /** Scan for nearby peers for `scanDurationMs`. */
@@ -49,8 +31,6 @@ export interface ProximityTransportPort {
   stopScanAsync(): Promise<void>;
   /** Tear down the whole transport session (advertising, scanning, links). */
   stopSessionAsync(): Promise<void>;
-  /** Re-request the profile of a connected endpoint. */
-  refreshPeerProfileAsync(endpointId: string): Promise<void>;
   /** Send one complete binary protocol packet to a connected endpoint. */
   sendAsync(endpointId: string, payload: Uint8Array): Promise<void>;
   /**

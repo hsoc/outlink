@@ -1,11 +1,5 @@
-/**
- * Port for the app's foreground/background lifecycle — used by the
- * notification service (post only while backgrounded) and the managed relay
- * pool (recover connections on re-activation).
- *
- * Both members stay synchronous by exception: `currentState` is a cached
- * in-memory OS read, not I/O, and `addChangeListener` is a subscription
- * registration (see the note in `network-state.ts`).
+/** Foreground/background lifecycle for pausing sessions and restoring connections.
+ * Reads use cached OS state; listener registration performs no storage I/O.
  */
 
 /** Mirrors React Native's `AppStateStatus`. */

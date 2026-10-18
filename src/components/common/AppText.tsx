@@ -50,7 +50,6 @@ export function AppText({
   const { i18n } = useTranslation();
   const language = contentLanguage ?? i18n?.resolvedLanguage ?? i18n?.language ?? 'en';
   const isRTL = getLanguageDirection(language) === 'rtl';
-  const webLanguageProps = { lang: language } as unknown as TextProps;
   const v = typography[variant];
 
   const toneColor: Record<Tone, string> = {
@@ -67,7 +66,6 @@ export function AppText({
   return (
     <Text
       {...rest}
-      {...webLanguageProps}
       style={[
         {
           fontSize: v.fontSize,

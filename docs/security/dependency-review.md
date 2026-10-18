@@ -10,6 +10,10 @@ dev dependencies, reports **68 (52 high, 16 moderate)**. The production
 closure includes Expo/Metro/project-generation tools as ordinary dependencies.
 This is not a clean audit or a production-security certification.
 
+Subsequent unused-code cleanup removed only `expo-status-bar` without upgrading
+retained dependencies. The recorded advisory JSON and lock hash remain a dated
+snapshot; see the [cleanup review](../maintenance/unused-code-review.md).
+
 ## Applied patches
 
 | Package | Previous | Updated | Reason |

@@ -1,6 +1,6 @@
 Outlink dependency license notices
 
-Cross-platform non-development npm dependency closure, plus the shipped Electron runtime.
+Cross-platform non-development npm dependency closure.
 Includes optional packages and build utilities; not an exact binary inventory.
 
 ========================================
@@ -2525,13 +2525,6 @@ LICENSE
 ========================================
 
 expo-sqlite@57.0.3
-License: MIT
-Source: https://github.com/expo/expo.git
-LICENSE
-  Text: fb3ca4a837f5779e83cef89b78253a8949cfb9429c340309f62d0465ec6610b4
-========================================
-
-expo-status-bar@57.0.1
 License: MIT
 Source: https://github.com/expo/expo.git
 LICENSE

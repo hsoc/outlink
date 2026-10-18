@@ -584,6 +584,5 @@ export class BitchatSession {
     await this.transport.stopSessionAsync();
     await this.queue;
     await Promise.allSettled([...this.sends.values()]);
-    await this.transport.configureProtocolAsync?.('nearby');
   }
 }

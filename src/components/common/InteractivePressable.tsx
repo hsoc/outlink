@@ -3,13 +3,12 @@ import {
   Pressable,
   type PressableProps,
   type PressableStateCallbackType,
-  Platform,
   StyleSheet,
   type View,
 } from 'react-native';
 
 type PointerPressableState = PressableStateCallbackType & {
-  /** React Native Web supplies this at runtime, but React Native's shared type omits it. */
+  /** Shared feedback state for native pointer hover. */
   readonly hovered?: boolean;
 };
 
@@ -100,10 +99,7 @@ export const InteractivePressable = forwardRef<View, Props>(function Interactive
         ? state
         : { ...state, pressed: false };
   const pressDelay = resolvePressDelay(pressFeedback, unstable_pressDelay);
-  const platformDelayProps =
-    Platform.OS === 'web'
-      ? ({ delayPressIn: pressDelay } as unknown as PressableProps)
-      : { unstable_pressDelay: pressDelay };
+
 
   const resolvedChildren: ReactNode | ((state: PressableStateCallbackType) => ReactNode) =
     typeof children === 'function' ? (state) => children(resolveState(state)) : children;
@@ -111,7 +107,7 @@ export const InteractivePressable = forwardRef<View, Props>(function Interactive
   return (
     <Pressable
       {...props}
-      {...platformDelayProps}
+      unstable_pressDelay={pressDelay}
       ref={ref}
       accessible={accessible}
       disabled={disabled}

@@ -20,7 +20,7 @@ test('round-trips verbatim notices, including CRLF, Unicode, and trailing newlin
   }
 });
 
-test('includes optional and nested packages on every platform and the Electron runtime', () => {
+test('includes optional and nested production packages and excludes development runtimes', () => {
   const packages = lockedPackages({ packages: {
     '': {},
     'node_modules/example': { ...pkg },
@@ -31,7 +31,7 @@ test('includes optional and nested packages on every platform and the Electron r
     'node_modules/local-workspace': { link: true },
   } });
   assert.deepEqual(packages.map((entry) => `${entry.name}@${entry.version}`), [
-    'electron@1.2.3', 'example@1.2.3', 'example@2.0.0', 'windows-only@1.2.3',
+    'example@1.2.3', 'example@2.0.0', 'windows-only@1.2.3',
   ]);
 });
 

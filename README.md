@@ -68,3 +68,6 @@ device-secured key; existing mobile history is migrated automatically.
 See [storage protections](docs/security/local-storage.md),
 [dependency review](docs/security/dependency-review.md), and
 [automated interoperability results](docs/security/automated-interoperability.md).
+
+See the [unused-code review](docs/maintenance/unused-code-review.md) for cleanup
+scope and intentionally retained native compatibility paths.

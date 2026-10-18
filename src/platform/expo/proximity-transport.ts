@@ -18,13 +18,10 @@ type ExpoProximityModule = {
   maximumFrameSizeAsync?(endpointId: string): Promise<number>;
   inflateRawAsync?(bytes: string, size: number): Promise<string>;
   startAdvertisingAsync(profile: string): Promise<void>;
-  updateProfileAsync(profile: string): Promise<void>;
-  preferPeripheralAsync(endpointId: string): Promise<void>;
   disconnectAsync?(endpointId: string): Promise<void>;
   startScanAsync(scanDurationMs: number): Promise<void>;
   stopScanAsync(): Promise<void>;
   stopSessionAsync(): Promise<void>;
-  refreshPeerProfileAsync(endpointId: string): Promise<void>;
   sendAsync(endpointId: string, payload: string): Promise<void>;
   addListener(
     name: string,
@@ -81,16 +78,10 @@ export const proximityTransportAdapter: ProximityTransportPort = {
 
   startAdvertisingAsync: (profile) =>
     load()?.startAdvertisingAsync(base64.encode(profile)) ?? Promise.resolve(),
-  updateProfileAsync: (profile) =>
-    load()?.updateProfileAsync(base64.encode(profile)) ?? Promise.resolve(),
-  preferPeripheralAsync: (endpointId) =>
-    load()?.preferPeripheralAsync(endpointId) ?? Promise.resolve(),
   disconnectAsync: (endpointId) => load()?.disconnectAsync?.(endpointId) ?? Promise.resolve(),
   startScanAsync: (scanDurationMs) => load()?.startScanAsync(scanDurationMs) ?? Promise.resolve(),
   stopScanAsync: () => load()?.stopScanAsync() ?? Promise.resolve(),
   stopSessionAsync: () => load()?.stopSessionAsync() ?? Promise.resolve(),
-  refreshPeerProfileAsync: (endpointId) =>
-    load()?.refreshPeerProfileAsync(endpointId) ?? Promise.resolve(),
   sendAsync: (endpointId, payload) =>
     load()?.sendAsync(endpointId, base64.encode(payload)) ?? Promise.resolve(),
   addListener: (name, listener) =>

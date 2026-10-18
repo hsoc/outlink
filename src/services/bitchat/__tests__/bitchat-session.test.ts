@@ -19,7 +19,7 @@ function radio(id: string, frameSize = 185): Radio {
   return { id, listeners, neighbors, wire, port: {
     isAvailable: () => true, requestPermissions: async () => true,
     configureProtocolAsync: jest.fn(async () => {}), maximumFrameSizeAsync: async () => frameSize,
-    startAdvertisingAsync: async () => {}, updateProfileAsync: async () => {}, preferPeripheralAsync: async () => {},
+    startAdvertisingAsync: async () => {},
     startScanAsync: async () => {}, stopScanAsync: async () => {}, stopSessionAsync: async () => {
       for (const neighbor of neighbors.values()) {
         neighbor.neighbors.delete(id);
@@ -27,7 +27,6 @@ function radio(id: string, frameSize = 185): Radio {
       }
       neighbors.clear();
     },
-    refreshPeerProfileAsync: async () => {},
     async sendAsync(endpoint, payload) {
       wire.push(payload.slice());
       const target = neighbors.get(endpoint);
@@ -100,11 +99,11 @@ it('rejects tampered public signatures and a forged announcement without surfaci
   await new Promise((r) => setTimeout(r, 50));
   expect(b.messages).toHaveLength(1);
 });
-it('rejects oversized outgoing UTF-8 before transmission and restores the bearer on stop', async () => {
+it('rejects oversized outgoing UTF-8 before transmission and keeps the Bitchat bearer selected on stop', async () => {
   const a = node('Alice', 1); await a.session.start();
   await expect(a.session.sendPublic('💬'.repeat(64))).rejects.toThrow('255');
   await a.session.stop();
-  expect(a.r.port.configureProtocolAsync).toHaveBeenLastCalledWith('nearby');
+  expect(a.r.port.configureProtocolAsync).toHaveBeenLastCalledWith('bitchat');
 });
 
 it('resolves simultaneous private initiations without changing the authenticated peer', async () => {

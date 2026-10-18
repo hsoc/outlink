@@ -37,11 +37,11 @@ export function parseNoticeTexts(contents) {
 }
 
 /** Conservative cross-platform inventory, including transitive and optional packages.
- * Electron is a shipped runtime despite being declared as a development dependency. */
+ */
 export function lockedPackages(lock) {
   const packages = new Map();
   for (const [location, pkg] of Object.entries(lock.packages)) {
-    if (!location.includes('node_modules/') || pkg.link || (pkg.dev && location !== 'node_modules/electron')) continue;
+    if (!location.includes('node_modules/') || pkg.link || pkg.dev) continue;
     const name = pkg.name ?? location.split('node_modules/').at(-1);
     if (!pkg.version || !pkg.integrity) throw new Error(`Unpinned package: ${location}`);
     const entry = { ...pkg, name, location };
@@ -89,7 +89,7 @@ export function serializeNotices(packages, texts) {
   });
   const used = [...new Set(packages.flatMap((pkg) => pkg.licenseFiles.map((file) => file.sha256)))];
   return 'Outlink dependency license notices\n\n' +
-    'Cross-platform non-development npm dependency closure, plus the shipped Electron runtime.\n' +
+    'Cross-platform non-development npm dependency closure.\n' +
     'Includes optional packages and build utilities; not an exact binary inventory.\n' +
     separator + descriptions.join(separator) + separator +
     used.map((hash) => `TEXT ${hash}\n\n${texts.get(hash)}`).join(separator) + '\n';

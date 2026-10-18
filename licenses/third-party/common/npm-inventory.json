@@ -1,7 +1,7 @@
 {
-  "reviewed": "2026-10-17",
-  "lockfileSha256": "720884820cb7d8076d131d7a86cb189d2cfced136d5efb8eecf39032e0cbf55b",
-  "scope": "All locked non-development npm packages on all platforms, plus the shipped Electron runtime. Includes build utilities; not an exact binary inventory.",
+  "reviewed": "2026-10-18",
+  "lockfileSha256": "bd0fffc4d7766e2ba442b8139cb325f255a5cb1a6e82648e2a95e049bbadcaa9",
+  "scope": "All locked non-development npm packages on all platforms. Includes build utilities; not an exact binary inventory.",
   "packages": [
     {
       "name": "@babel/code-frame",
@@ -4758,20 +4758,6 @@
       "integrity": "sha512-gbu9Nwm76DNpSK+MEhCjjjF3/EMyFE96IEDSlfO9jPiF4q48a7bef5EXnWVrwW8rvqCZKYAfSGqSpYNhhhpgIg==",
       "repository": "https://github.com/expo/expo.git",
       "homepage": "https://docs.expo.dev/versions/latest/sdk/sqlite/",
-      "licenseFiles": [
-        {
-          "source": "LICENSE",
-          "sha256": "fb3ca4a837f5779e83cef89b78253a8949cfb9429c340309f62d0465ec6610b4"
-        }
-      ]
-    },
-    {
-      "name": "expo-status-bar",
-      "version": "57.0.1",
-      "license": "MIT",
-      "integrity": "sha512-Xwaq1gAoVRWx5dPG5VhT5RSbnI9OilhZnO5qoPBnUaBAa5VzRzfdS8q0/bsPt0jR2DKLtGuP0bQ6efMJ4RIMDg==",
-      "repository": "https://github.com/expo/expo.git",
-      "homepage": "https://docs.expo.dev/versions/latest/sdk/status-bar/",
       "licenseFiles": [
         {
           "source": "LICENSE",
