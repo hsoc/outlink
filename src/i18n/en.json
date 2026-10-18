@@ -39,11 +39,11 @@
     "leave": "Leave",
     "sending": "Sending",
     "failed": "Send failed",
-    "sent": "Sent",
+    "sent": "Sent to transport",
     "delivered": "Delivered",
     "read": "Read",
     "error": "Unable to connect or send. Check Bluetooth, use an updated build, and try again.",
-    "queued": "Queued",
+    "queued": "Queued — waiting for a route",
     "carried": "Carried"
   },
   "appearance": {
@@ -149,6 +149,16 @@
     "channel_rotation_hint": "Your public identity changes daily. Old keys accept private delivery for 48 hours. Your nickname and message timing may still identify you.",
     "channel_identity_expired": "This contact has not confirmed your identity change. The old key has expired. Continuing with the current identity may appear as a new conversation in their app.",
     "channel_identity_recover": "Continue with current identity",
-    "channel_identity_pending": "Waiting for this contact to confirm your identity change. This conversation still uses its previous identity."
+    "channel_identity_pending": "Waiting for this contact to confirm your identity change. This conversation still uses its previous identity.",
+    "mesh_connected": "{{count}} peer(s) connected",
+    "mesh_searching": "Searching for nearby peers",
+    "disconnected": "Disconnected",
+    "relays_connected": "{{count}} relay(s) connected",
+    "relays_disconnected": "No relay connected — reconnecting",
+    "send_failed": "Message could not be sent. Check this conversation's connection and try again.",
+    "mesh_join_failed": "Could not start Bluetooth. Check that Bluetooth is enabled and Nearby devices permission is granted.",
+    "geo_join_failed": "Could not join this area. Check the area code and internet relay settings.",
+    "operation_failed": "Operation failed. Please try again.",
+    "storage_failed": "Could not save local preferences. Check available device storage."
   }
 }

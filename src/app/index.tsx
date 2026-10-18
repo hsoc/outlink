@@ -41,7 +41,8 @@ export default function Chats() {
   const draft = workspace.drafts[draftKey] ?? '';
   const setDraft = (value: string) => workspaceStore.setState(state => ({ drafts: { ...state.drafts, [draftKey]: value } }));
   const [name, setName] = useState(''), [ready, setReady] = useState(false);
-  const [working, setWorking] = useState(false), [error, setError] = useState(false);
+  const [working, setWorking] = useState(false);
+  const [actionError, setActionError] = useState<'join' | 'send' | 'other' | null>(null);
   const active = mode === 'mesh' ? mesh.active : geo.active;
   const busy = working || mesh.busy || geo.busy;
   const contacts = useMemo(() => {
@@ -63,7 +64,7 @@ export default function Chats() {
       const savedHash = workspaceStore.getState().hash;
       if (savedHash) await geohashService.restore(savedHash).catch(() => {});
       if (alive) { setName(value ?? t('bitchat.default_name')); setReady(true); }
-    }).catch(() => { if (alive) { setReady(true); setError(true); } });
+    }).catch(() => { if (alive) { setReady(true); setActionError('other'); } });
     return () => { alive = false; };
   }, [t]);
   useEffect(() => {
@@ -75,10 +76,10 @@ export default function Chats() {
     if (mode !== 'geo' || !geoRecipient || !geo.privateActive) return;
     for (const message of geo.privateMessages) if (!message.outgoing && (message.channelThread === geoRecipient || message.peer === geoRecipient) && message.delivery === 'delivered') void geohashService.readPrivate(geoRecipient, message.id, message.peer).catch(() => {});
   }, [mode, geoRecipient, geo.privateActive, geo.privateMessages]);
-  async function operate(task: () => Promise<void>) {
+  async function operate(task: () => Promise<void>, action: 'join' | 'send' | 'other' = 'other') {
     if (working) return;
-    setWorking(true); setError(false);
-    try { await task(); } catch { setError(true); } finally { setWorking(false); }
+    setWorking(true); setActionError(null);
+    try { await task(); } catch { setActionError(action); } finally { setWorking(false); }
   }
   async function join() {
     const intent = sessionIntent();
@@ -94,12 +95,20 @@ export default function Chats() {
     else await geohashService.send(draft);
     workspaceStore.setState(state => state.drafts[draftKey] === draft ? { drafts: { ...state.drafts, [draftKey]: '' }, ...(mode === 'mesh' && !recipient ? { nearbyOnly: false } : {}) } : state);
   }
+  // Disconnected peers are marked lastSeen=0 by BitchatSession; avoid a clock read during render.
+  const onlinePeerCount = mesh.peers.filter(p => p.lastSeen > 0).length;
+  const hasMeshPeers = onlinePeerCount > 0;
+  const canSendPublicMesh = hasMeshPeers || (workspace.bridge && !workspace.nearbyOnly);
+  const isComposing = active || (mode === 'mesh' ? mesh.messages.length > 0 || contacts.length > 0 : geo.messages.length > 0);
+  const transportHint = mode === 'mesh'
+    ? `Bluetooth · ${mesh.active ? (hasMeshPeers ? t('mobile.mesh_connected', { count: onlinePeerCount }) : t('mobile.mesh_searching')) : t('mobile.disconnected')}`
+    : `Internet · ${geo.connected > 0 ? t('mobile.relays_connected', { count: geo.connected }) : t('mobile.relays_disconnected')}`;
   if (!ready) return <AppScreen><AppText>Outlink</AppText></AppScreen>;
   return <AppScreen edges={['bottom']}>
-    <View style={{ flex: 1, paddingTop: top, paddingHorizontal: spacing.lg, gap: spacing.md }}>
+    <View style={{ flex: 1, paddingTop: top, paddingHorizontal: spacing.lg, gap: spacing.sm, minHeight: 0 }}>
       <View style={{ flexDirection: 'row', gap: spacing.sm }}>
         {(['mesh', 'geo'] as const).map(value => <AppButton key={value} label={t(`mobile.${value}`)} variant="secondary"
-          fullWidth={false} selected={mode === value} disabled={busy} onPress={() => { setMode(value); setError(false); }} />)}
+          fullWidth={false} selected={mode === value} disabled={busy} onPress={() => { setMode(value); setActionError(null); }} />)}
       </View>
       {!active ? <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: spacing.lg, paddingBottom: spacing.lg }}>
         <Radar size={uiDensity.iconButtonSize} color={c.textMuted} />
@@ -119,9 +128,9 @@ export default function Chats() {
           {workspace.autoAreaRelays ? <AppText variant="caption" tone="muted" selectable>{t('mobile.automatic_area_hint')}{'\n'}{(() => { try { return areaRelays(hash).join('\n'); } catch { return ''; } })()}</AppText> : <AppInput label={t('mobile.relays')} value={relays} onChangeText={setRelays} multiline autoCapitalize="none" autoCorrect={false} maxLength={1536} />}
         </>}
         <AppButton label={t('mobile.join')} loading={busy} disabled={!ready || !name.trim() || bytes(name.trim()).length > 64}
-          onPress={() => void operate(join)} />
+          onPress={() => void operate(join, 'join')} />
       </ScrollView> : null}
-      {(active || (mode === 'mesh' ? mesh.messages.length > 0 || contacts.length > 0 : geo.messages.length > 0)) && <>
+      {isComposing && <>
         {mode === 'mesh' ? <FlatList horizontal data={contacts} keyExtractor={p => p.id} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm }}
           ListHeaderComponent={<AppButton label={t('bitchat.public')} variant="secondary" fullWidth={false} selected={!recipient} onPress={() => setRecipient(undefined)} />}
           renderItem={({ item: p }) => <AppButton label={p.name} variant="secondary" fullWidth={false}
@@ -129,6 +138,12 @@ export default function Chats() {
         {mode === 'geo' && <FlatList horizontal data={geo.privatePeers} keyExtractor={key => key} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm }}
           ListHeaderComponent={<AppButton label={t('bitchat.public')} variant="secondary" fullWidth={false} selected={!geoRecipient} onPress={() => setPrivateTarget(undefined)} />}
           renderItem={({ item: key }) => <AppButton label={key.slice(0, 8)} variant="secondary" fullWidth={false} selected={geoRecipient === key} onPress={() => setPrivateTarget({ hash: geo.hash, pubkey: key })} />} />}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
+          <AppText variant="caption" tone="muted">{transportHint}</AppText>
+          {active && <AppButton label={t('bitchat.leave')} variant="text" fullWidth={false} size="sm" disabled={busy} onPress={() => void operate(async () => {
+            if (mode === 'mesh') await bitchatService.stop(); else geohashService.stop(); setRecipient(undefined);
+          })} />}
+        </View>
         {mode === 'geo' && !geo.privateActive && <AppText variant="caption" tone="muted">{t('mobile.geo_private_disabled')}</AppText>}
         {mode === 'geo' && geoRecipient && <AppText variant="caption" selectable tone="muted">{geoThread?.head ?? geoRecipient}</AppText>}
         {mode === 'geo' && !geoRecipient && <AppText variant="caption" tone="muted">{t('mobile.channel_rotation_hint')}</AppText>}
@@ -139,10 +154,13 @@ export default function Chats() {
         {mode === 'geo' && geoRecipient && geoThread?.migrating && !geoThread.blocked && <AppText variant="caption" tone="muted">{t('mobile.channel_identity_pending')}</AppText>}
         <AppText variant="caption" tone="muted">{t(mode === 'geo' ? geoRecipient ? 'mobile.geo_private_notice' : 'mobile.geo_privacy' : recipient ? 'bitchat.private_notice' : workspace.bridge && !workspace.nearbyOnly ? 'mobile.bridge_notice' : 'bitchat.public_notice')}</AppText>
         {mode === 'mesh' && peer ? <AppText variant="caption" selectable tone="muted">{t('bitchat.fingerprint', { value: peer.fingerprint })}</AppText> : null}
-        <AppButton label={t('mobile.older')} variant="text" disabled={busy} onPress={() => void operate(() => mode === 'mesh' ? bitchatService.older() : geoRecipient ? geohashService.olderPrivate() : geohashService.older())} />
-        <AppButton label={t('mobile.latest')} variant="text" disabled={busy} onPress={() => void operate(() => mode === 'mesh' ? bitchatService.latest() : geohashService.restore(geo.hash))} />
-        <FlatList<BitchatMessage | GeoMessage> data={messages} keyExtractor={m => m.id + ('peer' in m ? m.peer : m.pubkey)} keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ gap: spacing.sm, paddingBottom: spacing.md }}
+         <FlatList<BitchatMessage | GeoMessage> data={messages} keyExtractor={m => m.id + ('peer' in m ? m.peer : m.pubkey)} keyboardShouldPersistTaps="handled"
+          style={{ flex: 1, minHeight: 0 }}
+          contentContainerStyle={{ gap: spacing.sm, paddingBottom: spacing.md, flexGrow: 1 }}
+          ListHeaderComponent={messages.length > 0 ? <View style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+            <AppButton label={t('mobile.older')} variant="text" size="sm" disabled={busy} onPress={() => void operate(() => mode === 'mesh' ? bitchatService.older() : geoRecipient ? geohashService.olderPrivate() : geohashService.older())} />
+            <AppButton label={t('mobile.latest')} variant="text" size="sm" disabled={busy} onPress={() => void operate(() => mode === 'mesh' ? bitchatService.latest() : geohashService.restore(geo.hash))} />
+          </View> : null}
           renderItem={({ item }) => <View style={{ padding: spacing.md, borderRadius: radius.lg, backgroundColor: item.outgoing ? c.accentSoft : c.surface }}>
             <AppText variant="caption" tone="muted" selectable accessibilityLabel={item.name + ('pubkey' in item ? ' · ' + item.pubkey : '')}>{item.name}{'pubkey' in item ? ' · ' + item.pubkey.slice(0, 8) : ''}</AppText><AppText selectable>{item.content}</AppText>
             {'bridge' in item && item.bridge && <AppText variant="caption" tone="muted">{t('mobile.via_bridge')}</AppText>}
@@ -154,14 +172,14 @@ export default function Chats() {
             <AppText tone="muted">{t(mode === 'geo' ? 'mobile.geo_empty_hint' : 'bitchat.empty_hint')}</AppText>
           </View>} />
         {mode === 'mesh' && !recipient && workspace.bridge && <AppButton label={t('mobile.nearby_only')} variant="secondary" selected={workspace.nearbyOnly} disabled={busy} onPress={() => workspaceStore.setState({ nearbyOnly: !workspace.nearbyOnly })} />}
-        <AppInput label={t('bitchat.message')} value={draft} onChangeText={setDraft} multiline maxLength={mode === 'mesh' ? 255 : geoRecipient ? 4096 : MAX_GEO_CONTENT_BYTES} />
-        <AppButton label={t('bitchat.send')} loading={working} disabled={(!active && !(mode === 'mesh' && recipient && contactsService.get(recipient))) || busy || !draft.trim() || bytes(draft).length > (mode === 'mesh' ? 255 : geoRecipient ? 4096 : MAX_GEO_CONTENT_BYTES) || (mode === 'geo' && (geoRecipient ? !geo.privateActive || geoThread?.blocked : !geo.connected && !bitchatService.hasGateway()))}
-          onPress={() => void operate(send)} />
-        <AppButton label={t('bitchat.leave')} variant="text" disabled={busy} onPress={() => void operate(async () => {
-          if (mode === 'mesh') await bitchatService.stop(); else geohashService.stop(); setRecipient(undefined);
-        })} />
+        <AppInput label={t('bitchat.message')} value={draft} onChangeText={setDraft} multiline compactMultiline scrollEnabled maxLength={mode === 'mesh' ? 255 : geoRecipient ? 4096 : MAX_GEO_CONTENT_BYTES} />
+        <AppButton label={t('bitchat.send')} loading={working} disabled={(!active && !(mode === 'mesh' && recipient && contactsService.get(recipient))) || (mode === 'mesh' && !recipient && !canSendPublicMesh) || busy || !draft.trim() || bytes(draft).length > (mode === 'mesh' ? 255 : geoRecipient ? 4096 : MAX_GEO_CONTENT_BYTES) || (mode === 'geo' && (geoRecipient ? !geo.privateActive || geoThread?.blocked : !geo.connected && !bitchatService.hasGateway()))}
+          onPress={() => void operate(send, 'send')} />
       </>}
-      {(error || workspace.error || (mode === 'mesh' ? mesh.error : geo.error)) && <AppText variant="caption" tone="danger" accessibilityLiveRegion="polite">{t('mobile.failed')}</AppText>}
+      {actionError && <AppText variant="caption" tone="danger" accessibilityLiveRegion="polite">
+        {t(actionError === 'send' ? 'mobile.send_failed' : actionError === 'join' ? (mode === 'mesh' ? 'mobile.mesh_join_failed' : 'mobile.geo_join_failed') : 'mobile.operation_failed')}
+      </AppText>}
+      {!actionError && workspace.error && <AppText variant="caption" tone="danger">{t('mobile.storage_failed')}</AppText>}
     </View>
     <ScreenHeader title="Outlink" back={false} right={<AppButton label={t('mobile.settings')} variant="text" onPress={() => router.push('/settings')} />} />
   </AppScreen>;
