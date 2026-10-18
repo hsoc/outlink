@@ -41,6 +41,8 @@ and provide a nearby-only choice when composing a bridged message.
 Private conversations opened from public channels show the full signed public key
 and stay visibly separate from public channel messages and verified mesh contacts.
 
+Active conversations give their message history the remaining scrollable space, while a compact composer remains accessible above the keyboard. A disconnected session with saved history shows a reconnection action rather than overlapping setup and conversation surfaces. Transport status distinguishes Bluetooth peers, public relay links, and private mailbox links; transmission does not imply recipient delivery.
+
 Identity changes preserve private conversation selection and drafts. Expired,
 unconfirmed identity changes require a visible recovery action; never silently
 present a new identity as authenticated continuity in another client.

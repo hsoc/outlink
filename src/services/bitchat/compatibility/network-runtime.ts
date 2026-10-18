@@ -14,7 +14,7 @@ type Dependencies = {
   send(payload: Uint8Array, peer?: string): Promise<void>;
   geo(event: Event, hash: string): void; bridge(event: Event): void; hasRadio(event: Event): boolean;
   open(envelope: CourierEnvelope): Promise<boolean>; handover(envelope: CourierEnvelope, peer: string): Promise<void>;
-  connected(): void; error(): void; published(event: Event): void;
+  connected(count: number): void; error(): void; published(event: Event): void;
 };
 /** Opt-in public forwarding; private courier seals remain opaque on relays. */
 export class NetworkRuntime {
@@ -59,7 +59,13 @@ export class NetworkRuntime {
     return filters;
   }
   refreshRelays() { if (!this.stopped && this.config.autoAreaRelays) for (const [hash, area] of this.areas) area.transport.updateRelays(areaRelays(hash)); }
-  private connections() { this.online = this.dropOnline + [...this.areas.values()].reduce((sum, area) => sum + area.online, 0); if (this.online && !this.stopped) { this.drain(); this.deps.connected(); } }
+  private connections() {
+    this.online = this.dropOnline + [...this.areas.values()].reduce((sum, area) => sum + area.online, 0);
+    if (this.stopped) return;
+    // Surface disconnections as well as reconnections, not just successful opens.
+    this.deps.connected(this.online);
+    if (this.online) this.drain();
+  }
   private area(hash: string, _bridge: boolean) {
     const id = hash, existing = this.areas.get(id); if (existing) return existing.transport;
     if (this.stopped) throw new Error('Network forwarding stopped');
@@ -213,5 +219,5 @@ export class NetworkRuntime {
   canDrop() { return this.config.bridge && this.dropOnline > 0 && !this.stopped; }
   async publishDrop(envelope: CourierEnvelope) { if (!this.canDrop()) throw new Error('Bridge is offline'); await this.publish(courierDrop(envelope)); }
   async idle() { await this.pending; await this.mutations.catch(() => {}); while (this.draining) await this.draining; }
-  stop() { this.stopped = true; if (this.timer) clearInterval(this.timer); this.transport?.stop(); for (const area of this.areas.values()) area.transport.stop(); this.areas.clear(); this.online = this.dropOnline = 0; this.bridgeKey.fill(0); }
+  stop() { this.stopped = true; if (this.timer) clearInterval(this.timer); this.transport?.stop(); for (const area of this.areas.values()) area.transport.stop(); this.areas.clear(); this.online = this.dropOnline = 0; this.bridgeKey.fill(0); this.deps.connected(0); }
 }
