@@ -2,7 +2,7 @@ import { sessionIntent } from '@/services/history/lifecycle';
 import { areaRelays } from '@/services/geohash/relay-directory';
 import { contactsStore, contactsService } from '@/services/bitchat/compatibility/contacts';
 import { workspaceStore, restoreWorkspace } from '@/services/history/workspace';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { FlatList, ScrollView, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useTranslation } from 'react-i18next';
@@ -57,6 +57,11 @@ export default function Chats() {
     return [...found.values()];
   }, [mesh.peers, mesh.messages, recipient, savedContacts]);
   const peer = mesh.peers.find(p => p.id === recipient);
+  const savedContact = savedContacts.find(contact => contact.id === recipient);
+  const fingerprint = peer?.fingerprint || savedContact?.fingerprint;
+  const listRef = useRef<FlatList<BitchatMessage | GeoMessage>>(null);
+  const atLatest = useRef(true);
+  useEffect(() => { atLatest.current = true; }, [mode, recipient, geoRecipient, geo.hash]);
   const messages = useMemo(() => mode === 'geo' ? geoRecipient ? geo.privateMessages.filter(m => m.channelThread === geoRecipient || m.peer === geoRecipient || m.recipient === geoRecipient) : geo.messages : mesh.messages.filter(m => recipient ?
     m.recipient && (m.peer === recipient || m.recipient === recipient) : !m.recipient), [mode, recipient, mesh.messages, geo.messages, geo.privateMessages, geoRecipient]);
   useEffect(() => {
@@ -160,13 +165,21 @@ export default function Chats() {
         {mode === 'mesh' && workspace.internet && <AppText variant="caption" tone="muted">
           {t('mobile.private_relay_status', { count: mesh.privateRelays })}
         </AppText>}
-        {mode === 'mesh' && peer ? <AppText variant="caption" selectable tone="muted">{t('bitchat.fingerprint', { value: peer.fingerprint })}</AppText> : null}
-         <FlatList<BitchatMessage | GeoMessage> data={messages} keyExtractor={m => m.id + ('peer' in m ? m.peer : m.pubkey)} keyboardShouldPersistTaps="handled"
+        {mode === 'mesh' && recipient && savedContact?.verified && <AppText variant="caption" tone="muted">{t('mobile.verified')}</AppText>}
+        {mode === 'mesh' && recipient && fingerprint ? <AppText variant="caption" selectable tone="muted">{t('bitchat.fingerprint', { value: fingerprint })}</AppText> : null}
+        <FlatList<BitchatMessage | GeoMessage> ref={listRef} key={draftKey} data={messages} keyExtractor={m => m.id + ('peer' in m ? m.peer : m.pubkey)} keyboardShouldPersistTaps="handled"
           style={{ flex: 1, minHeight: 0 }}
+          scrollEventThrottle={100}
+          onScroll={({ nativeEvent }) => {
+            const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+            atLatest.current = layoutMeasurement.height + contentOffset.y >= contentSize.height - spacing.xl;
+          }}
+          onContentSizeChange={() => { if (atLatest.current) listRef.current?.scrollToEnd({ animated: false }); }}
+          onLayout={() => { if (atLatest.current) listRef.current?.scrollToEnd({ animated: false }); }}
           contentContainerStyle={{ gap: spacing.sm, paddingBottom: spacing.md, flexGrow: 1 }}
           ListHeaderComponent={messages.length > 0 ? <View style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap' }}>
-            <AppButton label={t('mobile.older')} variant="text" size="sm" disabled={busy} onPress={() => void operate(() => mode === 'mesh' ? bitchatService.older() : geoRecipient ? geohashService.olderPrivate() : geohashService.older())} />
-            <AppButton label={t('mobile.latest')} variant="text" size="sm" disabled={busy} onPress={() => void operate(() => mode === 'mesh' ? bitchatService.latest() : geohashService.restore(geo.hash))} />
+            <AppButton label={t('mobile.older')} variant="text" size="sm" disabled={busy} onPress={() => void operate(async () => { atLatest.current = false; await (mode === 'mesh' ? bitchatService.older() : geoRecipient ? geohashService.olderPrivate() : geohashService.older()); })} />
+            <AppButton label={t('mobile.latest')} variant="text" size="sm" disabled={busy} onPress={() => void operate(async () => { atLatest.current = true; await (mode === 'mesh' ? bitchatService.latest() : geohashService.restore(geo.hash)); listRef.current?.scrollToEnd({ animated: true }); })} />
           </View> : null}
           renderItem={({ item }) => <View style={{ padding: spacing.md, borderRadius: radius.lg, backgroundColor: item.outgoing ? c.accentSoft : c.surface }}>
             <AppText variant="caption" tone="muted" selectable accessibilityLabel={item.name + ('pubkey' in item ? ' · ' + item.pubkey : '')}>{item.name}{'pubkey' in item ? ' · ' + item.pubkey.slice(0, 8) : ''}</AppText><AppText selectable>{item.content}</AppText>
