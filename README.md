@@ -12,8 +12,9 @@ phone numbers, wallets, or username registration.
   English until translated.
 
 Location channels require internet access and are public. They are separate
-from encrypted Bluetooth private chats. There is no Tor integration, internet
-private-message fallback, push delivery, file transfer, or background messaging.
+from encrypted Bluetooth private chats. Optional internet private messaging and
+mesh gateway/bridge features are disabled by default. There is no Tor integration,
+push delivery, file transfer, or background messaging.
 Connections pause in the background and reconnect on return. Messages, drafts,
 and channel selections survive restarts; Settings offers explicit local-history deletion.
 Ephemeral Nostr events do not guarantee historical message retrieval.
@@ -54,6 +55,9 @@ history with the previous app before upgrading; do not assume old conversations
 appear in this version.
 
 [Architecture](docs/ARCHITECTURE.md) · [Geohash protocol](docs/protocols/geohash.md)
+· [Internet private messaging](docs/protocols/connection-and-internet.md)
+· [Channel identity rotation](docs/protocols/channel-identity-rotation.md)
+· [Compatibility and remaining gaps](docs/protocols/compatibility.md)
 · [Privacy](docs/PRIVACY.md) · [Security](SECURITY.md)
 
 Original copyright notices and third-party license texts are preserved.
