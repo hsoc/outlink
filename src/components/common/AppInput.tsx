@@ -7,6 +7,8 @@ import { AppText } from './AppText';
 
 type Props = TextInputProps & {
   invalid?: boolean;
+  /** Keep the chat composer compact while allowing longer messages to scroll. */
+  compactMultiline?: boolean;
   /** Short field name. Always rendered above the control as a muted caption. */
   label?: string;
   /** Supporting copy. Always rendered below the control as a muted caption. */
@@ -22,6 +24,7 @@ type Props = TextInputProps & {
 export const AppInput = forwardRef<TextInput, Props>(function AppInput(
   {
     invalid,
+    compactMultiline = false,
     label,
     description,
     error,
@@ -60,8 +63,9 @@ export const AppInput = forwardRef<TextInput, Props>(function AppInput(
         backgroundColor: c.surfaceElevated,
         paddingHorizontal: uiDensity.inputHorizontalPadding,
         height: multiline ? undefined : uiDensity.inputHeight,
-        minHeight: multiline ? uiDensity.multilineInputMinHeight : undefined,
-        paddingVertical: multiline ? 12 : 0,
+        minHeight: multiline ? (compactMultiline ? uiDensity.inputHeight : uiDensity.multilineInputMinHeight) : undefined,
+        maxHeight: multiline && compactMultiline ? uiDensity.multilineInputMinHeight : undefined,
+        paddingVertical: multiline ? spacing.sm : 0,
         justifyContent: multiline ? 'flex-start' : 'center',
         flexDirection: 'row',
         alignItems: multiline ? 'flex-start' : 'center',
