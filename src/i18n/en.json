@@ -168,6 +168,7 @@
     "private_relay_status": "Private mailbox · {{count}} relay connection(s)",
     "relay_accepted": "Relay accepted",
     "public_channel": "Public channel",
+    "nobody_around": "Nobody Around",
     "background_connectivity": "Keep connectivity active while in background",
     "background_hint": "Android only. Keeps a joined Bluetooth mesh and its open internet connections active using an ongoing notification. Join Nearby first. Location-only sessions still pause. Uses more battery; Android may still stop the app. Leaving the mesh, closing the app, or tapping Stop ends background connectivity.",
     "background_unavailable": "Requires an updated Android build. iOS cannot keep the current messaging engine continuously active in the background; connections pause and resume when you return.",

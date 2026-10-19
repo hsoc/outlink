@@ -51,3 +51,6 @@ Background connectivity is opt-in and visibly platform-limited. Its Android swit
 explains battery use and requires a visible ongoing notification with a Stop
 action. Public Mesh denotes Bluetooth broadcast; internet channels retain their
 separate public-channel label.
+
+A Public Mesh composer with no available peer or enabled bridge route labels its
+disabled send button “Nobody Around”; available routes retain “Send”.

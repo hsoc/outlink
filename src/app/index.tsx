@@ -194,7 +194,7 @@ export default function Chats() {
           </View>} />
         {mode === 'mesh' && !recipient && workspace.bridge && <AppButton label={t('mobile.nearby_only')} variant="secondary" selected={workspace.nearbyOnly} disabled={busy} onPress={() => workspaceStore.setState({ nearbyOnly: !workspace.nearbyOnly })} />}
         <AppInput label={t('bitchat.message')} value={draft} onChangeText={setDraft} multiline compactMultiline scrollEnabled maxLength={mode === 'mesh' ? 255 : geoRecipient ? 4096 : MAX_GEO_CONTENT_BYTES} />
-        <AppButton label={t('bitchat.send')} loading={working} disabled={(!active && !(mode === 'mesh' && recipient && contactsService.get(recipient))) || (mode === 'mesh' && !recipient && !canSendPublicMesh) || busy || !draft.trim() || bytes(draft).length > (mode === 'mesh' ? 255 : geoRecipient ? 4096 : MAX_GEO_CONTENT_BYTES) || (mode === 'geo' && (geoRecipient ? !geo.privateActive || geoThread?.blocked : !geo.connected && !bitchatService.hasGateway()))}
+        <AppButton label={t(mode === 'mesh' && !recipient && !canSendPublicMesh ? 'mobile.nobody_around' : 'bitchat.send')} loading={working} disabled={(!active && !(mode === 'mesh' && recipient && contactsService.get(recipient))) || (mode === 'mesh' && !recipient && !canSendPublicMesh) || busy || !draft.trim() || bytes(draft).length > (mode === 'mesh' ? 255 : geoRecipient ? 4096 : MAX_GEO_CONTENT_BYTES) || (mode === 'geo' && (geoRecipient ? !geo.privateActive || geoThread?.blocked : !geo.connected && !bitchatService.hasGateway()))}
           onPress={() => void operate(send, 'send')} />
       </>}
       {actionError && <AppText variant="caption" tone="danger" accessibilityLiveRegion="polite">
