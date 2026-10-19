@@ -22,6 +22,7 @@ import type { GeoMessage } from '@/services/geohash/geohash-session';
 import { bytes } from '@/services/bitchat/bitchat-wire';
 import { geohashService, geohashStore } from '@/services/geohash/geohash.service';
 import { MAX_GEO_CONTENT_BYTES } from '@/services/geohash/geohash-protocol';
+import { normalizeGeohash } from '@/services/geohash/geohash';
 import { ensureNickname, saveNickname } from '@/services/preferences/nickname';
 import { radius, spacing, uiDensity, useThemeColors } from '@/theme';
 
@@ -32,8 +33,7 @@ export default function Chats() {
   const workspace = useStore(workspaceStore);
   const { mode, hash, precision, relays, recipient } = workspace;
   const setMode = (mode: 'mesh' | 'geo') => workspaceStore.setState({ mode });
-  const setHash = (hash: string) => workspaceStore.setState({ hash });
-  const setPrecision = (precision: number) => workspaceStore.setState({ precision });
+  const setHash = (hash: string) => workspaceStore.setState({ hash, precision: 0 });
   const setRelays = (relays: string) => workspaceStore.setState({ relays });
   const setRecipient = (recipient?: string) => workspaceStore.setState({ recipient });
   const [privateTarget, setPrivateTarget] = useState<{ hash: string; pubkey: string }>();
@@ -43,7 +43,11 @@ export default function Chats() {
   const draft = workspace.drafts[draftKey] ?? '';
   const setDraft = (value: string) => workspaceStore.setState(state => ({ drafts: { ...state.drafts, [draftKey]: value } }));
   const [name, setName] = useState(''), [ready, setReady] = useState(false);
-  const [working, setWorking] = useState(false);
+  const [working, setWorking] = useState(false), [editingArea, setEditingArea] = useState(false);
+  const areaRequest = useRef(0);
+  useEffect(() => () => { ++areaRequest.current; }, []);
+  let validArea = false;
+  try { normalizeGeohash(hash); validArea = true; } catch { /* Keep custom input editable until valid. */ }
   const [actionError, setActionError] = useState<'join' | 'send' | 'other' | null>(null);
   const active = mode === 'mesh' ? mesh.active : geo.active;
   const busy = working || mesh.busy || geo.busy;
@@ -85,6 +89,12 @@ export default function Chats() {
     void ensureNickname().then(value => { if (alive) setName(value); }).catch(() => { if (alive) setActionError('other'); });
     return () => { alive = false; };
   }, []));
+  async function selectArea(precision: number) {
+    const request = ++areaRequest.current, intent = sessionIntent();
+    const hash = await geohashService.nearby(precision);
+    if (request !== areaRequest.current || intent !== sessionIntent()) return;
+    workspaceStore.setState({ hash, precision });
+  }
   async function join() {
     const intent = sessionIntent();
     const value = await saveNickname(name);
@@ -92,7 +102,7 @@ export default function Chats() {
     const identity = mode === 'mesh' ? await mobileIdentity() : undefined;
     if (intent !== sessionIntent()) throw new Error('Join canceled');
     if (identity) await bitchatService.start(identity, name.trim());
-    else { await geohashService.join(hash, name.trim(), workspace.autoAreaRelays ? areaRelays(hash) : relays.split(/\s+/).filter(Boolean)); await bitchatService.refreshNetwork(); }
+    else { await geohashService.join(hash, name.trim(), workspace.autoAreaRelays ? areaRelays(hash) : relays.split(/\s+/).filter(Boolean)); await bitchatService.refreshNetwork(); setEditingArea(false); }
   }
   async function send() {
     if (mode === 'mesh') await bitchatService.send(draft, recipient, workspace.nearbyOnly);
@@ -115,32 +125,33 @@ export default function Chats() {
         {(['mesh', 'geo'] as const).map(value => <AppButton key={value} label={t(`mobile.${value}`)} variant="secondary"
           fullWidth={false} selected={mode === value} disabled={busy} onPress={() => { setMode(value); setActionError(null); }} />)}
       </View>
-      {!active && !isComposing ? <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: spacing.lg, paddingBottom: spacing.lg }}>
+      {(mode === 'geo' && editingArea) || (!active && !isComposing) ? <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: spacing.lg, paddingBottom: spacing.lg }}>
         <Radar size={uiDensity.iconButtonSize} color={c.textMuted} />
         <AppText variant="title">{t(mode === 'mesh' ? 'bitchat.title' : 'mobile.geo')}</AppText>
         <AppText tone="muted">{t(mode === 'mesh' ? 'mobile.mesh_privacy' : 'mobile.geo_privacy')}</AppText>
         <AppInput label={t('bitchat.name')} value={name} onChangeText={setName} maxLength={32} editable={ready && !busy} />
         {mode === 'geo' && <>
-          <AppInput label={t('mobile.geohash')} value={hash} onChangeText={setHash} autoCapitalize="none" autoCorrect={false} maxLength={13} />
-          <AppText variant="caption" tone="muted">{t('mobile.precision')}</AppText>
-          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <AppText variant="caption" tone="muted">{t('mobile.area_picker_title')}</AppText>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
             {[3, 4, 5].map(value => <AppButton key={value} label={t(`mobile.precision_${value}`)} fullWidth={false} variant="secondary"
-              selected={precision === value} onPress={() => setPrecision(value)} disabled={busy} />)}
+              selected={!!hash && precision === value} onPress={() => void operate(() => selectArea(value))} disabled={busy} />)}
           </View>
-          <AppButton label={t('mobile.use_location')} variant="secondary" disabled={busy}
-            onPress={() => void operate(async () => { setHash(await geohashService.nearby(precision)); })} />
-          <AppText variant="caption" tone="muted">{t('mobile.location_hint')}</AppText>
+          <AppText variant="caption" tone="muted">{t('mobile.area_picker_hint')}</AppText>
+          <AppInput label={t('mobile.geohash')} value={hash} onChangeText={setHash} autoCapitalize="none" autoCorrect={false} maxLength={13}
+            editable={!busy} error={hash.trim() && !validArea ? t('mobile.invalid_area') : undefined} returnKeyType="go"
+            onSubmitEditing={() => { if (!busy && validArea && name.trim() && bytes(name.trim()).length <= 64) void operate(join, 'join'); }} />
           {workspace.autoAreaRelays ? <AppText variant="caption" tone="muted" selectable>{t('mobile.automatic_area_hint')}{'\n'}{(() => { try { return areaRelays(hash).join('\n'); } catch { return ''; } })()}</AppText> : <AppInput label={t('mobile.relays')} value={relays} onChangeText={setRelays} multiline autoCapitalize="none" autoCorrect={false} maxLength={1536} />}
         </>}
-        <AppButton label={t('mobile.join')} loading={busy} disabled={!ready || !name.trim() || bytes(name.trim()).length > 64}
+        <AppButton label={t('mobile.join')} loading={busy} disabled={busy || !ready || !name.trim() || bytes(name.trim()).length > 64 || (mode === 'geo' && !validArea)}
           onPress={() => void operate(join, 'join')} />
+        {mode === 'geo' && editingArea && isComposing && <AppButton label={t('common.cancel')} variant="text" disabled={busy} onPress={() => { workspaceStore.setState(state => ({ hash: geo.hash, precision: state.hash === geo.hash ? state.precision : 0 })); setEditingArea(false); }} />}
       </ScrollView> : null}
-      {isComposing && <>
+      {isComposing && !(mode === 'geo' && editingArea) && <>
         {mode === 'mesh' ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
           <AppButton label={t('bitchat.public')} variant="secondary" fullWidth={false} selected={!recipient} onPress={() => setRecipient(undefined)} />
           {recipient && <AppButton label={`${selectedName} · ${t(selectedOnline ? 'mobile.mesh_online' : 'mobile.mesh_offline')}`} labelNumberOfLines={1} variant="secondary" fullWidth={false} selected onPress={() => router.push('/contacts')} />}
           <AppButton label={t('mobile.contacts')} variant="text" fullWidth={false} onPress={() => router.push('/contacts')} />
-        </View> : <AppText variant="caption" tone="muted">{t('mobile.geo_area_people', { hash: geo.hash, people: geo.present })}</AppText>}
+        </View> : <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, alignItems: 'center' }}><AppText variant="caption" tone="muted">{t('mobile.geo_area_people', { hash: geo.hash, people: geo.present })}</AppText><AppButton label={t('mobile.change_area')} variant="text" fullWidth={false} disabled={busy} onPress={() => setEditingArea(true)} /></View>}
         {mode === 'mesh' && recipient && !selectedOnline && <AppText variant="caption" tone="muted">{t(savedContact?.blocked ? 'mobile.contact_blocked' : savedContact ? 'mobile.mesh_offline_hint' : 'mobile.contact_reconnect_hint')}</AppText>}
         {mode === 'geo' && <FlatList horizontal data={geo.privatePeers} keyExtractor={key => key} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm }}
           ListHeaderComponent={<AppButton label={t('mobile.public_channel')} variant="secondary" fullWidth={false} selected={!geoRecipient} onPress={() => setPrivateTarget(undefined)} />}

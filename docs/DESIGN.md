@@ -67,3 +67,8 @@ Settings exposes **Your name** with an explicit Save action. New profiles receiv
 name is persisted before use. Existing names are preserved. Editing the name does
 not reconnect or replace communication identities, contacts, or history. Use the
 shared input, secondary button, and an accessible save confirmation.
+
+Location-area presets fill the editable code directly on tap; no separate location
+button is needed. Explain the permission request before the presets are used.
+Custom codes submit through Join or the keyboard, with inline validation. Public
+name uses the same persisted random default as Nearby, never a fixed fallback.

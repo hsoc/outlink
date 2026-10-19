@@ -30,3 +30,7 @@ Automated tests cover random sampling, concurrent initialization, persistence
 failure, validation, wipe cancellation, signed mesh rename propagation with an
 existing encrypted conversation, and location-event names with unchanged keys
 and connections. Physical-device testing was intentionally omitted.
+
+Location-channel setup pre-fills Public name from this same saved preference,
+including the `OutlinkXXXX` default on a new profile. It does not generate a new
+name on each channel visit or silently replace a chosen name.
