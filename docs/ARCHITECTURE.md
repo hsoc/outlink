@@ -85,3 +85,8 @@ roots are separate from wire identities, preserving indexed history and queues
 without whole-history rewrites. Only authenticated proof/acknowledgment changes
 peer routes and acknowledged local signing identities. See
 [channel identity lifecycle](protocols/channel-identity-rotation.md).
+
+Contact persistence distinguishes explicit trust/save decisions from temporary
+24-hour discoveries. Queue identity metadata survives until its pending mail is
+settled; expiry cannot silently repin or authorize new sends. The directory uses
+virtualized rows and bounded loaded-history data; see [contact retention](protocols/contact-retention.md).

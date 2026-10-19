@@ -9,7 +9,7 @@ test('only Android and iOS applications and the Bitchat native module ship', asy
   assert.equal(app.ios.entitlements?.['aps-environment'],undefined);
   for(const dep of ['electron','electron-builder','@getalby/sdk','expo-audio'])assert.equal(pkg.dependencies[dep],undefined);
   assert.deepEqual((await readdir('modules')).sort(),['expo-proximity']);
-  assert.deepEqual((await readdir('src/app')).sort(),['+native-intent.tsx','_layout.tsx','index.tsx','licenses.tsx','settings.tsx']);
+  assert.deepEqual((await readdir('src/app')).sort(),['+native-intent.tsx','_layout.tsx','contacts.tsx','index.tsx','licenses.tsx','settings.tsx']);
 });
 test('both native modes still advertise the standard Bitchat BLE service', async()=>{
   const files=['modules/expo-proximity/ios/ExpoProximityModule.swift','modules/expo-proximity/android/src/main/java/io/github/hsoc/outlink/proximity/ExpoProximityModule.kt'];

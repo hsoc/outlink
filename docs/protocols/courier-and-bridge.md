@@ -9,7 +9,9 @@ physical interoperability or complete feature parity.
 ## Using the features
 
 Courier handling runs while Bluetooth is joined. Private text composed for an
-offline saved contact enters the encrypted outbox. Outlink first tries live
+offline retained contact enters the encrypted outbox. Temporary discovery identities
+are retained for pending delivery without turning them into permanently saved
+contacts; see [contact retention](contact-retention.md). Outlink first tries live
 Bluetooth, then optional favorite internet delivery, then sealed courier mail.
 Nearby eligible carriers are authenticated before a deposit. They can deliver
 later when the sender is absent. Leaving/backgrounding preserves queued and

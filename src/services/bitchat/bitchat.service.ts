@@ -9,7 +9,7 @@ import { decodeCourier, encodeCourier, decodePrekeys, courierTag, courierTags, s
 import { geohashService } from '@/services/geohash/geohash.service';
 import { getPublicKey } from 'nostr-tools/pure';
 import { decode as decodeNpub, npubEncode } from 'nostr-tools/nip19';
-import { contactsService, contactsStore } from './compatibility/contacts';
+import { DISCOVERY_LIFETIME_MS, isSavedContact, contactsService, contactsStore } from './compatibility/contacts';
 import { putRecord, readRecord, readRecords, removeRecord } from './compatibility/storage';
 import { MessageOutbox, type PendingMessage, type CourierDispatch, type DeliveryResult } from './compatibility/outbox';
 import { PrivateMailbox, privateNostrKey, type InternetPayload } from './compatibility/private-mailbox';
@@ -104,8 +104,8 @@ class BitchatService {
     const previous = contactsService.get(peer.id);
     if (previous && previous.noiseKey !== noiseKey) throw new Error('Pinned peer identity changed');
     if (previous?.verified && previous.signingKey !== signingKey) throw new Error('Verified signing identity changed');
-    if (!previous || previous.name !== peer.name || previous.signingKey !== signingKey) await contactsService.upsert(peer.id, current => ({ id: peer.id, noiseKey, signingKey, name: peer.name,
-      fingerprint: peer.fingerprint, favorite: current?.favorite ?? false, verified: current?.verified ?? false,
+    if (!previous || previous.name !== peer.name || previous.signingKey !== signingKey || !isSavedContact(previous) && (previous.expiresAt ?? 0) < Date.now() + 3600000) await contactsService.upsert(peer.id, current => ({ id: peer.id, noiseKey, signingKey, name: peer.name,
+      fingerprint: peer.fingerprint, saved: current?.saved, expiresAt: Date.now() + DISCOVERY_LIFETIME_MS, favorite: current?.favorite ?? false, verified: current?.verified ?? false,
       blocked: current?.blocked ?? false, mutual: current?.mutual ?? false, npub: current?.npub,
       theirFavorite: current?.theirFavorite, pendingFavorite: current?.pendingFavorite, updatedAt: Date.now() }));
     if (newlyOnline && peer.lastSeen > 0 && this.connection) void this.encounter(peer.id).catch(() => bitchatSessionStore.setState({ error: true }));
@@ -119,7 +119,12 @@ class BitchatService {
     const work = this.flushInternal(peer).finally(() => { this.flushes.delete(peer); }); this.flushes.set(peer, work); return work;
   }
   private async flushInternal(peer: string) {
-    const contact = contactsService.get(peer); if (!contact || contact.blocked) return;
+    const contact = contactsService.get(peer);
+    if (!contact) {
+      // Expire orphaned queued mail without transmitting under a discarded identity.
+      await this.outbox.flush(peer, async () => { throw new Error('Contact expired'); }, () => false); return;
+    }
+    if (contact.blocked) return;
     await this.sendFavoriteNotice(peer); await this.flushReceipts(peer);
     const available = (entry: PendingMessage) => !!this.session && bitchatSessionStore.getState().peers.some(p => p.id === peer && p.lastSeen > 0 && Date.now() - p.lastSeen < 60000) ||
       !!this.mailbox && this.internetConnections > 0 && contact.favorite && !!contact.npub || !!this.prekeys && (this.carrierPeers(entry).length > 0 || !!this.network?.canDrop() && !entry.courier?.dropAccepted);
@@ -412,6 +417,7 @@ class BitchatService {
               await this.publishPrekeys();
               for (const peer of bitchatSessionStore.getState().peers) { if (!this.connection) break; if (peer.lastSeen > 0) await this.encounter(peer.id); }
               for (const contact of contactsStore.getState().contacts) { if (!this.connection) break; if (!contact.blocked) await this.flush(contact.id); }
+              await contactsService.prune();
               if (this.network?.canDrop()) await this.couriers?.publishHeld(envelope => this.network!.publishDrop(envelope));
             }
             catch { bitchatSessionStore.setState({ error: true }); }
@@ -483,7 +489,7 @@ class BitchatService {
   }
   async favorite(peer: string, favorite: boolean) {
     const contact = contactsService.get(peer); if (!contact) throw new Error('Unknown contact');
-    await contactsService.upsert(peer, current => ({ ...(current ?? contact), favorite, mutual: favorite && !!current?.theirFavorite, pendingFavorite: favorite }));
+    await contactsService.upsert(peer, current => ({ ...(current ?? contact), favorite, saved: favorite || current?.saved, mutual: favorite && !!current?.theirFavorite, pendingFavorite: favorite }));
     await this.sendFavoriteNotice(peer);
   }
   private async favoriteNotification(peer: string, content: string): Promise<boolean> {
@@ -520,6 +526,7 @@ class BitchatService {
     if (!contact || contact.blocked) throw new Error('Unknown or blocked contact');
     const identity = await this.localIdentity();
     const own = peerId(identity.noisePublicKey); identity.noiseSeed.fill(0); identity.signingSeed.fill(0);
+    await contactsService.keepForDelivery(peer);
     await this.outbox.enqueue(peer, { id: await platform.deviceCrypto.randomUUID(), peer: own, recipient: peer,
       name: await platform.preferences.getItem('mobile.nickname') ?? 'Outlink', content, timestamp: Date.now(), outgoing: true, delivery: 'queued' });
     if (this.connection) void this.flush(peer).catch(() => bitchatSessionStore.setState({ error: true }));

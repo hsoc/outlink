@@ -178,6 +178,18 @@
     "background_failed": "Background connectivity could not start. Allow notifications and Bluetooth access, check the notification channel, and try again while Outlink is open.",
     "background_notification_title": "Outlink connectivity active",
     "background_notification_body": "Nearby mesh is running. Tap to open Outlink.",
-    "background_stop": "Stop"
+    "background_stop": "Stop",
+    "saved_contacts": "Saved contacts",
+    "recent_conversations": "Recent conversations",
+    "save_contact": "Save contact",
+    "add_share_contact": "Add or share a contact",
+    "contact_blocked": "Blocked",
+    "contact_retention_hint": "Ordinary discoveries expire after 24 hours. Save, favorite, verify, or block a contact to retain their identity. Recent conversations come from the loaded chat history; clearing contacts does not erase messages.",
+    "contact_reconnect_hint": "This contact identity has expired. Reconnect on the mesh or add their contact code before sending. Your message history is kept.",
+    "no_contacts": "No contacts here",
+    "no_contacts_hint": "Join the mesh to discover people, save a contact, or search another tab.",
+    "loading_contacts": "Loading contacts…",
+    "unsave_contact": "Remove from saved",
+    "saved_contact_status": "Saved"
   }
 }

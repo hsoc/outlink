@@ -73,3 +73,7 @@ See [storage protections](docs/security/local-storage.md),
 
 See the [unused-code review](docs/maintenance/unused-code-review.md) for cleanup
 scope and intentionally retained native compatibility paths.
+
+The searchable [Contacts menu](docs/protocols/contact-retention.md) separates live
+mesh peers, explicitly saved contacts, and recent conversations. Ordinary
+discoveries expire instead of being saved permanently.

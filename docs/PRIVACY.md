@@ -85,3 +85,10 @@ forward secrecy. See [rotation policy](protocols/channel-identity-rotation.md). 
 directory while its internet feature is joined, exposing the fetcher IP to that
 operator. Custom relay mode bypasses this download. Both use bounded foreground
 connections; no push service is introduced.
+
+Ordinary discovered contacts now have a 24-hour temporary lease rather than
+indefinite automatic retention. Explicit saves/imports, favorites, verification
+and blocks persist. Queued mail can retain encrypted identity metadata until it
+settles; message history remains independent. Legacy ordinary discoveries receive
+one recorded upgrade window. See [contact retention](protocols/contact-retention.md)
+for expiry, directory visibility and deletion limits.

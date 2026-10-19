@@ -1,7 +1,7 @@
 /** @jest-environment node */
 import { safeNativePath } from '../native-link';
 it.each([
-  ['/settings', '/settings'], ['outlink://settings', '/settings'], ['outlink:///licenses', '/licenses'],
+  ['/contacts', '/contacts'], ['outlink://contacts?peer=untrusted', '/contacts'], ['/settings', '/settings'], ['outlink://settings', '/settings'], ['outlink:///licenses', '/licenses'],
   ['outlink-dev://licenses?view=all', '/licenses'], ['/licenses#section', '/licenses'],
   ['/settings?value=%FF%FF%FF', '/settings'], ['/unknown?value=%FF', '/'],
   ['https://example.com/settings?x=%FF', '/'], ['outlink://%73ettings', '/'],

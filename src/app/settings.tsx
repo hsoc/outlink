@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import { NetworkSettings } from '@/components/bitchat/NetworkSettings';
-import { ContactSettings } from '@/components/bitchat/ContactSettings';
 import { panicWipe } from '@/services/bitchat/panic';
 import { restoreWorkspace, workspaceStore } from '@/services/history/workspace';
 import { clearHistory } from '@/services/history/history';
@@ -21,7 +20,7 @@ export default function Settings() {
   const colors = useThemeColors();
   const [backgroundBusy, setBackgroundBusy] = useState(false);
   const workspace = useStore(workspaceStore);
-  const [erased, setErased] = useState(false), [contactsBusy, setContactsBusy] = useState(false), [networkBusy, setNetworkBusy] = useState(false);
+  const [erased, setErased] = useState(false), [networkBusy, setNetworkBusy] = useState(false);
   const [clearing, setClearing] = useState(false), [failed, setFailed] = useState(false);
   useEffect(() => { void restoreWorkspace().catch(() => setFailed(true)); }, []);
   const { t } = useTranslation(), top = useScreenHeaderClearance();
@@ -37,7 +36,7 @@ export default function Settings() {
       <Switch accessibilityLabel={t('mobile.background_connectivity')}
         accessibilityHint={t(platform.backgroundConnectivity.supported() ? 'mobile.background_hint' : 'mobile.background_unavailable')}
         value={workspace.keepBackground && platform.backgroundConnectivity.supported()}
-        disabled={!workspace.ready || !platform.backgroundConnectivity.supported() || backgroundBusy || clearing || contactsBusy || networkBusy}
+        disabled={!workspace.ready || !platform.backgroundConnectivity.supported() || backgroundBusy || clearing || networkBusy}
         trackColor={{ false: colors.surfaceMuted, true: colors.accent }}
         onValueChange={enabled => void (async () => {
           setBackgroundBusy(true); workspaceStore.setState({ backgroundError: false });
@@ -52,17 +51,17 @@ export default function Settings() {
       <AppText variant="caption" tone="muted">{t(platform.backgroundConnectivity.supported() ? 'mobile.background_hint' : 'mobile.background_unavailable')}</AppText>
       {workspace.backgroundError && <AppText variant="caption" tone="danger">{t('mobile.background_failed')}</AppText>}
     </View>
-    <ContactSettings key={erased ? 'fresh' : 'current'} onBusyChange={setContactsBusy} />
-    <NetworkSettings disabled={clearing || contactsBusy} onBusyChange={setNetworkBusy} />
+    <AppButton label={t('mobile.contacts')} variant="secondary" disabled={clearing || networkBusy || backgroundBusy} onPress={() => router.push('/contacts')} />
+    <NetworkSettings disabled={clearing} onBusyChange={setNetworkBusy} />
     <AppText variant="subtitle">{t('mobile.internet_private')}</AppText>
     <AppText tone="muted">{t('mobile.internet_private_hint')}</AppText>
-    <AppButton label={t(workspace.internet ? 'mobile.disable' : 'mobile.enable')} variant="secondary" disabled={clearing || contactsBusy || networkBusy || !workspace.ready} onPress={() => void (async () => {
+    <AppButton label={t(workspace.internet ? 'mobile.disable' : 'mobile.enable')} variant="secondary" disabled={clearing || networkBusy || !workspace.ready} onPress={() => void (async () => {
       setClearing(true); setFailed(false);
       try { const enabled = !workspace.internet; await bitchatService.enableInternet(enabled, workspace.relays.split(/\s+/).filter(Boolean)); await geohashService.enableInternet(enabled); workspaceStore.setState({ internet: enabled }); }
       catch { setFailed(true); } finally { setClearing(false); }
     })()} />
     <AppText tone="muted">{t('mobile.storage_note')}</AppText>
-    <AppButton label={t('mobile.clear_history')} variant="secondary" disabled={clearing || contactsBusy || networkBusy} onPress={() => void (async () => {
+    <AppButton label={t('mobile.clear_history')} variant="secondary" disabled={clearing || networkBusy} onPress={() => void (async () => {
       if (!await platform.confirmationDialog.confirm(t('mobile.clear_history'), t('mobile.clear_confirm'), t('mobile.cancel'), t('mobile.clear_history'))) return;
       setClearing(true); setFailed(false);
       bitchatService.clearMessages(); geohashService.clearMessages();
@@ -70,10 +69,10 @@ export default function Settings() {
       try { await clearHistory(); } catch { setFailed(true); } finally { setClearing(false); }
     })()} />
     <AppText variant="caption" tone="muted">{t('mobile.queue_retention_note')}</AppText>
-    <AppButton label={t('mobile.wipe_identity')} variant="secondary" disabled={clearing || contactsBusy || networkBusy} onPress={() => void (async () => {
+    <AppButton label={t('mobile.wipe_identity')} variant="secondary" disabled={clearing || networkBusy} onPress={() => void (async () => {
       if (!await platform.confirmationDialog.confirm(t('mobile.wipe_identity'), t('mobile.wipe_confirm'), t('mobile.cancel'), t('mobile.wipe_identity'))) return;
       setClearing(true); setFailed(false);
-      try { await panicWipe(); setErased(value => !value); } catch { setFailed(true); } finally { setClearing(false); }
+      try { await panicWipe(); setErased(true); } catch { setFailed(true); } finally { setClearing(false); }
     })()} />
     {erased && <AppText tone="muted">{t('mobile.wipe_done')}</AppText>}
     {failed && <AppText tone="danger">{t('mobile.failed')}</AppText>}

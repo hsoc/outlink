@@ -57,3 +57,7 @@ disabled send button “Nobody Around”; available routes retain “Send”.
 
 Saved mesh contacts remain selectable after disconnection, with explicit “On mesh”
 or “Mesh offline” status. Retained identity/history must never imply live presence.
+
+The mesh composer shows only Public Mesh and its selected private conversation;
+a searchable Contacts menu separates live mesh presence, saved identities, and
+recent history. Discovery alone must not imply an explicit permanent save.
