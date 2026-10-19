@@ -48,15 +48,15 @@ export default function Chats() {
   const active = mode === 'mesh' ? mesh.active : geo.active;
   const busy = working || mesh.busy || geo.busy;
   const contacts = useMemo(() => {
-    const found = new Map(savedContacts.filter(contact => !contact.blocked).map(contact => [contact.id, { id: contact.id, name: contact.name }]));
-    for (const peer of mesh.peers) if (!contactsService.get(peer.id)?.blocked) found.set(peer.id, { id: peer.id, name: peer.name });
+    const found = new Map(savedContacts.filter(contact => !contact.blocked).map(contact => [contact.id, { id: contact.id, name: contact.name, online: false }]));
+    for (const peer of mesh.peers) if (!contactsService.get(peer.id)?.blocked) found.set(peer.id, { id: peer.id, name: peer.name, online: mesh.active && peer.lastSeen > 0 });
     for (const message of mesh.messages) if (message.recipient) {
       const id = message.outgoing ? message.recipient : message.peer;
-      if (!found.has(id) && !contactsService.get(id)?.blocked) found.set(id, { id, name: message.outgoing ? id : message.name });
+      if (!found.has(id) && !contactsService.get(id)?.blocked) found.set(id, { id, name: message.outgoing ? id : message.name, online: false });
     }
-    if (recipient && !found.has(recipient)) found.set(recipient, { id: recipient, name: recipient });
+    if (recipient && !found.has(recipient)) found.set(recipient, { id: recipient, name: recipient, online: false });
     return [...found.values()];
-  }, [mesh.peers, mesh.messages, recipient, savedContacts]);
+  }, [mesh.active, mesh.peers, mesh.messages, recipient, savedContacts]);
   const peer = mesh.peers.find(p => p.id === recipient);
   const savedContact = savedContacts.find(contact => contact.id === recipient);
   const fingerprint = peer?.fingerprint || savedContact?.fingerprint;
@@ -140,8 +140,9 @@ export default function Chats() {
       {isComposing && <>
         {mode === 'mesh' ? <FlatList horizontal data={contacts} keyExtractor={p => p.id} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm }}
           ListHeaderComponent={<AppButton label={t('bitchat.public')} variant="secondary" fullWidth={false} selected={!recipient} onPress={() => setRecipient(undefined)} />}
-          renderItem={({ item: p }) => <AppButton label={p.name} variant="secondary" fullWidth={false}
+          renderItem={({ item: p }) => <AppButton label={`${p.name} · ${t(p.online ? 'mobile.mesh_online' : 'mobile.mesh_offline')}`} variant="secondary" fullWidth={false}
             selected={recipient === p.id} onPress={() => setRecipient(p.id)} />} /> : <AppText variant="caption" tone="muted">{t('mobile.geo_area_people', { hash: geo.hash, people: geo.present })}</AppText>}
+        {mode === 'mesh' && recipient && !contacts.find(contact => contact.id === recipient)?.online && <AppText variant="caption" tone="muted">{t('mobile.mesh_offline_hint')}</AppText>}
         {mode === 'geo' && <FlatList horizontal data={geo.privatePeers} keyExtractor={key => key} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm }}
           ListHeaderComponent={<AppButton label={t('mobile.public_channel')} variant="secondary" fullWidth={false} selected={!geoRecipient} onPress={() => setPrivateTarget(undefined)} />}
           renderItem={({ item: key }) => <AppButton label={key.slice(0, 8)} variant="secondary" fullWidth={false} selected={geoRecipient === key} onPress={() => setPrivateTarget({ hash: geo.hash, pubkey: key })} />} />}

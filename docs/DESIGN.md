@@ -54,3 +54,6 @@ separate public-channel label.
 
 A Public Mesh composer with no available peer or enabled bridge route labels its
 disabled send button “Nobody Around”; available routes retain “Send”.
+
+Saved mesh contacts remain selectable after disconnection, with explicit “On mesh”
+or “Mesh offline” status. Retained identity/history must never imply live presence.
