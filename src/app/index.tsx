@@ -3,13 +3,13 @@ import { isChatAtLatest } from '@/lib/chat-scroll';
 import { areaRelays } from '@/services/geohash/relay-directory';
 import { contactsStore, contactsService, contactAvailable } from '@/services/bitchat/compatibility/contacts';
 import { workspaceStore, restoreWorkspace } from '@/services/history/workspace';
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { FlatList, ScrollView, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useTranslation } from 'react-i18next';
 import { useStore } from 'zustand';
 import { Radar } from '@solar-icons/react-native/category/map/Linear/Radar';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { AppScreen } from '@/components/common/AppScreen';
 import { AppText } from '@/components/common/AppText';
 import { AppInput } from '@/components/common/AppInput';
@@ -22,7 +22,7 @@ import type { GeoMessage } from '@/services/geohash/geohash-session';
 import { bytes } from '@/services/bitchat/bitchat-wire';
 import { geohashService, geohashStore } from '@/services/geohash/geohash.service';
 import { MAX_GEO_CONTENT_BYTES } from '@/services/geohash/geohash-protocol';
-import { getDevicePreference, setDevicePreference } from '@/services/preferences/device-preferences.service';
+import { ensureNickname, saveNickname } from '@/services/preferences/nickname';
 import { radius, spacing, uiDensity, useThemeColors } from '@/theme';
 
 export default function Chats() {
@@ -59,10 +59,10 @@ export default function Chats() {
     m.recipient && (m.peer === recipient || m.recipient === recipient) : !m.recipient), [mode, recipient, mesh.messages, geo.messages, geo.privateMessages, geoRecipient]);
   useEffect(() => {
     let alive = true;
-    void Promise.all([getDevicePreference('mobile.nickname'), restoreWorkspace(), bitchatService.restore(), contactsService.restore()]).then(async ([value]) => {
+    void Promise.all([ensureNickname(), restoreWorkspace(), bitchatService.restore(), contactsService.restore()]).then(async ([value]) => {
       const savedHash = workspaceStore.getState().hash;
       if (savedHash) await geohashService.restore(savedHash).catch(() => {});
-      if (alive) { setName(value ?? t('bitchat.default_name')); setReady(true); }
+      if (alive) { setName(value); setReady(true); }
     }).catch(() => { if (alive) { setReady(true); setActionError('other'); } });
     return () => { alive = false; };
   }, [t]);
@@ -80,9 +80,15 @@ export default function Chats() {
     setWorking(true); setActionError(null);
     try { await task(); } catch { setActionError(action); } finally { setWorking(false); }
   }
+  useFocusEffect(useCallback(() => {
+    let alive = true;
+    void ensureNickname().then(value => { if (alive) setName(value); }).catch(() => { if (alive) setActionError('other'); });
+    return () => { alive = false; };
+  }, []));
   async function join() {
     const intent = sessionIntent();
-    await setDevicePreference('mobile.nickname', name.trim());
+    const value = await saveNickname(name);
+    bitchatService.rename(value); geohashService.rename(value);
     const identity = mode === 'mesh' ? await mobileIdentity() : undefined;
     if (intent !== sessionIntent()) throw new Error('Join canceled');
     if (identity) await bitchatService.start(identity, name.trim());

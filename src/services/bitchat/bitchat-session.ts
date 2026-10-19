@@ -61,7 +61,7 @@ export class BitchatSession {
   private readonly outboundTimes = new Map<string, number[]>();
   private readonly sendWaits = new Map<string, { timer: ReturnType<typeof setTimeout>; resolve(): void }>();
   constructor(private readonly transport: ProximityTransportPort, private readonly identity: BitchatIdentity,
-    private readonly name: string, private readonly callbacks: Callbacks,
+    private name: string, private readonly callbacks: Callbacks,
     private readonly random: (length: number) => Uint8Array,
     archive?: { packets: BitchatPacket[]; changed(id: string, packet?: BitchatPacket): void; pins?: { id: string; noiseKey: string; signingKey: string }[] }) {
     if (!name.trim() || bytes(name).length > 64) throw new Error('Bitchat name must fit 64 UTF-8 bytes');
@@ -118,6 +118,14 @@ export class BitchatSession {
       await this.transport.startScanAsync(0);
       this.tick();
     } catch (error) { await this.stop(); throw error; }
+  }
+  get nickname(): string { return this.name; }
+  rename(name: string): void {
+    const value = name.trim();
+    if (!value || bytes(value).length > 64) throw new Error('Bitchat name must fit 64 UTF-8 bytes');
+    if (value === this.name) return;
+    this.name = value;
+    if (this.running && this.links.size) void this.broadcast(this.announcement()).catch(error => this.report(error));
   }
   private tick(): void {
     if (!this.running) return;

@@ -28,13 +28,18 @@ export class GeohashSession {
   private readonly seen = new Set<string>();
   private readonly present = new Map<string, number>();
   private readonly pending = new Map<string, Pending>();
-  constructor(hash: string, private key: Uint8Array, private readonly name: string,
+  constructor(hash: string, private key: Uint8Array, private name: string,
     private readonly relays: string[], private readonly callbacks: Callbacks,
     private readonly socket: (url: string) => GeoSocket = url => new WebSocket(url) as unknown as GeoSocket,
     private readonly mode?: RelayMode, private readonly fallback?: (event: Event) => Promise<boolean>) {
     this.hash = normalizeGeohash(hash); this.relays = normalizeGeoRelays(relays);
     this.publicKey = getPublicKey(key); this.ownPublicKeys.add(this.publicKey);
     if (!name.trim() || new TextEncoder().encode(name).length > 64) throw new Error('Invalid nickname');
+  }
+  rename(name: string): void {
+    const value = name.trim();
+    if (!value || new TextEncoder().encode(value).length > 64) throw new Error('Invalid nickname');
+    this.name = value;
   }
   start(): void {
     if (!this.stopped) return;

@@ -1,31 +1,53 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import { NetworkSettings } from '@/components/bitchat/NetworkSettings';
 import { panicWipe } from '@/services/bitchat/panic';
 import { restoreWorkspace, workspaceStore } from '@/services/history/workspace';
 import { clearHistory } from '@/services/history/history';
-import { bitchatService } from '@/services/bitchat/bitchat.service';
-import { geohashService } from '@/services/geohash/geohash.service';
-import { router } from 'expo-router';
+import { bitchatService, bitchatSessionStore } from '@/services/bitchat/bitchat.service';
+import { geohashService, geohashStore } from '@/services/geohash/geohash.service';
+import { router, useFocusEffect } from 'expo-router';
 import { ScrollView, Switch, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { platform } from '@/platform';
 import { AppScreen } from '@/components/common/AppScreen';
 import { AppText } from '@/components/common/AppText';
+import { AppInput } from '@/components/common/AppInput';
+import { ensureNickname, saveNickname } from '@/services/preferences/nickname';
 import { AppButton } from '@/components/common/AppButton';
 import { ScreenHeader, useScreenHeaderClearance } from '@/components/common/ScreenHeader';
 import { useThemeStore } from '@/stores/theme.store';
 import { spacing, useThemeColors, ACCENT_KEYS } from '@/theme';
 export default function Settings() {
   const colors = useThemeColors();
+  const [name, setName] = useState(''), [savedName, setSavedName] = useState(''), [nameReady, setNameReady] = useState(false), [nameSaved, setNameSaved] = useState(false);
+  const meshBusy = useStore(bitchatSessionStore, state => state.busy), geoBusy = useStore(geohashStore, state => state.busy);
   const [backgroundBusy, setBackgroundBusy] = useState(false);
   const workspace = useStore(workspaceStore);
   const [erased, setErased] = useState(false), [networkBusy, setNetworkBusy] = useState(false);
   const [clearing, setClearing] = useState(false), [failed, setFailed] = useState(false);
+  useFocusEffect(useCallback(() => {
+    let alive = true;
+    void ensureNickname().then(value => { if (alive) { setName(value); setSavedName(value); setNameReady(true); } }).catch(() => { if (alive) setFailed(true); });
+    return () => { alive = false; };
+  }, []));
   useEffect(() => { void restoreWorkspace().catch(() => setFailed(true)); }, []);
   const { t } = useTranslation(), top = useScreenHeaderClearance();
   const preference = useThemeStore(s => s.preference), accent = useThemeStore(s => s.accent);
   return <AppScreen edges={['bottom']}><ScrollView contentContainerStyle={{ padding: spacing.lg, paddingTop: top, gap: spacing.lg }}>
+    <AppInput label={t('mobile.your_name')} value={name} maxLength={32} editable={nameReady && !clearing && !meshBusy && !geoBusy}
+      onChangeText={value => { setName(value); setNameSaved(false); }} />
+    <AppText variant="caption" tone="muted">{t('mobile.name_hint')}</AppText>
+    <AppButton label={t('common.save')} variant="secondary" disabled={!nameReady || clearing || networkBusy || backgroundBusy || meshBusy || geoBusy || !name.trim() || new TextEncoder().encode(name.trim()).length > 64 || name.trim() === savedName}
+      onPress={() => void (async () => {
+        setClearing(true); setFailed(false); setNameSaved(false);
+        try {
+          const value = await saveNickname(name);
+          bitchatService.rename(value); geohashService.rename(value);
+          setName(value); setSavedName(value); setNameSaved(true);
+        } catch { setFailed(true); } finally { setClearing(false); }
+      })()} />
+    {nameSaved && <AppText variant="caption" tone="muted" accessibilityLiveRegion="polite">{t('mobile.name_saved')}</AppText>}
     <AppText variant="subtitle">{t('mobile.appearance')}</AppText>
     <View style={{ flexDirection: 'row', gap: spacing.sm }}>{(['system','light','dark'] as const).map(value => <AppButton key={value}
       label={t(`mobile.${value}`)} variant="secondary" fullWidth={false} selected={preference === value} onPress={() => useThemeStore.getState().setPreference(value)} />)}</View>
@@ -72,7 +94,7 @@ export default function Settings() {
     <AppButton label={t('mobile.wipe_identity')} variant="secondary" disabled={clearing || networkBusy} onPress={() => void (async () => {
       if (!await platform.confirmationDialog.confirm(t('mobile.wipe_identity'), t('mobile.wipe_confirm'), t('mobile.cancel'), t('mobile.wipe_identity'))) return;
       setClearing(true); setFailed(false);
-      try { await panicWipe(); setErased(true); } catch { setFailed(true); } finally { setClearing(false); }
+      try { await panicWipe(); const fresh = await ensureNickname(); setName(fresh); setSavedName(fresh); setNameSaved(false); setErased(true); } catch { setFailed(true); } finally { setClearing(false); }
     })()} />
     {erased && <AppText tone="muted">{t('mobile.wipe_done')}</AppText>}
     {failed && <AppText tone="danger">{t('mobile.failed')}</AppText>}

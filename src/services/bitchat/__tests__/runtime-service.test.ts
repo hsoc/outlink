@@ -18,7 +18,7 @@ const root = 'aa'.repeat(32), recipientSeed = new Uint8Array(32).fill(2), recipi
 const carrierSeed = new Uint8Array(32).fill(3), carrierKey = x25519.getPublicKey(carrierSeed), carrierId = peerId(carrierKey);
 jest.mock('@/services/geohash/geohash.service', () => ({ geohashService: { acceptCarrier: jest.fn() } }));
 jest.mock('@/platform', () => ({ platform: { proximityTransport: {}, records: { get: jest.fn(), set: jest.fn(), remove: jest.fn(), list: jest.fn() },
-  history: { save: jest.fn(), load: jest.fn(async () => []), get: jest.fn() }, preferences: { getItem: jest.fn(async () => null) },
+  history: { save: jest.fn(), load: jest.fn(async () => []), get: jest.fn() }, preferences: { getItem: jest.fn(async () => null), setItem: jest.fn(async () => {}) },
   secureStorage: { getItem: jest.fn(), setItem: jest.fn() }, deviceCrypto: { randomUUID: jest.fn(async () => 'outgoing-one') } } }));
 jest.mock('../compatibility/private-mailbox', () => {
   const actual = jest.requireActual('../compatibility/private-mailbox');

@@ -21,6 +21,10 @@ See [background connectivity](docs/protocols/background-connectivity.md). Messag
 and channel selections survive restarts; Settings offers explicit local-history deletion.
 Ephemeral Nostr events do not guarantee historical message retrieval.
 
+Change your display name in **Settings → Your name → Save**. New profiles start
+with a saved random name such as `Outlink4827`; existing names are kept. See
+[display names](docs/protocols/display-names.md) for identity and privacy details.
+
 ## Build
 
 Use Node.js 24 and npm, then:

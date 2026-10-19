@@ -383,3 +383,20 @@ it('times out a lost replacement response while preserving the established encry
   } finally { timers.mockRestore(); shifted.mockRestore(); }
 
 });
+
+it('announces renames while preserving identity and an established encrypted session', async () => {
+  const a = node('Alice', 1, 512), b = node('Bob', 2, 512);
+  await Promise.all([a.session.start(), b.session.start()]); connect(a.r, b.r);
+  await until(() => b.peers.has(a.session.id));
+  await a.session.sendPrivate(b.session.id, 'before rename', 'rename-before');
+  await until(() => b.messages.length === 1 && a.receipts.some(r => r[2] === 'delivered'));
+  const id = a.session.id, fingerprint = b.peers.get(id)?.fingerprint;
+  const handshakes = () => [...a.r.wire, ...b.r.wire].filter(w => w[1] === BitchatType.handshake).length;
+  const count = handshakes();
+  a.session.rename('Alice Updated'); await until(() => b.peers.get(id)?.name === 'Alice Updated');
+  expect(a.session.id).toBe(id); expect(b.peers.get(id)?.fingerprint).toBe(fingerprint);
+  await a.session.sendPrivate(b.session.id, 'after rename', 'rename-after');
+  await until(() => b.messages.length === 2); expect(handshakes()).toBe(count);
+  expect(a.peers.get(b.session.id)?.secure).toBe(true);
+  expect(() => a.session.rename(' ')).toThrow(); expect(a.session.nickname).toBe('Alice Updated');
+});

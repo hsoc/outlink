@@ -1,3 +1,4 @@
+import { ensureNickname, NICKNAME_KEY, validateNickname } from '@/services/preferences/nickname';
 import { refreshAreaRelays } from '@/services/geohash/relay-refresh';
 import type { Event } from 'nostr-tools/pure';
 import { base64 } from '@scure/base';
@@ -365,6 +366,11 @@ class BitchatService {
     const promise = this.lifecycle.catch(() => {}).then(operation);
     this.lifecycle = promise; return promise;
   }
+  rename(name: string): void {
+    const value = validateNickname(name);
+    this.session?.rename(value);
+    if (this.connection) this.connection.name = value;
+  }
   start(account: string, name: string): Promise<void> {
     return this.transition(async () => {
       await this.stopInternal();
@@ -375,6 +381,7 @@ class BitchatService {
         const prekeyKey = `outlink.prekeys.${account}`;
         this.prekeys = new PrekeyRuntime(this.identity, protocolStorage, { get: () => platform.secureStorage.getItem(prekeyKey), set: value => platform.secureStorage.setItem(prekeyKey, value) });
         await this.prekeys.bundle(); this.couriers = new CourierRuntime(protocolStorage);
+        name = validateNickname(await platform.preferences.getItem(NICKNAME_KEY) ?? name);
         this.session = new BitchatSession(platform.proximityTransport, this.identity, name, {
           extension: (packet, context) => this.extension(packet, context),
           peer: peer => {
@@ -401,7 +408,7 @@ class BitchatService {
         }, randomBytes, { ...await gossipArchive(() => bitchatSessionStore.setState({ error: true })), pins: contactsStore.getState().contacts.filter(contact => contact.verified || contact.favorite).map(contact => ({ id: contact.id, noiseKey: contact.noiseKey, signingKey: contact.signingKey })) });
         this.session.setCapabilities(1);
         await this.session.start();
-        this.connection = { account, name };
+        this.connection = { account, name: this.session.nickname ?? name };
         bitchatSessionStore.setState({ active: true, busy: false, id: this.session.id, account });
         const workspace = await platform.preferences.getItem('mobile.workspace');
         const preferences = workspace ? JSON.parse(workspace) as { internet?: boolean; relays?: string } : {};
@@ -528,7 +535,7 @@ class BitchatService {
     const own = peerId(identity.noisePublicKey); identity.noiseSeed.fill(0); identity.signingSeed.fill(0);
     await contactsService.keepForDelivery(peer);
     await this.outbox.enqueue(peer, { id: await platform.deviceCrypto.randomUUID(), peer: own, recipient: peer,
-      name: await platform.preferences.getItem('mobile.nickname') ?? 'Outlink', content, timestamp: Date.now(), outgoing: true, delivery: 'queued' });
+      name: await ensureNickname(), content, timestamp: Date.now(), outgoing: true, delivery: 'queued' });
     if (this.connection) void this.flush(peer).catch(() => bitchatSessionStore.setState({ error: true }));
   }
   async ping(peer: string) {

@@ -85,3 +85,13 @@ it('ignores a delayed acceptance from disconnected sockets and recovers on new r
   sockets[2].onmessage!({ data: JSON.stringify(['OK', replacement.id, true, '']) }); await resumed;
   expect(callbacks.delivery).toHaveBeenLastCalledWith(replacement.id, 'sent'); session.stop(); expect(jest.getTimerCount()).toBe(0);
 });
+
+it('uses the edited name for future events without replacing channel identity or connections', async () => {
+  const { session, sockets } = setup(); session.start(); sockets.forEach(s => s.onopen!());
+  const key = createGeohashEvent(new Uint8Array(32).fill(1), 'ezs42', 'Alice', 'before').pubkey; session.rename('Alice Updated');
+  const pending = session.send('after rename');
+  const event = sockets[0].sent.at(-1)![1] as { id: string; pubkey: string; tags: string[][] };
+  expect(event.pubkey).toBe(key); expect(event.tags).toContainEqual(['n', 'Alice Updated']);
+  expect(sockets).toHaveLength(2); expect(sockets[0].close).not.toHaveBeenCalled();
+  sockets[0].onmessage!({ data: JSON.stringify(['OK', event.id, true, '']) }); await pending; session.stop();
+});

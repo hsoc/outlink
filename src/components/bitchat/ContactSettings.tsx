@@ -12,7 +12,7 @@ import { spacing, verificationLayout, useThemeColors } from '@/theme';
 import { platform } from '@/platform';
 import { contactsService } from '@/services/bitchat/compatibility/contacts';
 import { bitchatService } from '@/services/bitchat/bitchat.service';
-import { getDevicePreference } from '@/services/preferences/device-preferences.service';
+import { ensureNickname } from '@/services/preferences/nickname';
 function VerificationCode({ link }: { link: string }) {
   const c = useThemeColors(), { t } = useTranslation();
   const matrix = useMemo(() => {
@@ -57,7 +57,7 @@ export function ContactSettings({ onBusyChange }: { onBusyChange?: (busy: boolea
     <AppText variant="subtitle">{t('mobile.add_share_contact')}</AppText>
     <AppText tone="muted">{t('mobile.contact_hint')}</AppText>
     <AppButton label={t('mobile.show_code')} variant="secondary" disabled={busy} onPress={() => void operate(async () => {
-      const name = await getDevicePreference('mobile.nickname') ?? t('bitchat.default_name');
+      const name = await ensureNickname();
       const value = await bitchatService.verification(name); if (mounted.current) setLink(value);
     })} />
     {!!link && <><VerificationCode link={link} /><AppText variant="caption" tone="muted">{t('mobile.code_expiry')}</AppText>

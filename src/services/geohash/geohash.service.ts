@@ -1,3 +1,4 @@
+import { NICKNAME_KEY, validateNickname } from '@/services/preferences/nickname';
 import { ChannelIdentities, clearIdentitySet, type ChannelIdentitySet } from './channel-identities';
 import { GeoPrivateSession, type GeoThread } from './private-session';
 import type { BitchatMessage } from '@/services/bitchat/bitchat-session';
@@ -71,6 +72,11 @@ class GeohashService {
   private directoryTimer?: ReturnType<typeof setInterval>;
   private relayEpoch = 0;
   private revision = 0;
+  rename(name: string): void {
+    const value = validateNickname(name);
+    this.session?.rename(value);
+    if (this.connection) this.connection.name = value;
+  }
   join(input: string, name: string, relayInput: string[]): Promise<void> {
     const operation = this.joinInternal(input, name, relayInput); this.joining.add(operation);
     void operation.finally(() => this.joining.delete(operation)).catch(() => {}); return operation;
@@ -94,6 +100,9 @@ class GeohashService {
       const identities = new ChannelIdentities(platform.secureStorage, root), master = hexToBytes(root);
       const legacy = channelKey(master, hash); master.fill(0);
       const keys = await identities.load(hash, legacy);
+      if (revision !== this.revision) { clearIdentitySet(keys); return; }
+      try { name = validateNickname(await platform.preferences.getItem(NICKNAME_KEY) ?? name); }
+      catch (error) { clearIdentitySet(keys); throw error; }
       if (revision !== this.revision) { clearIdentitySet(keys); return; }
       this.identities = identities; this.keySet = keys;
       const key = keys.current.key.slice();
