@@ -29,7 +29,13 @@ message content is encrypted. This option is disabled by default. Contact-code
 scanning requests camera access only on an explicit scan and stores no images.
 
 There is no internet push registration or background delivery guarantee. Connections
-pause in the background and reconnect on return within the same app process.
+pause in the background and reconnect on return within the same app process
+unless the Android background-connectivity switch is enabled with a joined mesh.
+That option keeps Bluetooth and existing relay connections active, consuming more
+battery and continuing to expose their usual radio/network metadata. A local
+ongoing notification contains no contacts, messages, keys, or area codes. It
+does not register for internet push. iOS and internet-only sessions still pause.
+See [background connectivity](protocols/background-connectivity.md).
 Messages, drafts, channel selections, relay settings, and nickname are encrypted
 before being saved locally, using a separate key kept in device secure storage.
 Appearance preferences remain unencrypted. Message/room indexes are keyed;
@@ -56,7 +62,8 @@ Courier and prekey delivery runs while Bluetooth is joined. Nearby authenticated
 phones may retain opaque private mail for up to 24 hours. Prekeys reduce exposure
 after their private keys are deleted; static-key fallback and the 48-hour duplicate
 grace do not provide that immediate protection. Relays/carriers can still observe
-traffic metadata. Keys and delivery state survive backgrounding, not active sessions.
+traffic metadata. Keys and delivery state survive backgrounding. Active sessions normally pause;
+the Android foreground-service option can keep a joined mesh active.
 
 Gateway and public bridge forwarding are separate opt-in controls, disabled by
 default. A bridge publishes only the author's explicitly bridge-enabled public

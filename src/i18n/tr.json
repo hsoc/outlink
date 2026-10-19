@@ -27,7 +27,7 @@
     "privacy": "Katıldığınızda adınız ve cihaz kimliğiniz yakındaki kullanıcılara görünür. Bu oda açıkken Nearby sohbetleri duraklatılır. Çıktığınızda mesajlar silinir.",
     "name": "Herkese açık adınız",
     "join": "Yakındaki odaya katıl",
-    "public": "Herkese açık oda",
+    "public": "Herkese Açık Mesh",
     "public_notice": "Yakındaki ağdaki herkes herkese açık mesajları okuyabilir.",
     "private_notice": "Özel mesajlar şifrelenir. Hassas bilgi paylaşmadan önce parmak izini karşıdaki kişiyle karşılaştırın.",
     "fingerprint": "Cihaz parmak izi: {{value}}",

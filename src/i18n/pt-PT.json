@@ -27,7 +27,7 @@
     "privacy": "Ao entrar, o seu nome e a identidade do dispositivo ficam visíveis para utilizadores próximos. As conversas Nearby ficam suspensas enquanto esta sala está aberta. As mensagens são apagadas ao sair.",
     "name": "O seu nome público",
     "join": "Entrar na sala próxima",
-    "public": "Sala pública",
+    "public": "Malha pública",
     "public_notice": "Todos na rede próxima podem ler as mensagens públicas.",
     "private_notice": "As mensagens privadas são cifradas. Compare a impressão digital com a pessoa antes de partilhar informações sensíveis.",
     "fingerprint": "Impressão digital do dispositivo: {{value}}",

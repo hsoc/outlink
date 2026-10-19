@@ -46,3 +46,8 @@ Active conversations give their message history the remaining scrollable space, 
 Identity changes preserve private conversation selection and drafts. Expired,
 unconfirmed identity changes require a visible recovery action; never silently
 present a new identity as authenticated continuity in another client.
+
+Background connectivity is opt-in and visibly platform-limited. Its Android switch
+explains battery use and requires a visible ongoing notification with a Stop
+action. Public Mesh denotes Bluetooth broadcast; internet channels retain their
+separate public-channel label.

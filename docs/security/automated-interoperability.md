@@ -123,3 +123,9 @@ proof/acknowledgment binding, simultaneous rotations, cold restart with pending
 migration, original-key outbox receipts, expiry/recovery, and rejection of expired
 remote-key impersonation. This Outlink extension is not implemented by the
 pinned official client; see [the protocol boundary](../protocols/channel-identity-rotation.md).
+
+Background-connectivity lifecycle and platform-adapter tests additionally cover
+permission denial, native startup failures, retained sessions, disabling while
+backgrounded, lost service, internet-only fallback, identity-wipe invalidation,
+opt-in persistence, and Headless JS stop races. These do not validate native
+service/OS behavior; see [background connectivity](../protocols/background-connectivity.md).

@@ -60,7 +60,9 @@ A failed/expired message remains in conversation history with failed status.
 Contact state, queues, and gossip records use encrypted protected records,
 separate from user-clearable conversation history. Clear history does not forget
 pins or cancel pending outgoing messages. The explicit identity wipe removes
-both. Routine backgrounding cancels in-flight work and preserves records.
+both. Routine backgrounding cancels in-flight work and preserves records unless
+the opt-in Android foreground service is retaining a joined mesh. See
+[background connectivity](background-connectivity.md) for platform limits.
 
 The implemented delivery paths and their limits are detailed in [courier and bridge](courier-and-bridge.md).
 

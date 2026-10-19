@@ -69,7 +69,9 @@ peers. This is an additional Outlink privacy policy; the pinned upstream uses
 stable channel identities. Existing clients retain standard message-format
 compatibility but cannot confirm the migration extension. No claim of anonymity
 or per-message forward secrecy is made. The inbox is active only while the area
-is joined in the foreground. Push registration remains absent.
+is joined and its transport is running: normally foreground-only, with the
+opt-in [Android background service](background-connectivity.md) exception when
+a mesh is also joined. Push registration remains absent.
 
 ## Directory refresh
 

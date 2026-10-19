@@ -27,7 +27,7 @@
     "privacy": "Entrando, il tuo nome e l’identità del dispositivo saranno visibili agli utenti vicini. Le chat Nearby sono sospese finché questa stanza è aperta. I messaggi vengono cancellati quando esci.",
     "name": "Il tuo nome pubblico",
     "join": "Entra nella stanza vicina",
-    "public": "Stanza pubblica",
+    "public": "Mesh pubblica",
     "public_notice": "Tutti nella rete vicina possono leggere i messaggi pubblici.",
     "private_notice": "I messaggi privati sono cifrati. Confronta l’impronta con la persona prima di condividere informazioni sensibili.",
     "fingerprint": "Impronta del dispositivo: {{value}}",

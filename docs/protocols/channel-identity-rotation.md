@@ -1,7 +1,7 @@
 # Channel identity rotation
 
 Outlink changes the identity used for a public geohash channel every 24 hours of
-wall-clock time, when the joined foreground app next checks it or sends. The
+wall-clock time, when the running joined app next checks it or sends. The
 maintenance timer checks each minute; a cold join rotates an overdue identity
 before publishing. Different channels have independent identities. Mesh Noise
 identities, QR contacts, favorite-internet identities and bridge rendezvous keys
@@ -119,8 +119,9 @@ fallback metadata can link activity despite rotation. This is not anonymity or
 per-message forward secrecy. Retained encrypted history and native backups have
 separate confidentiality/erasure boundaries.
 
-Keys and private transports stay foreground-only. Backgrounding stops connections
-and retains delivery state. Join, secure key writes, identity maintenance,
+Backgrounding normally stops connections and retains delivery state. The opt-in
+[Android foreground service](background-connectivity.md) can keep an already
+joined mesh and open private relay transports active, including identity maintenance. Join, secure key writes, identity maintenance,
 private messages and receipts are drained before confirmed identity erasure. The
 wipe removes every indexed channel key ring and its index together with the old
 root; in-memory byte buffers are cleared. JavaScript strings, platform keychain

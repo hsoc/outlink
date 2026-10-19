@@ -1,3 +1,4 @@
+import type { BackgroundConnectivityPort } from './background-connectivity';
 import type { RecordsPort } from './records';
 import type { HistoryPort } from './history';
 import type { UrlOpenerPort } from './url-opener';
@@ -11,6 +12,7 @@ export type { PreferencesPort, LocationPort } from './mobile';
 export type { AppStatePort, AppStateStatus } from './app-state';
 export type { ProximityTransportPort, ProximityTransportSubscription } from './proximity-transport';
 export interface PlatformAdapters {
+  backgroundConnectivity: BackgroundConnectivityPort;
   history: HistoryPort;
   records: RecordsPort;
   wipeLocalData(): Promise<void>;

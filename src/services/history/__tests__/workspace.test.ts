@@ -25,3 +25,15 @@ it('clearing drafts is durable without removing channel preferences', async () =
   const saved = JSON.parse(calls[calls.length - 1][1]);
   expect(saved.drafts).toEqual({}); expect(saved.hash).toBe('ezs42');
 });
+
+it('persists background opt-in without persisting runtime failure status', async () => {
+  workspaceStore.setState({ keepBackground: true, backgroundError: true });
+  await historyOperation(async () => {});
+  const calls = jest.mocked(platform.preferences.setItem).mock.calls;
+  const saved = calls[calls.length - 1][1];
+  expect(JSON.parse(saved)).toMatchObject({ keepBackground: true, backgroundError: false });
+  workspaceStore.setState({ keepBackground: false, backgroundError: false });
+  jest.mocked(platform.preferences.getItem).mockResolvedValue(saved);
+  await restoreWorkspace();
+  expect(workspaceStore.getState()).toMatchObject({ keepBackground: true, backgroundError: false });
+});

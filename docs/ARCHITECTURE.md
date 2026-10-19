@@ -31,10 +31,15 @@ Bluetooth Noise/Ed25519 keys remain stable. Location signing keys are generated 
 rotate daily with a bounded private delivery window. A shared nickname or public
 radio behaviour can still link activity; rotation is not an anonymity guarantee.
 
-Both transports stop on background. Pending operations are cancelled or rejected,
+By default, both transports stop on background. Pending operations are cancelled or rejected,
 connections/timers are released, private session key material is cleared, and
 message history is retained. Foreground resumption reconnects sessions that were
-active before backgrounding. Cold launch restores history and selections without
+active before backgrounding. The opt-in Android connected-device foreground service
+retains an already joined mesh and existing relay sessions, with an ongoing
+notification, a scoped CPU wake lock, and an active Headless JS task for timers.
+The platform port confirms native service state; failure falls back to pausing.
+Internet-only sessions and iOS use the default pause/resume path.
+See [background lifecycle](protocols/background-connectivity.md). Cold launch restores history and selections without
 opening a transport until Join. History uses an asynchronous SQLite platform port,
 indexed by keyed room/message identifiers and insertion sequence, with 200-record pages and a 500-record
 visible window. Writes are incremental and serialized with reads and deletion.
@@ -74,7 +79,7 @@ message and directory-cache work before identity erasure. See
 [connection and internet lifecycle](protocols/connection-and-internet.md).
 
 Channel identity ownership belongs to a serialized secure-storage key-ring manager.
-The foreground geohash service commits random keys before swapping public signers
+The running geohash service commits random keys before swapping public signers
 and private inboxes, and drains maintenance before erasure. Private conversation
 roots are separate from wire identities, preserving indexed history and queues
 without whole-history rewrites. Only authenticated proof/acknowledgment changes

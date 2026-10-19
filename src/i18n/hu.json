@@ -27,7 +27,7 @@
     "privacy": "Belépéskor a neved és az eszközazonosságod láthatóvá válik a közeli felhasználóknak. A Nearby-csevegések szünetelnek, amíg ez a szoba nyitva van. A kilépés törli az üzeneteket.",
     "name": "Nyilvános neved",
     "join": "Belépés a közeli szobába",
-    "public": "Nyilvános szoba",
+    "public": "Nyilvános mesh",
     "public_notice": "A közeli hálózatban mindenki olvashatja a nyilvános üzeneteket.",
     "private_notice": "A privát üzenetek titkosítottak. Bizalmas adatok megosztása előtt hasonlítsd össze az ujjlenyomatot a másik féllel.",
     "fingerprint": "Eszközujjlenyomat: {{value}}",

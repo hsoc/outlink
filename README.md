@@ -14,8 +14,10 @@ phone numbers, wallets, or username registration.
 Location channels require internet access and are public. They are separate
 from encrypted Bluetooth private chats. Optional internet private messaging and
 mesh gateway/bridge features are disabled by default. There is no Tor integration,
-push delivery, file transfer, or background messaging.
-Connections pause in the background and reconnect on return. Messages, drafts,
+push delivery or file transfer. Android offers an optional ongoing-notification
+mode to retain a joined Bluetooth mesh and open relay connections in the background.
+It is off by default; iOS and internet-only sessions pause and reconnect on return.
+See [background connectivity](docs/protocols/background-connectivity.md). Messages, drafts,
 and channel selections survive restarts; Settings offers explicit local-history deletion.
 Ephemeral Nostr events do not guarantee historical message retrieval.
 

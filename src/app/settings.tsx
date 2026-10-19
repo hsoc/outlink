@@ -8,7 +8,7 @@ import { clearHistory } from '@/services/history/history';
 import { bitchatService } from '@/services/bitchat/bitchat.service';
 import { geohashService } from '@/services/geohash/geohash.service';
 import { router } from 'expo-router';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, Switch, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { platform } from '@/platform';
 import { AppScreen } from '@/components/common/AppScreen';
@@ -16,8 +16,10 @@ import { AppText } from '@/components/common/AppText';
 import { AppButton } from '@/components/common/AppButton';
 import { ScreenHeader, useScreenHeaderClearance } from '@/components/common/ScreenHeader';
 import { useThemeStore } from '@/stores/theme.store';
-import { spacing, ACCENT_KEYS } from '@/theme';
+import { spacing, useThemeColors, ACCENT_KEYS } from '@/theme';
 export default function Settings() {
+  const colors = useThemeColors();
+  const [backgroundBusy, setBackgroundBusy] = useState(false);
   const workspace = useStore(workspaceStore);
   const [erased, setErased] = useState(false), [contactsBusy, setContactsBusy] = useState(false), [networkBusy, setNetworkBusy] = useState(false);
   const [clearing, setClearing] = useState(false), [failed, setFailed] = useState(false);
@@ -30,6 +32,26 @@ export default function Settings() {
       label={t(`mobile.${value}`)} variant="secondary" fullWidth={false} selected={preference === value} onPress={() => useThemeStore.getState().setPreference(value)} />)}</View>
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>{ACCENT_KEYS.map(value => <AppButton key={value} label={t(`appearance.colors.${value}`)} variant="secondary"
       fullWidth={false} selected={accent === value} onPress={() => useThemeStore.getState().setAccent(value)} />)}</View>
+    <View style={{ gap: spacing.sm }}>
+      <AppText variant="subtitle">{t('mobile.background_connectivity')}</AppText>
+      <Switch accessibilityLabel={t('mobile.background_connectivity')}
+        accessibilityHint={t(platform.backgroundConnectivity.supported() ? 'mobile.background_hint' : 'mobile.background_unavailable')}
+        value={workspace.keepBackground && platform.backgroundConnectivity.supported()}
+        disabled={!workspace.ready || !platform.backgroundConnectivity.supported() || backgroundBusy || clearing || contactsBusy || networkBusy}
+        trackColor={{ false: colors.surfaceMuted, true: colors.accent }}
+        onValueChange={enabled => void (async () => {
+          setBackgroundBusy(true); workspaceStore.setState({ backgroundError: false });
+          try {
+            if (enabled && !await platform.backgroundConnectivity.requestPermission()) {
+              workspaceStore.setState({ keepBackground: false, backgroundError: true }); return;
+            }
+            workspaceStore.setState({ keepBackground: enabled });
+          } catch { workspaceStore.setState({ keepBackground: false, backgroundError: true }); }
+          finally { setBackgroundBusy(false); }
+        })()} />
+      <AppText variant="caption" tone="muted">{t(platform.backgroundConnectivity.supported() ? 'mobile.background_hint' : 'mobile.background_unavailable')}</AppText>
+      {workspace.backgroundError && <AppText variant="caption" tone="danger">{t('mobile.background_failed')}</AppText>}
+    </View>
     <ContactSettings key={erased ? 'fresh' : 'current'} onBusyChange={setContactsBusy} />
     <NetworkSettings disabled={clearing || contactsBusy} onBusyChange={setNetworkBusy} />
     <AppText variant="subtitle">{t('mobile.internet_private')}</AppText>

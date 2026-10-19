@@ -27,7 +27,7 @@
     "privacy": "Votre nom et votre identité d’appareil deviennent visibles aux utilisateurs proches. Les discussions Nearby sont suspendues tant que ce salon est ouvert. Les messages sont effacés à votre départ.",
     "name": "Votre nom public",
     "join": "Rejoindre le salon proche",
-    "public": "Salon public",
+    "public": "Maillage public",
     "public_notice": "Tout le monde dans le réseau proche peut lire les messages publics.",
     "private_notice": "Les messages privés sont chiffrés. Comparez l’empreinte avec la personne avant de partager des informations sensibles.",
     "fingerprint": "Empreinte de l’appareil : {{value}}",

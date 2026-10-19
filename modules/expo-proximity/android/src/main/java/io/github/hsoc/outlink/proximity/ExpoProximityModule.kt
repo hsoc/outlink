@@ -1,5 +1,6 @@
 package io.github.hsoc.outlink.proximity
 
+import android.content.Intent
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
@@ -111,6 +112,43 @@ class ExpoProximityModule : Module() {
 
   override fun definition() = ModuleDefinition {
     Name("ExpoProximity")
+    AsyncFunction("backgroundRunningAsync") { ConnectivityService.running }
+    AsyncFunction("backgroundTokenAsync") { ConnectivityService.token }
+    AsyncFunction("stopBackgroundAsync") {
+      appContext.reactContext?.stopService(Intent(appContext.reactContext, ConnectivityService::class.java))
+      Unit
+    }
+    AsyncFunction("startBackgroundAsync") { title: String, body: String, stop: String, promise: Promise ->
+      handler.post {
+        val context = appContext.reactContext
+        if (context == null || appContext.currentActivity == null) {
+          promise.reject("ERR_BACKGROUND", "Open Outlink to start background connectivity", null)
+        } else if (ConnectivityService.running) {
+          promise.resolve()
+        } else {
+          try {
+            val intent = Intent(context, ConnectivityService::class.java)
+              .putExtra("title", title.take(128)).putExtra("body", body.take(256)).putExtra("stop", stop.take(64))
+            if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(intent) else context.startService(intent)
+            val deadline = SystemClock.elapsedRealtime() + 5_000L
+            fun confirm() {
+              if (ConnectivityService.running) promise.resolve()
+              else if (SystemClock.elapsedRealtime() >= deadline) {
+                context.stopService(intent)
+                promise.reject("ERR_BACKGROUND", "Background connectivity could not start; check notifications and Bluetooth permissions", null)
+              } else handler.postDelayed({ confirm() }, 50L)
+            }
+            confirm()
+          } catch (error: Exception) {
+            promise.reject("ERR_BACKGROUND", "Background connectivity could not start", error)
+          }
+        }
+      }
+    }
+    OnDestroy {
+      appContext.reactContext?.let { it.stopService(Intent(it, ConnectivityService::class.java)) }
+    }
+
     Events("onPeer", "onSignal", "onMessage", "onConnection", "onBluetoothState")
 
     AsyncFunction("configureProtocolAsync") { mode: String, promise: Promise ->
@@ -183,6 +221,7 @@ class ExpoProximityModule : Module() {
 
     AsyncFunction("stopSessionAsync") { promise: Promise ->
       handler.post {
+        appContext.reactContext?.let { it.stopService(Intent(it, ConnectivityService::class.java)) }
         stopScan()
         discoveryConnections.stopSession()
         inboundProfileEndpoints.clear()

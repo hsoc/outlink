@@ -56,7 +56,9 @@ A bundled public directory with validated cached refresh selects up to five near
 custom relay addresses remain available. The [courier and bridge runtime](courier-and-bridge.md)
 adds optional public gateway/bridge forwarding and encrypted courier mailboxes.
 No high-difficulty proof-of-work mining, directory map, location
-notes, media, moderation lists, Tor, or background/push delivery is included. A relay requiring positive proof
+notes, media, moderation lists, Tor, or push delivery is included. Optional
+[Android background connectivity](background-connectivity.md) retains open
+relay sessions only while a mesh is joined. A relay requiring positive proof
 of work may reject a publish; rejection is surfaced rather than shown as sent.
 Do not treat a geohash tag, nickname, or signature as proof of physical location
 or real-world identity. Channel contents and metadata are public.

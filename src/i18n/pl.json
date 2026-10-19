@@ -27,7 +27,7 @@
     "privacy": "Po dołączeniu Twoja nazwa i tożsamość urządzenia będą widoczne dla pobliskich użytkowników. Czaty Nearby są wstrzymane, gdy ten pokój jest otwarty. Wiadomości znikają po wyjściu.",
     "name": "Twoja publiczna nazwa",
     "join": "Dołącz do pobliskiego pokoju",
-    "public": "Pokój publiczny",
+    "public": "Publiczna sieć mesh",
     "public_notice": "Wszyscy w pobliskiej sieci mogą czytać wiadomości publiczne.",
     "private_notice": "Wiadomości prywatne są szyfrowane. Porównaj odcisk z drugą osobą przed udostępnieniem poufnych informacji.",
     "fingerprint": "Odcisk urządzenia: {{value}}",

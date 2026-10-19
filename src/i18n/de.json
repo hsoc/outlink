@@ -27,7 +27,7 @@
     "privacy": "Beim Beitritt sind dein Name und deine Geräteidentität für Nutzer in der Nähe sichtbar. Nearby-Chats pausieren, solange dieser Raum geöffnet ist. Nachrichten werden beim Verlassen gelöscht.",
     "name": "Dein öffentlicher Name",
     "join": "Raum in der Nähe betreten",
-    "public": "Öffentlicher Raum",
+    "public": "Öffentliches Mesh",
     "public_notice": "Alle im nahen Mesh-Netz können öffentliche Nachrichten lesen.",
     "private_notice": "Private Nachrichten sind verschlüsselt. Vergleiche den Fingerabdruck mit der Person, bevor du vertrauliche Informationen teilst.",
     "fingerprint": "Gerätefingerabdruck: {{value}}",

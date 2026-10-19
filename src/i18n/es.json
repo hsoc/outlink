@@ -27,7 +27,7 @@
     "privacy": "Al entrar, tu nombre e identidad del dispositivo serán visibles para usuarios cercanos. Los chats Nearby se pausan mientras esta sala está abierta. Los mensajes se borran al salir.",
     "name": "Tu nombre público",
     "join": "Entrar en la sala cercana",
-    "public": "Sala pública",
+    "public": "Malla pública",
     "public_notice": "Todos en la red cercana pueden leer los mensajes públicos.",
     "private_notice": "Los mensajes privados están cifrados. Compara la huella con la otra persona antes de compartir información sensible.",
     "fingerprint": "Huella del dispositivo: {{value}}",

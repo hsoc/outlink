@@ -27,7 +27,7 @@
     "privacy": "Nearby public messages are readable by mesh participants. Private messages are encrypted in transit. Chat history is saved on this device.",
     "name": "Your public name",
     "join": "Join",
-    "public": "Public room",
+    "public": "Public Mesh",
     "public_notice": "Everyone in the nearby mesh can read public messages.",
     "private_notice": "Private messages are encrypted. Compare the fingerprint with the person before sharing sensitive information.",
     "fingerprint": "Device fingerprint: {{value}}",
@@ -87,7 +87,7 @@
     "light": "Light",
     "dark": "Dark",
     "failed": "Unable to connect or send. Check Bluetooth, internet access, location permission, and the area or relay addresses, then try again.",
-    "storage_note": "Messages and drafts are saved encrypted on this device until you clear local history. Connections pause in the background and reconnect when you return. Restoring a backup without this device’s key cannot recover saved chats.",
+    "storage_note": "Messages and drafts are saved encrypted on this device until you clear local history. Connections normally pause in the background; the Android background-connectivity option can retain a joined mesh. Restoring a backup without this device’s key cannot recover saved chats.",
     "source": "Source code",
     "licenses": "Open-source notices",
     "join": "Join",
@@ -136,7 +136,7 @@
     "gateway_hint": "While Bluetooth is joined, publish signed public area messages for nearby phones and bring relay messages back to the mesh. This uses your internet connection.",
     "bridge": "Connect separate nearby meshes",
     "bridge_hint": "While Bluetooth is joined, publish your public mesh messages to this area’s internet bridge and receive messages from other meshes. You can choose Nearby only for individual messages. Also enables encrypted courier mailboxes on relays.",
-    "network_privacy": "Both options are off by default. Public bridge and area messages are readable by others. Relays can see your IP address and area code. Private messages stay encrypted. Connections pause in the background.",
+    "network_privacy": "Both options are off by default. Public bridge and area messages are readable by others. Relays can see your IP address and area code. Private messages stay encrypted. Connections normally pause in the background unless Android background connectivity is enabled with a joined mesh.",
     "network_failed": "Could not apply network settings. Check the area codes and secure relay addresses.",
     "bridge_notice": "Public chat crosses the internet bridge for your selected area. It is not encrypted.",
     "nearby_only": "Nearby only for this message",
@@ -166,6 +166,14 @@
     "channel_rotation_short": "Public identity rotates daily; your nickname may still identify you.",
     "bridge_relay_status": "Bridge/gateway · {{count}} relay connection(s)",
     "private_relay_status": "Private mailbox · {{count}} relay connection(s)",
-    "relay_accepted": "Relay accepted"
+    "relay_accepted": "Relay accepted",
+    "public_channel": "Public channel",
+    "background_connectivity": "Keep connectivity active while in background",
+    "background_hint": "Android only. Keeps a joined Bluetooth mesh and its open internet connections active using an ongoing notification. Join Nearby first. Location-only sessions still pause. Uses more battery; Android may still stop the app. Leaving the mesh, closing the app, or tapping Stop ends background connectivity.",
+    "background_unavailable": "Requires an updated Android build. iOS cannot keep the current messaging engine continuously active in the background; connections pause and resume when you return.",
+    "background_failed": "Background connectivity could not start. Allow notifications and Bluetooth access, check the notification channel, and try again while Outlink is open.",
+    "background_notification_title": "Outlink connectivity active",
+    "background_notification_body": "Nearby mesh is running. Tap to open Outlink.",
+    "background_stop": "Stop"
   }
 }
