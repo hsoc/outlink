@@ -95,3 +95,19 @@ it('uses the edited name for future events without replacing channel identity or
   expect(sockets).toHaveLength(2); expect(sockets[0].close).not.toHaveBeenCalled();
   sockets[0].onmessage!({ data: JSON.stringify(['OK', event.id, true, '']) }); await pending; session.stop();
 });
+
+it('counts fresh channel identities once, includes self once, and excludes replayed history and expired activity', () => {
+  const { session, sockets, callbacks } = setup(); session.start(); sockets.forEach(s => s.onopen!());
+  expect(callbacks.presence).toHaveBeenLastCalledWith(1);
+  const now = Math.floor(Date.now() / 1000);
+  const old = createGeohashEvent(new Uint8Array(32).fill(2), 'ezs42', 'Bob', 'old history', false, now - 240);
+  session.acceptEvent(old); expect(callbacks.message).toHaveBeenCalled(); expect(callbacks.presence).toHaveBeenLastCalledWith(1);
+  const fresh = createGeohashEvent(new Uint8Array(32).fill(2), 'ezs42', 'Bob', '', true, now);
+  sockets.forEach(s => s.onmessage!({ data: JSON.stringify(['EVENT', 'geohash', fresh]) }));
+  expect(callbacks.presence).toHaveBeenLastCalledWith(2);
+  session.acceptEvent(createGeohashEvent(new Uint8Array(32).fill(1), 'ezs42', 'Alice', '', true, now));
+  expect(callbacks.presence).toHaveBeenLastCalledWith(2);
+  jest.advanceTimersByTime(240_000); expect(callbacks.presence).toHaveBeenLastCalledWith(1);
+  sockets.forEach(s => s.onclose!()); expect(callbacks.presence).toHaveBeenLastCalledWith(0);
+  session.stop();
+});

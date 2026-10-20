@@ -21,9 +21,15 @@ Public messages are signed Nostr kind **20000** events with `g` equal to the
 exact lowercase channel and `n` containing the nickname. A random NIP-13 nonce
 with target zero prevents identical sends in one second from sharing an event
 ID. Presence is kind **20001**, empty content, and one `g` tag with no nickname.
-Presence refreshes every 60 seconds; the displayed recent participant count
-expires after three minutes and is bounded to 256 keys. It is not a verified
-count of people physically present in an area.
+Presence refreshes every 60 seconds. The displayed **Active recently** count
+includes the local user once while relays are connected, plus up to 256 distinct
+remote identities with signed presence or messages created within three minutes.
+Relay duplicates, current/grace self echoes, and older replayed history do not
+inflate it. Expiry is checked on new events and the minute heartbeat, so removal
+can lag the three-minute threshold by up to a minute. Relays disconnected shows
+unavailable; stopping resets the count. This is a channel-identity estimate, not
+a verified count of unique people or people physically nearby. Separate devices,
+identity rotation and limited relay visibility can affect the estimate.
 
 Each channel uses independently generated secp256k1 identities, persisted in
 secure storage and rotated every 24 hours while active or on the next join.

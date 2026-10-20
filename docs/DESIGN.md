@@ -93,3 +93,7 @@ Location presets cover Region through Block and include approximate grid widths,
 explicitly distinguished from radio range. Derive the six-character bridge area
 from the same location fix, fill it only when empty, and preserve custom or active
 bridge choices. Choosing an area or relay policy never enables bridging.
+
+Joined location channels show an explicit Active recently count and explain its
+three-minute window, inclusion of self, and identity-based estimate. Disconnected
+relays show unavailable rather than implying zero users or live presence.

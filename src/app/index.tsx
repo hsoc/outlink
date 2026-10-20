@@ -175,7 +175,13 @@ export default function Chats() {
           <AppButton label={t('bitchat.public')} variant="secondary" fullWidth={false} selected={!recipient} onPress={() => setRecipient(undefined)} />
           {recipient && <AppButton label={`${selectedName} · ${t(selectedOnline ? 'mobile.mesh_online' : 'mobile.mesh_offline')}`} labelNumberOfLines={1} variant="secondary" fullWidth={false} selected onPress={() => router.push('/contacts')} />}
           <AppButton label={t('mobile.contacts')} variant="text" fullWidth={false} onPress={() => router.push('/contacts')} />
-        </View> : <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, alignItems: 'center' }}><AppText variant="caption" tone="muted">{t('mobile.geo_area_people', { hash: geo.hash, people: geo.present })}</AppText><AppButton label={t('mobile.change_area')} variant="text" fullWidth={false} disabled={busy} onPress={() => setEditingArea(true)} /></View>}
+        </View> : <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, alignItems: 'center' }}><AppText variant="caption" tone="muted">#{geo.hash}</AppText><AppButton label={t('mobile.change_area')} variant="text" fullWidth={false} disabled={busy} onPress={() => setEditingArea(true)} /></View>}
+        {mode === 'geo' && <View style={{ gap: spacing.xs }}>
+          <AppText variant="caption" weight="semibold" tone={geo.connected > 0 ? 'accent' : 'muted'}>
+            {t(geo.connected > 0 ? 'mobile.geo_active_count' : 'mobile.geo_active_unavailable', { count: geo.present })}
+          </AppText>
+          {geo.connected > 0 && <AppText variant="caption" tone="muted">{t('mobile.geo_active_hint')}</AppText>}
+        </View>}
         {mode === 'mesh' && recipient && !selectedOnline && <AppText variant="caption" tone="muted">{t(savedContact?.blocked ? 'mobile.contact_blocked' : savedContact ? 'mobile.mesh_offline_hint' : 'mobile.contact_reconnect_hint')}</AppText>}
         {mode === 'geo' && <FlatList horizontal data={geo.privatePeers} keyExtractor={key => key} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm }}
           ListHeaderComponent={<AppButton label={t('mobile.public_channel')} variant="secondary" fullWidth={false} selected={!geoRecipient} onPress={() => setPrivateTarget(undefined)} />}

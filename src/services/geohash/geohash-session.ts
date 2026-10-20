@@ -48,9 +48,7 @@ export class GeohashSession {
     this.links.forEach((link, index) => this.connect(link, this.relays[index]));
     if (!this.mode) this.heartbeat = setInterval(() => {
       this.presence();
-      const cutoff = Date.now() - 180_000;
-      for (const [pubkey, at] of this.present) if (at < cutoff) this.present.delete(pubkey);
-      this.callbacks.presence(this.present.size);
+      this.reportPresence();
     }, 60_000);
   }
   replaceIdentity(key: Uint8Array, previous: string[] = []) {
@@ -58,6 +56,8 @@ export class GeohashSession {
     const next = getPublicKey(key), changed = next !== this.publicKey;
     this.key.fill(0); this.key = key; this.publicKey = next;
     this.ownPublicKeys = new Set([this.publicKey, ...previous]);
+    for (const own of this.ownPublicKeys) this.present.delete(own);
+    if (!this.mode) this.reportPresence();
     if (!this.mode && changed) this.presence();
   }
   updateRelays(input: string[]): void {
@@ -86,7 +86,16 @@ export class GeohashSession {
       try { link.socket.send(JSON.stringify(['REQ', this.mode.subscription, ...requested])); } catch { this.callbacks.error(); }
     }
   }
-  private connections(): void { this.callbacks.connection(this.links.filter(l => l.opened).length); }
+  private reportPresence(): void {
+    if (this.mode) return;
+    const cutoff = Date.now() - 180_000;
+    for (const [pubkey, at] of this.present) if (at < cutoff) this.present.delete(pubkey);
+    this.callbacks.presence(this.links.some(link => link.opened) ? this.present.size + 1 : 0);
+  }
+  private connections(): void {
+    this.callbacks.connection(this.links.filter(l => l.opened).length);
+    this.reportPresence();
+  }
   private connect(link: Link, url: string): void {
     if (this.stopped) return;
     const retry = () => {
@@ -137,8 +146,12 @@ export class GeohashSession {
     if (this.stopped || this.mode) return;
     const event = validateGeohashEvent(value, this.hash); if (!event || this.seen.has(event.id)) return;
     this.seen.add(event.id); if (this.seen.size > 2048) this.seen.delete(this.seen.values().next().value!);
-    if (!this.present.has(event.pubkey) && this.present.size >= 256) this.present.delete(this.present.keys().next().value!);
-    this.present.set(event.pubkey, Date.now()); this.callbacks.presence(this.present.size);
+    const now = Date.now(), activity = Math.min(now, event.created_at * 1000);
+    if (!this.ownPublicKeys.has(event.pubkey) && activity >= now - 180_000) {
+      if (!this.present.has(event.pubkey) && this.present.size >= 256) this.present.delete(this.present.keys().next().value!);
+      this.present.set(event.pubkey, Math.max(this.present.get(event.pubkey) ?? 0, activity));
+    }
+    this.reportPresence();
     if (event.kind === 20000) { const message = this.message(event, this.ownPublicKeys.has(event.pubkey)); message.delivery = 'sent'; this.callbacks.message(message); }
   }
   private message(event: Event, outgoing: boolean): GeoMessage {
