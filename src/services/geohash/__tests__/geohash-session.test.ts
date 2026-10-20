@@ -111,3 +111,14 @@ it('counts fresh channel identities once, includes self once, and excludes repla
   sockets.forEach(s => s.onclose!()); expect(callbacks.presence).toHaveBeenLastCalledWith(0);
   session.stop();
 });
+
+it('clears the signing key and pending sends even when a relay close throws', async () => {
+  const { session, sockets, callbacks } = setup(); session.start(); sockets.forEach(s => s.onopen!());
+  const pending = session.send('pending'); const rejected = expect(pending).rejects.toThrow('closed');
+  jest.mocked(sockets[0].close).mockImplementationOnce(() => { throw new Error('native close failed'); });
+  expect(() => session.stop()).not.toThrow(); await rejected;
+  expect(sockets[1].close).toHaveBeenCalled();
+  expect((session as unknown as { key: Uint8Array }).key.every(byte => byte === 0)).toBe(true);
+  expect(callbacks.connection).toHaveBeenLastCalledWith(0);
+  expect(jest.getTimerCount()).toBe(0);
+});

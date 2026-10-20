@@ -117,3 +117,11 @@ and physical notification behavior remain outside the verified scope. Local
 notification API imports and generated native configuration are tested to avoid
 remote registration: APNs/remote wake-up are absent and FCM/analytics auto-init
 are disabled. No remote credentials or Google services file is added.
+
+
+## Focused source security re-check — 2026-10-20
+
+A fresh production npm audit still reports 43 findings (27 high, 16 moderate,
+0 critical). No dependency versions were changed. See the
+[source review and cleanup fixes](security-review-2026-10-20.md) for findings,
+validation and remaining limitations.

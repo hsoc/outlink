@@ -210,7 +210,8 @@ export class GeohashSession {
       if (link.socket) {
         link.socket.onopen = null; link.socket.onmessage = null; link.socket.onclose = null; link.socket.onerror = null;
         try { if (link.opened) link.socket.send(JSON.stringify(['CLOSE', this.mode?.subscription ?? 'geohash'])); } catch {}
-        link.socket.close();
+        // A native close failure must not retain keys or skip the remaining relays.
+        try { link.socket.close(); } catch {}
       }
     }
     for (const pending of [...this.pending.values()]) pending.reject(new Error('Channel closed'));

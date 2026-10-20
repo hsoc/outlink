@@ -12,7 +12,8 @@ export function panicWipe(): Promise<void> {
   return wiping ??= (async () => {
     invalidateSessionIntent();
     workspaceStore.setState({ keepBackground: false, backgroundError: false });
-    await platform.backgroundConnectivity?.stop();
+    // Native notification/service cleanup must not prevent transport shutdown and key deletion.
+    await platform.backgroundConnectivity?.stop().catch(() => {});
     await bitchatService.stop(); geohashService.stop(); await geohashService.idle();
     bitchatSessionStore.setState({ busy: true });
     workspaceStore.setState({ ready: false, keepBackground: false, backgroundError: false, drafts: {}, recipient: undefined, internet: false, autoAreaRelays: true, gateway: false, bridge: false, bridgeCell: '', nearbyOnly: false, mode: 'mesh', hash: '' });

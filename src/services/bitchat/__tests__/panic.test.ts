@@ -7,7 +7,7 @@ import { geohashService } from '@/services/geohash/geohash.service';
 import { workspaceStore } from '@/services/history/workspace';
 import { contactsStore } from '../compatibility/contacts';
 import { resetMobileIdentity } from '../mobile-identity';
-jest.mock('@/platform', () => ({ platform: { wipeLocalData: jest.fn(async () => {}), mentionNotifications: { clear: jest.fn(async () => {}) } } }));
+jest.mock('@/platform', () => ({ platform: { backgroundConnectivity: { stop: jest.fn(async () => {}) }, wipeLocalData: jest.fn(async () => {}), mentionNotifications: { clear: jest.fn(async () => {}) } } }));
 jest.mock('../bitchat.service', () => {
   const { createStore } = jest.requireActual('zustand/vanilla');
   return { bitchatSessionStore: createStore(() => ({ busy: false, error: false })), bitchatService: { stop: jest.fn(async () => {}), resetLocalState: jest.fn() } };
@@ -56,6 +56,14 @@ it('invokes the same full wipe only after the third quick activation', async () 
 it('does not let failed notification dismissal block identity and key erasure', async () => {
   const before = jest.mocked(platform.wipeLocalData).mock.calls.length;
   jest.mocked(platform.mentionNotifications.clear).mockRejectedValueOnce(new Error('OS notification service unavailable'));
+  await expect(panicWipe()).resolves.toBeUndefined();
+  expect(platform.wipeLocalData).toHaveBeenCalledTimes(before + 1);
+  expect(workspaceStore.getState()).toMatchObject({ ready: true, drafts: {}, internet: false });
+});
+
+it('still stops transports and erases data when native background service shutdown rejects', async () => {
+  const before = jest.mocked(platform.wipeLocalData).mock.calls.length;
+  jest.mocked(platform.backgroundConnectivity!.stop).mockRejectedValueOnce(new Error('native service unavailable'));
   await expect(panicWipe()).resolves.toBeUndefined();
   expect(platform.wipeLocalData).toHaveBeenCalledTimes(before + 1);
   expect(workspaceStore.getState()).toMatchObject({ ready: true, drafts: {}, internet: false });
