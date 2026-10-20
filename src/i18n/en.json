@@ -193,7 +193,9 @@
     "unsave_contact": "Remove from saved",
     "saved_contact_status": "Saved",
     "your_name": "Your name",
+    "shared_public_name": "Public name / nickname",
+    "change_name": "Change name in Settings",
     "name_hint": "Shown in Nearby, public location messages, and contact codes. Changing your name keeps your identity and conversations. New profiles start with Outlink followed by four random digits.",
-    "name_saved": "Name saved. Nearby peers receive it through discovery announcements."
+    "name_saved": "Name saved for Nearby and location channels. New messages use this name; nearby peers receive it through discovery announcements."
   }
 }

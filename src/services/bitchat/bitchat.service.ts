@@ -1,4 +1,4 @@
-import { ensureNickname, NICKNAME_KEY, validateNickname } from '@/services/preferences/nickname';
+import { ensureNickname, validateNickname } from '@/services/preferences/nickname';
 import { refreshAreaRelays } from '@/services/geohash/relay-refresh';
 import type { Event } from 'nostr-tools/pure';
 import { base64 } from '@scure/base';
@@ -381,7 +381,7 @@ class BitchatService {
         const prekeyKey = `outlink.prekeys.${account}`;
         this.prekeys = new PrekeyRuntime(this.identity, protocolStorage, { get: () => platform.secureStorage.getItem(prekeyKey), set: value => platform.secureStorage.setItem(prekeyKey, value) });
         await this.prekeys.bundle(); this.couriers = new CourierRuntime(protocolStorage);
-        name = validateNickname(await platform.preferences.getItem(NICKNAME_KEY) ?? name);
+        name = await ensureNickname();
         this.session = new BitchatSession(platform.proximityTransport, this.identity, name, {
           extension: (packet, context) => this.extension(packet, context),
           peer: peer => {
@@ -522,8 +522,12 @@ class BitchatService {
   private async sendInternal(content: string, peer?: string, nearbyOnly = false): Promise<void> {
     if (!content.trim() || bytes(content).length > 255) throw new Error('Message must fit 255 UTF-8 bytes');
     if (!peer) {
-      if (!this.session) throw new Error('Bitchat is stopped');
-      const message = await this.session.sendPublic(content, !!this.network?.config.bridge && !nearbyOnly);
+      const session = this.session;
+      if (!session) throw new Error('Bitchat is stopped');
+      const name = await ensureNickname();
+      if (this.session !== session) throw new Error('Mesh session changed');
+      this.rename(name);
+      const message = await session.sendPublic(content, !!this.network?.config.bridge && !nearbyOnly);
       try { await this.network?.publicMessage(content, message.name, message.peer, message.timestamp, nearbyOnly); }
       catch { bitchatSessionStore.setState({ error: true }); }
       return;
@@ -534,8 +538,10 @@ class BitchatService {
     const identity = await this.localIdentity();
     const own = peerId(identity.noisePublicKey); identity.noiseSeed.fill(0); identity.signingSeed.fill(0);
     await contactsService.keepForDelivery(peer);
+    const name = await ensureNickname();
+    this.rename(name);
     await this.outbox.enqueue(peer, { id: await platform.deviceCrypto.randomUUID(), peer: own, recipient: peer,
-      name: await ensureNickname(), content, timestamp: Date.now(), outgoing: true, delivery: 'queued' });
+      name, content, timestamp: Date.now(), outgoing: true, delivery: 'queued' });
     if (this.connection) void this.flush(peer).catch(() => bitchatSessionStore.setState({ error: true }));
   }
   async ping(peer: string) {

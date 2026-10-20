@@ -62,7 +62,9 @@ The mesh composer shows only Public Mesh and its selected private conversation;
 a searchable Contacts menu separates live mesh presence, saved identities, and
 recent history. Discovery alone must not imply an explicit permanent save.
 
-Settings exposes **Your name** with an explicit Save action. New profiles receive
+Settings is the only nickname editor: **Public name / nickname**, with an explicit
+Save action. Mesh and location setup show this same saved name with a Settings
+link; joining never writes a second nickname value. New profiles receive
 `Outlink` followed by four random digits (including leading zeros); the generated
 name is persisted before use. Existing names are preserved. Editing the name does
 not reconnect or replace communication identities, contacts, or history. Use the

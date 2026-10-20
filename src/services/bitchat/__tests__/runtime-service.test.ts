@@ -1,6 +1,7 @@
 /** @jest-environment node */
 import { ed25519, x25519 } from '@noble/curves/ed25519.js';
 import { sha256 } from '@noble/hashes/sha2.js';
+import { saveNickname } from '@/services/preferences/nickname';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { bitchatService, bitchatSessionStore } from '../bitchat.service';
 import { contactsService, contactsStore } from '../compatibility/contacts';
@@ -32,12 +33,16 @@ jest.mock('../bitchat-session', () => {
   const { sha256 } = jest.requireActual('@noble/hashes/sha2.js');
   const { bytesToHex } = jest.requireActual('@noble/hashes/utils.js');
   const key = x25519.getPublicKey(new Uint8Array(32).fill(3)), id = peerId(key), sign = ed25519.getPublicKey(new Uint8Array(32).fill(13));
-  return { BitchatSession: jest.fn().mockImplementation((_transport, identity, _name, callbacks) => ({
+  return { BitchatSession: jest.fn().mockImplementation((_transport, identity, initialName, callbacks) => {
+    let name = initialName;
+    return ({
+    get nickname() { return name; }, rename: jest.fn(value => { name = value; }),
+    sendPublic: jest.fn(async content => ({ id: 'public-one', peer: peerId(identity.noisePublicKey), name, content, timestamp: Date.now(), outgoing: true, delivery: 'sent' })),
     id: peerId(identity.noisePublicKey), callbacks,
     start: jest.fn(async () => { callbacks.peer({ id, name: 'Carrier', fingerprint: bytesToHex(sha256(key)), noisePublicKey: bytesToHex(key), signingPublicKey: bytesToHex(sign), secure: true, lastSeen: Date.now(), direct: true, capabilities: 1 }); }),
     stop: jest.fn(async () => {}), setCapabilities: jest.fn(), directPeers: () => [id], authenticatedDirect: () => true,
     authenticateDirect: jest.fn(async () => {}), sendExtension: jest.fn(async () => {}), sendPrivate: jest.fn(async () => {}), sendReceipt: jest.fn(async () => {}),
-  })) };
+  }); }) };
 });
 let records: ReturnType<typeof memoryStorage>;
 const secrets = new Map<string, string>(), history = new Map<string, string>();
@@ -45,6 +50,9 @@ function session() { return jest.mocked(BitchatSession).mock.results.at(-1)!.val
 async function until(check: () => boolean | Promise<boolean>) { const deadline = Date.now() + 3000; while (!await check()) { if (Date.now() > deadline) throw new Error('service test timed out'); await new Promise(resolve => setTimeout(resolve, 5)); } }
 beforeEach(async () => {
   await bitchatService.stop(); bitchatService.resetLocalState(); contactsStore.setState({ contacts: [], ready: false });
+  let name = 'Outlink1234';
+  jest.mocked(platform.preferences.getItem).mockImplementation(async key => key === 'mobile.nickname' ? name : null);
+  jest.mocked(platform.preferences.setItem).mockImplementation(async (key, value) => { if (key === 'mobile.nickname') name = value; });
   secrets.clear(); history.clear(); records = memoryStorage(); secrets.set('outlink.mobile.identity', root);
   jest.mocked(platform.secureStorage.getItem).mockImplementation(async key => secrets.get(key) ?? null);
   jest.mocked(platform.secureStorage.setItem).mockImplementation(async (key, value) => { secrets.set(key, value); });
@@ -108,4 +116,16 @@ it('persists mesh-favorite internet receipts across a failed relay write and sen
   await bitchatService.favorite(peer, false);
   expect(mailbox.send).toHaveBeenLastCalledWith(npubKey, expect.objectContaining({ kind: 'message', content: expect.stringContaining('[UNFAVORITED]:') }), expect.any(String), peer);
   expect(contactsService.get(peer)?.pendingFavorite).toBeUndefined();
+});
+
+it('uses the saved nickname for mesh posts even when setup or resume provides an older name', async () => {
+  await bitchatService.start(root, 'Stale setup name');
+  expect(bitchatService.connection?.name).toBe('Outlink1234');
+  await saveNickname('Shared updated name');
+  await bitchatService.send('public content');
+  const active = jest.mocked(BitchatSession).mock.results.at(-1)!.value;
+  expect(active.rename).toHaveBeenLastCalledWith('Shared updated name');
+  expect((await active.sendPublic.mock.results.at(-1).value).name).toBe('Shared updated name');
+  await bitchatService.stop(); await bitchatService.start(root, 'Old resume snapshot');
+  expect(bitchatService.connection?.name).toBe('Shared updated name');
 });

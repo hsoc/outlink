@@ -1,4 +1,6 @@
 /** @jest-environment node */
+import { saveNickname } from '@/services/preferences/nickname';
+import { verifyEvent, type Event } from 'nostr-tools/pure';
 import { geohashService, geohashStore } from '../geohash.service';
 import { refreshAreaRelays } from '../relay-refresh';
 import { platform } from '@/platform';
@@ -6,7 +8,7 @@ import { eraseChannelIdentities, CHANNEL_ROTATION_MS } from '../channel-identiti
 import { areaRelays } from '../relay-directory';
 import type { GeoSocket } from '../geohash-session';
 jest.mock('@/platform', () => { const secrets = new Map([['outlink.mobile.identity', 'aa'.repeat(32)]]); return { platform: {
-  preferences: { getItem: async () => JSON.stringify({ autoAreaRelays: false, internet: false }) },
+  preferences: { getItem: jest.fn(async (key: string) => key === 'mobile.nickname' ? 'Outlink1234' : JSON.stringify({ autoAreaRelays: false, internet: false })), setItem: jest.fn(async () => {}) },
   secureStorage: { getItem: jest.fn(async (key: string) => secrets.get(key) ?? null), setItem: jest.fn(async (key: string, value: string) => { secrets.set(key, value); }), deleteItem: jest.fn(async (key: string) => { secrets.delete(key); }) },
   history: { load: async () => [], save: async () => {} }, records: { list: async () => [] },
 } }; });
@@ -14,6 +16,9 @@ jest.mock('../relay-refresh', () => ({ refreshAreaRelays: jest.fn(async () => {}
 const sockets: (GeoSocket & { url: string })[] = [];
 beforeEach(() => {
   jest.clearAllMocks(); sockets.length = 0;
+  let name = 'Outlink1234';
+  jest.mocked(platform.preferences.getItem).mockImplementation(async key => key === 'mobile.nickname' ? name : JSON.stringify({ autoAreaRelays: false, internet: false }));
+  jest.mocked(platform.preferences.setItem).mockImplementation(async (key, value) => { if (key === 'mobile.nickname') name = value; });
   global.WebSocket = jest.fn().mockImplementation((url: string) => {
     const s = { url, readyState: 1, onopen: null, onmessage: null, onclose: null, onerror: null, send: jest.fn(), close: jest.fn() };
     sockets.push(s); return s;
@@ -75,4 +80,39 @@ it('drains a delayed secure-key write before identity erasure and prevents a lat
     expect(geohashStore.getState().active).toBe(false); expect(geohashStore.getState().publicIdentity).toBe(''); expect(sockets).toHaveLength(count);
     expect(await platform.secureStorage.getItem('outlink.channel-keys.index.' + 'aa'.repeat(32))).toBeNull();
   } finally { clock.mockRestore(); }
+});
+
+it('posts the saved shared name after join, edits, and restart instead of a stale caller name', async () => {
+  await geohashService.join('ezs42', 'Stale setup name', ['wss://one.example']);
+  sockets.forEach(s => s.onopen?.());
+  expect(geohashService.connection?.name).toBe('Outlink1234');
+  async function post(content: string, expected: string) {
+    const socket = sockets.at(-1)!;
+    const sent = geohashService.send(content);
+    let event: Event | undefined;
+    for (let i = 0; i < 100; i++) {
+      event = (socket.send as jest.Mock).mock.calls.map(([data]) => JSON.parse(data)).find(frame => frame[0] === 'EVENT' && frame[1].content === content)?.[1];
+      if (event) break;
+      await new Promise(resolve => setTimeout(resolve, 1));
+    }
+    if (!event) throw new Error('No signed location event emitted');
+    const posted = event;
+    expect(event.tags).toContainEqual(['n', expected]); expect(verifyEvent(event)).toBe(true);
+    socket.onmessage?.({ data: JSON.stringify(['OK', event.id, true, '']) }); await sent;
+    expect(geohashStore.getState().messages.find(m => m.id === posted.id)?.name).toBe(expected);
+  }
+  await post('before settings edit', 'Outlink1234');
+  await saveNickname('Shared updated name');
+  // Deliberately omit a direct session rename: persistence must remain authoritative.
+  await post('after settings edit', 'Shared updated name');
+  geohashService.stop(); await geohashService.idle();
+  await geohashService.join('ezs42', 'Old resume snapshot', ['wss://one.example']); sockets.at(-1)!.onopen?.();
+  await post('after restart', 'Shared updated name');
+});
+
+it('does not publish with a stale name when reading the saved nickname fails', async () => {
+  await geohashService.join('ezs42', 'Stale setup name', ['wss://one.example']); sockets.forEach(s => s.onopen?.());
+  jest.mocked(platform.preferences.getItem).mockImplementationOnce(async () => { throw new Error('Name storage unavailable'); });
+  await expect(geohashService.send('must not publish')).rejects.toThrow('Name storage unavailable');
+  expect(sockets.flatMap(s => (s.send as jest.Mock).mock.calls.map(([data]) => JSON.parse(data))).some(frame => frame[0] === 'EVENT' && frame[1].content === 'must not publish')).toBe(false);
 });

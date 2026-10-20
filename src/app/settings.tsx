@@ -35,7 +35,7 @@ export default function Settings() {
   const { t } = useTranslation(), top = useScreenHeaderClearance();
   const preference = useThemeStore(s => s.preference), accent = useThemeStore(s => s.accent);
   return <AppScreen edges={['bottom']}><ScrollView contentContainerStyle={{ padding: spacing.lg, paddingTop: top, gap: spacing.lg }}>
-    <AppInput label={t('mobile.your_name')} value={name} maxLength={32} editable={nameReady && !clearing && !meshBusy && !geoBusy}
+    <AppInput label={t('mobile.shared_public_name')} value={name} maxLength={32} editable={nameReady && !clearing && !meshBusy && !geoBusy}
       onChangeText={value => { setName(value); setNameSaved(false); }} />
     <AppText variant="caption" tone="muted">{t('mobile.name_hint')}</AppText>
     <AppButton label={t('common.save')} variant="secondary" disabled={!nameReady || clearing || networkBusy || backgroundBusy || meshBusy || geoBusy || !name.trim() || new TextEncoder().encode(name.trim()).length > 64 || name.trim() === savedName}

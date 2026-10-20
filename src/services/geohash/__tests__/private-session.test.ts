@@ -206,3 +206,12 @@ it('does not let an expired remote signing key impersonate the migrated conversa
     await new Promise(resolve => setTimeout(resolve, 30)); expect(b.history.size).toBe(1);
   } finally { shifted.mockRestore(); }
 });
+
+it('labels outgoing location private messages with the shared nickname while retaining authenticated keys', async () => {
+  const hub = relay(), a = client(1, hub), b = client(2, hub);
+  await a.session.send(b.session.pubkey, 'named private message', 'Outlink1234');
+  await until(() => b.history.size === 1);
+  expect([...a.history.values()][0]).toMatchObject({ name: 'Outlink1234', peer: a.session.pubkey });
+  expect([...b.history.values()][0].peer).toBe(a.session.pubkey);
+  expect(JSON.stringify(hub.events)).not.toContain('Outlink1234');
+});

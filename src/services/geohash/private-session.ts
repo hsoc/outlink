@@ -1,3 +1,4 @@
+import { validateNickname } from '@/services/preferences/nickname';
 import { bytesToHex, randomBytes } from '@noble/hashes/utils.js';
 import { getPublicKey } from 'nostr-tools/pure';
 import { PrivateMailbox, type InternetPayload, type RotationPayload } from '@/services/bitchat/compatibility/private-mailbox';
@@ -99,17 +100,17 @@ export class GeoPrivateSession {
       await this.saveThread(thread, { ...thread, local: this.pubkey });
     });
   }
-  send(peer: string, content: string) {
-    const work = this.sendInternal(peer, content); this.operations.add(work);
+  send(peer: string, content: string, name?: string) {
+    const work = this.sendInternal(peer, content, name); this.operations.add(work);
     void work.finally(() => this.operations.delete(work)).catch(() => {}); return work;
   }
-  private async sendInternal(peer: string, content: string) {
+  private async sendInternal(peer: string, content: string, name?: string) {
     if (this.stopped || !publicKey(peer) || this.own.has(peer) || !content.trim() || bytes(content).length > 4096) throw new Error('Invalid private message');
     const thread = await this.serial(() => this.thread(peer, this.pubkey));
     if (this.stopped) throw new Error('Private channel stopped');
     if (!thread || !this.hasOwn(thread.local)) throw new Error('Private identity expired; recover the conversation explicitly');
     const message: BitchatMessage = { id: bytesToHex(randomBytes(16)), peer: thread.local, recipient: thread.head, channelThread: thread.peer,
-      name: thread.local.slice(0, 8), content, timestamp: Date.now(), outgoing: true, delivery: 'queued' };
+      name: name === undefined ? thread.local.slice(0, 8) : validateNickname(name), content, timestamp: Date.now(), outgoing: true, delivery: 'queued' };
     await this.outbox.enqueue(thread.peer, message); await this.pending;
     if (!this.stopped) void this.flush().catch(this.deps.error);
   }

@@ -23,7 +23,7 @@ import { bytes } from '@/services/bitchat/bitchat-wire';
 import { geohashService, geohashStore } from '@/services/geohash/geohash.service';
 import { MAX_GEO_CONTENT_BYTES } from '@/services/geohash/geohash-protocol';
 import { normalizeGeohash } from '@/services/geohash/geohash';
-import { ensureNickname, saveNickname } from '@/services/preferences/nickname';
+import { ensureNickname } from '@/services/preferences/nickname';
 import { radius, spacing, uiDensity, useThemeColors } from '@/theme';
 
 export default function Chats() {
@@ -97,12 +97,12 @@ export default function Chats() {
   }
   async function join() {
     const intent = sessionIntent();
-    const value = await saveNickname(name);
-    bitchatService.rename(value); geohashService.rename(value);
+    const value = await ensureNickname();
+    setName(value);
     const identity = mode === 'mesh' ? await mobileIdentity() : undefined;
     if (intent !== sessionIntent()) throw new Error('Join canceled');
-    if (identity) await bitchatService.start(identity, name.trim());
-    else { await geohashService.join(hash, name.trim(), workspace.autoAreaRelays ? areaRelays(hash) : relays.split(/\s+/).filter(Boolean)); await bitchatService.refreshNetwork(); setEditingArea(false); }
+    if (identity) await bitchatService.start(identity, value);
+    else { await geohashService.join(hash, value, workspace.autoAreaRelays ? areaRelays(hash) : relays.split(/\s+/).filter(Boolean)); await bitchatService.refreshNetwork(); setEditingArea(false); }
   }
   async function send() {
     if (mode === 'mesh') await bitchatService.send(draft, recipient, workspace.nearbyOnly);
@@ -129,7 +129,11 @@ export default function Chats() {
         <Radar size={uiDensity.iconButtonSize} color={c.textMuted} />
         <AppText variant="title">{t(mode === 'mesh' ? 'bitchat.title' : 'mobile.geo')}</AppText>
         <AppText tone="muted">{t(mode === 'mesh' ? 'mobile.mesh_privacy' : 'mobile.geo_privacy')}</AppText>
-        <AppInput label={t('bitchat.name')} value={name} onChangeText={setName} maxLength={32} editable={ready && !busy} />
+        <View style={{ gap: spacing.xs }}>
+          <AppText variant="caption" tone="muted">{t('mobile.shared_public_name')}</AppText>
+          <AppText selectable>{name}</AppText>
+          <AppButton label={t('mobile.change_name')} variant="text" fullWidth={false} disabled={busy} onPress={() => router.push('/settings')} />
+        </View>
         {mode === 'geo' && <>
           <AppText variant="caption" tone="muted">{t('mobile.area_picker_title')}</AppText>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>

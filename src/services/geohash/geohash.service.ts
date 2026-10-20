@@ -1,4 +1,4 @@
-import { NICKNAME_KEY, validateNickname } from '@/services/preferences/nickname';
+import { ensureNickname, validateNickname } from '@/services/preferences/nickname';
 import { ChannelIdentities, clearIdentitySet, type ChannelIdentitySet } from './channel-identities';
 import { GeoPrivateSession, type GeoThread } from './private-session';
 import type { BitchatMessage } from '@/services/bitchat/bitchat-session';
@@ -83,7 +83,6 @@ class GeohashService {
   }
   private async joinInternal(input: string, name: string, relayInput: string[]): Promise<void> {
     const hash = normalizeGeohash(input); let relays = normalizeGeoRelays(relayInput);
-    if (!name.trim() || new TextEncoder().encode(name).length > 64) throw new Error('Invalid nickname');
     this.stop(); const revision = ++this.revision;
     await this.closing;
     await this.restore(hash);
@@ -101,7 +100,7 @@ class GeohashService {
       const legacy = channelKey(master, hash); master.fill(0);
       const keys = await identities.load(hash, legacy);
       if (revision !== this.revision) { clearIdentitySet(keys); return; }
-      try { name = validateNickname(await platform.preferences.getItem(NICKNAME_KEY) ?? name); }
+      try { name = await ensureNickname(); }
       catch (error) { clearIdentitySet(keys); throw error; }
       if (revision !== this.revision) { clearIdentitySet(keys); return; }
       this.identities = identities; this.keySet = keys;
@@ -213,8 +212,11 @@ class GeohashService {
   async sendPrivate(peer: string, content: string) {
     if (!this.privateSession) throw new Error('Enable internet private messages first');
     await this.checkIdentity();
-    if (!this.privateSession) throw new Error('Private channel stopped');
-    await this.privateSession.send(peer, content);
+    const session = this.privateSession;
+    if (!session) throw new Error('Private channel stopped');
+    const name = await ensureNickname();
+    if (this.privateSession !== session) throw new Error('Private channel changed');
+    await session.send(peer, content, name);
   }
   async readPrivate(peer: string, id: string, sender?: string) { await this.privateSession?.read(peer, id, sender); }
   async olderPrivate() {
@@ -228,8 +230,12 @@ class GeohashService {
   private privateBefore?: number;
   async send(content: string): Promise<void> {
     await this.checkIdentity();
-    if (!this.session) throw new Error('No location channel selected');
-    await this.session.send(content);
+    const session = this.session;
+    if (!session) throw new Error('No location channel selected');
+    const name = await ensureNickname();
+    if (this.session !== session) throw new Error('Location channel changed');
+    this.rename(name);
+    await session.send(content);
   }
   stop(): void {
     this.connection = undefined;

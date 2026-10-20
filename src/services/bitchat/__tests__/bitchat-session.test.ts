@@ -398,5 +398,9 @@ it('announces renames while preserving identity and an established encrypted ses
   await a.session.sendPrivate(b.session.id, 'after rename', 'rename-after');
   await until(() => b.messages.length === 2); expect(handshakes()).toBe(count);
   expect(a.peers.get(b.session.id)?.secure).toBe(true);
+  const publicMessage = await a.session.sendPublic('public after rename');
+  await until(() => b.messages.some(m => m.content === 'public after rename'));
+  expect(publicMessage.name).toBe('Alice Updated');
+  expect(b.messages.find(m => m.content === 'public after rename')?.name).toBe('Alice Updated');
   expect(() => a.session.rename(' ')).toThrow(); expect(a.session.nickname).toBe('Alice Updated');
 });
