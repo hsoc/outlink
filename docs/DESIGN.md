@@ -81,3 +81,10 @@ confirmation. Partial sequences reset on blur or background; do not accumulate
 taps across visits. Preserve an accessible hit target, describe the destructive
 gesture to assistive technology and in Settings, hide conversations during the
 operation, and distinguish completed erasure from a failure requiring retry.
+
+Conversation messages use content-sized rounded bubbles, capped below the full
+row width. Outgoing bubbles align to the logical end with the accent-soft fill;
+incoming bubbles align to the start with the elevated surface. A smaller lower
+corner points toward the sender side. Preserve selectable content, sender/key
+labels, bridge attribution, private-message actions, and delivery status. Use the
+same treatment for mesh and location conversations in both themes and RTL.
