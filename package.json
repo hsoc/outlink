@@ -1,7 +1,7 @@
 {
   "name": "outlink",
   "main": "index.ts",
-  "version": "26.10.5",
+  "version": "1.0.0",
   "license": "MIT",
   "expo": {
     "autolinking": {

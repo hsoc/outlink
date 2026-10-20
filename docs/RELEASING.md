@@ -3,7 +3,9 @@
 Run the **Build Mobile Apps** workflow from the Actions tab. Android defaults to
 on; iOS is optional. There are no desktop build targets or desktop credentials.
 Both use the existing Outlink production application ID `io.github.hsoc.outlink`.
-Development builds use `.dev`. Android version code and iOS build number are 13.
+Development builds use `.dev`. The public version is `1.0.0` (Git tag `v1.0.0`). Android version code and iOS
+build number are 14; keep increasing these counters even when changing the
+public version scheme.
 
 ## Android
 
