@@ -1,3 +1,4 @@
+import { mentionService } from '@/services/mentions/mentions';
 import { ensureNickname, validateNickname } from '@/services/preferences/nickname';
 import { ChannelIdentities, clearIdentitySet, type ChannelIdentitySet } from './channel-identities';
 import { GeoPrivateSession, type GeoThread } from './private-session';
@@ -109,9 +110,9 @@ class GeohashService {
       const current = () => revision === this.revision;
       this.session = new GeohashSession(hash, key, name, relays, {
         message: message => {
-          if (!current()) return;
+          if (!current() || geohashStore.getState().messages.some(m => m.id === message.id)) return;
+          mentionService.received(message, 'geo', hash);
           geohashStore.setState(state => {
-            if (state.messages.some(m => m.id === message.id)) return state;
             const messages = [...state.messages, message].sort((a, b) => a.timestamp - b.timestamp || a.id.localeCompare(b.id)).slice(-500);
             return { messages };
           });

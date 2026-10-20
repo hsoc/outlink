@@ -1,3 +1,4 @@
+import { mentionService } from '@/services/mentions/mentions';
 import i18n from '@/i18n/core';
 import { workspaceStore } from '@/services/history/workspace';
 import { createSessionLifecycle } from '@/services/history/lifecycle';
@@ -19,6 +20,8 @@ export default function Layout() {
   const [ready, setReady] = useState(false);
   useEffect(() => {
     let alive = true;
+    const mentionCopy = () => mentionService.setCopy({ channelName: i18n.t('mobile.mention_notifications'), meshBody: i18n.t('mobile.mention_alert_mesh'), geoBody: i18n.t('mobile.mention_alert_geo') });
+    mentionCopy(); i18n.on('languageChanged', mentionCopy);
     void useThemeStore.getState().load().finally(() => { if (alive) setReady(true); });
     const lifecycle = createSessionLifecycle(bitchatService, geohashService, {
       enabled: () => workspaceStore.getState().keepBackground === true && platform.backgroundConnectivity.supported(),
@@ -34,7 +37,7 @@ export default function Layout() {
       if (bitchatService.connection && workspaceStore.getState().keepBackground) workspaceStore.setState({ keepBackground: false });
     });
     const remove = platform.appState.addChangeListener(state => { void lifecycle.change(state).catch(() => {}); });
-    return () => { alive = false; remove(); unsubscribePreference(); unsubscribeMesh(); unsubscribeStop(); lifecycle.dispose(); };
+    return () => { i18n.off('languageChanged', mentionCopy); alive = false; remove(); unsubscribePreference(); unsubscribeMesh(); unsubscribeStop(); lifecycle.dispose(); };
   }, []);
   return <GestureHandlerRootView style={{ flex: 1 }}><SafeAreaProvider><KeyboardProvider><SystemColorSchemeProvider>
     {ready ? <Stack screenOptions={{ headerShown: false }} /> : <AppScreen><AppText>Outlink</AppText></AppScreen>}

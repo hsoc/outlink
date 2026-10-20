@@ -17,7 +17,7 @@ const entries=inventory.packages.map(pkg=>({ id:hash(`npm:${packageKey(pkg)}`).s
   license:pkg.license,repository:webUrl(pkg.repository),documents:pkg.licenseFiles.map(f=>document(f.source,texts.get(f.sha256))) }));
 for (const entry of await json('licenses/third-party/catalog-supplements.json')) {
   // The historical source snapshots remain in Git; only retained mobile extras ship.
-  if (!['outlink','solar-icons'].includes(entry.id)) continue;
+  if (!['outlink','solar-icons','firebase-messaging'].includes(entry.id)) continue;
   const {files,...metadata}=entry;
   entries.push({...metadata,documents:await Promise.all(files.map(async p=>document(p,await fs.readFile(p,'utf8'))))});
 }

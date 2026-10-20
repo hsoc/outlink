@@ -68,6 +68,7 @@ export const noticeAssets: Readonly<Record<string, () => number>> = {
   'cc06054a391f6b5dbcf6f142d2bb9d637db897746b0e6c58ed913834b581cae4': () => require('../../../assets/licenses/cc06054a391f6b5dbcf6f142d2bb9d637db897746b0e6c58ed913834b581cae4.txt'),
   '52412d7bc7ce4157ea628bbaacb8829e0a9cb3c58f57f99176126bc8cf2bfc85': () => require('../../../assets/licenses/52412d7bc7ce4157ea628bbaacb8829e0a9cb3c58f57f99176126bc8cf2bfc85.txt'),
   'dddddf170b975dc55422b4a7d852fb000b9088aea454730df07b36ebb40a8953': () => require('../../../assets/licenses/dddddf170b975dc55422b4a7d852fb000b9088aea454730df07b36ebb40a8953.txt'),
+  '85a1097da0ce9fd3e1b5a76dd9947730e9393379841421a642dab1cfe33c6434': () => require('../../../assets/licenses/85a1097da0ce9fd3e1b5a76dd9947730e9393379841421a642dab1cfe33c6434.txt'),
   'a1bd5deadb6a06dd74efa852c1b8b23f63b67f2214fbe9c8bd591da51da69268': () => require('../../../assets/licenses/a1bd5deadb6a06dd74efa852c1b8b23f63b67f2214fbe9c8bd591da51da69268.txt'),
   'd408f38ffa3355c5faec517153295338892eb0f1ea43f57874bb23c6075979b5': () => require('../../../assets/licenses/d408f38ffa3355c5faec517153295338892eb0f1ea43f57874bb23c6075979b5.txt'),
   'fb506e4ade12d7a9efa67c9d76a9a28c8e15d347ca49a69e48e29b40b34ad2ab': () => require('../../../assets/licenses/fb506e4ade12d7a9efa67c9d76a9a28c8e15d347ca49a69e48e29b40b34ad2ab.txt'),

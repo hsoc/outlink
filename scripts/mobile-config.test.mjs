@@ -29,3 +29,19 @@ test('unused SQLite full-text extensions are disabled in both native builds', as
   const plugin=app.plugins.find(p=>Array.isArray(p)&&p[0]==='expo-sqlite');
   assert.equal(plugin[1].enableFTS,false);
 });
+
+test('local mention alerts do not enable remote push registration', async () => {
+  const { execFileSync } = await import('node:child_process');
+  const output = execFileSync(process.execPath, ['node_modules/expo/bin/cli', 'config', '--type', 'introspect', '--json'], {
+    encoding: 'utf8', timeout: 60000, maxBuffer: 16 * 1024 * 1024, env: { ...process.env, EXPO_OFFLINE: '1' },
+  });
+  const mods = JSON.parse(output)._internal.modResults;
+  assert.equal(mods.ios.entitlements['aps-environment'], undefined);
+  assert.ok(!(mods.ios.infoPlist.UIBackgroundModes ?? []).includes('remote-notification'));
+  const metadata = mods.android.manifest.manifest.application[0]['meta-data'];
+  for (const name of ['firebase_messaging_auto_init_enabled', 'firebase_analytics_collection_enabled'])
+    assert.equal(metadata.find(item => item.$['android:name'] === name).$['android:value'], 'false');
+  const adapter = await readFile('src/platform/expo/mention-notifications.ts', 'utf8');
+  assert.ok(!adapter.includes("from 'expo-notifications';"));
+  assert.ok(!/getExpoPushTokenAsync|getDevicePushTokenAsync/.test(adapter));
+});

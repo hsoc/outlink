@@ -95,3 +95,25 @@ project generation and both JavaScript/Hermes bundle exports passed. The offline
 Expo SDK version check reported dependencies up to date while warning that
 offline validation is less reliable; it is not a substitute for the live audit.
 Native compilation and full resolved native advisory scans remain outstanding.
+
+
+## Local mention notification dependency update — 2026-10-20
+
+Added Expo SDK 57 `expo-notifications` 57.0.23 for local alerts; its required
+`expo-application` 57.0.3 and `badgin` 1.2.3 dependencies were added, and
+`expo-constants` moved from 57.0.18 to the notification SDK's required 57.0.22.
+Npm packages declare MIT licenses. The badgin npm archive omits its license file;
+a reviewed upstream MIT snapshot and integrity-pinned inventory override supply
+it. Firebase Android Cloud Messaging 25.0.1 is a dormant native dependency of the
+SDK; its upstream Apache-2.0 license is included in native notices. No upstream
+Bitchat application code is copied. Outlink remains MIT licensed.
+
+The production npm audit on this date reports 43 findings (16 moderate, 27 high,
+0 critical). None are assigned to the four added/upgraded npm packages. These
+are dependency-tree findings, not proof of application exploitability; existing
+unresolved findings are not fixed by this feature. No automatic audit fix or
+unrelated dependency upgrades were applied. Native transitive advisory scanning
+and physical notification behavior remain outside the verified scope. Local
+notification API imports and generated native configuration are tested to avoid
+remote registration: APNs/remote wake-up are absent and FCM/analytics auto-init
+are disabled. No remote credentials or Google services file is added.

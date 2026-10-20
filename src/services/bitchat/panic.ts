@@ -1,3 +1,4 @@
+import { mentionService } from '@/services/mentions/mentions';
 import { invalidateSessionIntent } from '@/services/history/lifecycle';
 import { bitchatService, bitchatSessionStore } from './bitchat.service';
 import { platform } from '@/platform';
@@ -15,6 +16,7 @@ export function panicWipe(): Promise<void> {
     await bitchatService.stop(); geohashService.stop(); await geohashService.idle();
     bitchatSessionStore.setState({ busy: true });
     workspaceStore.setState({ ready: false, keepBackground: false, backgroundError: false, drafts: {}, recipient: undefined, internet: false, autoAreaRelays: true, gateway: false, bridge: false, bridgeCell: '', nearbyOnly: false, mode: 'mesh', hash: '' });
+    await mentionService.clear().catch(() => {});
     await historyOperation(async () => {
       await platform.wipeLocalData();
       await resetMobileIdentity();

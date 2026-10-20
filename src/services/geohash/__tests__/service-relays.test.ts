@@ -1,3 +1,5 @@
+import { mentionService } from '@/services/mentions/mentions';
+import { createGeohashEvent } from '../geohash-protocol';
 /** @jest-environment node */
 import { saveNickname } from '@/services/preferences/nickname';
 import { verifyEvent, type Event } from 'nostr-tools/pure';
@@ -7,6 +9,7 @@ import { platform } from '@/platform';
 import { eraseChannelIdentities, CHANNEL_ROTATION_MS } from '../channel-identities';
 import { areaRelays } from '../relay-directory';
 import type { GeoSocket } from '../geohash-session';
+jest.mock('@/services/mentions/mentions', () => ({ mentionService: { received: jest.fn() } }));
 jest.mock('@/platform', () => { const secrets = new Map([['outlink.mobile.identity', 'aa'.repeat(32)]]); return { platform: {
   preferences: { getItem: jest.fn(async (key: string) => key === 'mobile.nickname' ? 'Outlink1234' : JSON.stringify({ autoAreaRelays: false, internet: false })), setItem: jest.fn(async () => {}) },
   secureStorage: { getItem: jest.fn(async (key: string) => secrets.get(key) ?? null), setItem: jest.fn(async (key: string, value: string) => { secrets.set(key, value); }), deleteItem: jest.fn(async (key: string) => { secrets.delete(key); }) },
@@ -134,4 +137,13 @@ it('rejects a denied location lookup instead of inventing a bridge suffix', asyn
 it('validates precision before requesting coordinates', async () => {
   await expect(geohashService.nearby(0)).rejects.toThrow('Invalid geohash precision');
   expect(platform.location.currentCoordinates).not.toHaveBeenCalled();
+});
+
+it('passes a received public location mention to notification handling only once', async () => {
+  await geohashService.join('u4pruy', 'Outlink1234', ['wss://one.example']); sockets.forEach(s => s.onopen?.());
+  const event = createGeohashEvent(new Uint8Array(32).fill(2), 'u4pruy', 'Bob', '@Outlink1234 hello');
+  const frame = { data: JSON.stringify(['EVENT', 'geohash', event]) };
+  sockets[0].onmessage?.(frame); sockets[0].onmessage?.(frame);
+  expect(mentionService.received).toHaveBeenCalledTimes(1);
+  expect(mentionService.received).toHaveBeenCalledWith(expect.objectContaining({ content: '@Outlink1234 hello', outgoing: false }), 'geo', 'u4pruy');
 });

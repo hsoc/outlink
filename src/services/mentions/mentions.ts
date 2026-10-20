@@ -1,0 +1,46 @@
+import english from '@/i18n/en.json';
+import { bytesToHex } from '@noble/hashes/utils.js';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { platform } from '@/platform';
+import { mentionMatcher } from '@/lib/mentions';
+import { ensureNickname } from '@/services/preferences/nickname';
+import { historyOperation } from '@/services/history/history';
+import { sessionIntent } from '@/services/history/lifecycle';
+export const MENTION_PREFERENCE = 'mobile.mentionNotifications';
+type Message = { id: string; content: string; timestamp: number; outgoing: boolean; recipient?: string };
+let revision = 0, queued = 0, pending: Promise<void> = Promise.resolve(), lastAlert = -Infinity;
+const seen = new Set<string>();
+let copy = { channelName: english.mobile.mention_notifications, meshBody: english.mobile.mention_alert_mesh, geoBody: english.mobile.mention_alert_geo };
+export const mentionService = {
+  setCopy(value: typeof copy) { copy = value; },
+  async enabled() { return await platform.preferences.getItem(MENTION_PREFERENCE) === 'true'; },
+  async configure(enabled: boolean) {
+    const epoch = sessionIntent();
+    if (enabled && !await platform.mentionNotifications.requestPermission(copy.channelName)) return false;
+    await historyOperation(async () => {
+      if (epoch !== sessionIntent()) throw new Error('Mention setting canceled by identity wipe');
+      await platform.preferences.setItem(MENTION_PREFERENCE, String(enabled));
+    });
+    if (!enabled) await this.clear().catch(() => {});
+    return true;
+  },
+  received(message: Message, mode: 'mesh' | 'geo', scope: string, key = message.id) {
+    const now = Date.now();
+    if (message.outgoing || message.recipient || !message.content.includes('@') || message.timestamp < now - 90_000 || message.timestamp > now + 60_000 || queued >= 32) return;
+    const id = 'mention-' + bytesToHex(sha256(new TextEncoder().encode(`${mode}:${scope}:${key}`)));
+    if (seen.has(id)) return;
+    seen.add(id); if (seen.size > 512) seen.delete(seen.values().next().value!);
+    const epoch = sessionIntent(), version = revision; ++queued;
+    pending = pending.catch(() => {}).then(async () => {
+      if (epoch !== sessionIntent() || version !== revision || Date.now() - lastAlert < 10000 || !await this.enabled()) return;
+      const name = await ensureNickname();
+      if (epoch !== sessionIntent() || version !== revision || !mentionMatcher(name)(message.content)) return;
+      await platform.mentionNotifications.show({ id, title: 'Outlink', body: mode === 'mesh' ? copy.meshBody : copy.geoBody, channelName: copy.channelName }); lastAlert = Date.now();
+    }).catch(() => { /* Notification failure must not reject or discard chat messages. */ }).finally(() => { --queued; });
+  },
+  async clear() {
+    ++revision; await pending; seen.clear(); lastAlert = -Infinity;
+    await platform.mentionNotifications?.clear();
+  },
+  async idle() { await pending; },
+};

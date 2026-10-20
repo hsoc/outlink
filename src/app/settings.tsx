@@ -1,3 +1,4 @@
+import { mentionService } from '@/services/mentions/mentions';
 import { useCallback, useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import { NetworkSettings } from '@/components/bitchat/NetworkSettings';
@@ -22,13 +23,14 @@ export default function Settings() {
   const colors = useThemeColors();
   const [name, setName] = useState(''), [savedName, setSavedName] = useState(''), [nameReady, setNameReady] = useState(false), [nameSaved, setNameSaved] = useState(false);
   const meshBusy = useStore(bitchatSessionStore, state => state.busy), geoBusy = useStore(geohashStore, state => state.busy);
+  const [mentions, setMentions] = useState(false), [mentionBusy, setMentionBusy] = useState(false), [mentionError, setMentionError] = useState(false);
   const [backgroundBusy, setBackgroundBusy] = useState(false);
   const workspace = useStore(workspaceStore);
   const [erased, setErased] = useState(false), [networkBusy, setNetworkBusy] = useState(false);
   const [clearing, setClearing] = useState(false), [failed, setFailed] = useState(false);
   useFocusEffect(useCallback(() => {
     let alive = true;
-    void ensureNickname().then(value => { if (alive) { setName(value); setSavedName(value); setNameReady(true); } }).catch(() => { if (alive) setFailed(true); });
+    void Promise.all([ensureNickname(), mentionService.enabled()]).then(([value, enabled]) => { if (alive) { setName(value); setSavedName(value); setNameReady(true); setMentions(enabled); } }).catch(() => { if (alive) setFailed(true); });
     return () => { alive = false; };
   }, []));
   useEffect(() => { void restoreWorkspace().catch(() => setFailed(true)); }, []);
@@ -48,6 +50,18 @@ export default function Settings() {
         } catch { setFailed(true); } finally { setClearing(false); }
       })()} />
     {nameSaved && <AppText variant="caption" tone="muted" accessibilityLiveRegion="polite">{t('mobile.name_saved')}</AppText>}
+    <View style={{ gap: spacing.sm }}>
+      <AppText variant="subtitle">{t('mobile.mention_notifications')}</AppText>
+      <Switch accessibilityLabel={t('mobile.mention_notifications')} value={mentions}
+        disabled={!nameReady || mentionBusy || clearing || networkBusy} trackColor={{ false: colors.surfaceMuted, true: colors.accent }}
+        onValueChange={enabled => void (async () => {
+          setMentionBusy(true); setMentionError(false);
+          try { if (await mentionService.configure(enabled)) setMentions(enabled); else setMentionError(true); }
+          catch { setMentionError(true); } finally { setMentionBusy(false); }
+        })()} />
+      <AppText variant="caption" tone="muted">{t('mobile.mention_hint')}</AppText>
+      {mentionError && <AppText variant="caption" tone="danger">{t('mobile.mention_permission_error')}</AppText>}
+    </View>
     <AppText variant="subtitle">{t('mobile.appearance')}</AppText>
     <View style={{ flexDirection: 'row', gap: spacing.sm }}>{(['system','light','dark'] as const).map(value => <AppButton key={value}
       label={t(`mobile.${value}`)} variant="secondary" fullWidth={false} selected={preference === value} onPress={() => useThemeStore.getState().setPreference(value)} />)}</View>
@@ -94,7 +108,7 @@ export default function Settings() {
     <AppButton label={t('mobile.wipe_identity')} variant="secondary" disabled={clearing || networkBusy} onPress={() => void (async () => {
       if (!await platform.confirmationDialog.confirm(t('mobile.wipe_identity'), t('mobile.wipe_confirm'), t('mobile.cancel'), t('mobile.wipe_identity'))) return;
       setClearing(true); setFailed(false);
-      try { await panicWipe(); const fresh = await ensureNickname(); setName(fresh); setSavedName(fresh); setNameSaved(false); setErased(true); } catch { setFailed(true); } finally { setClearing(false); }
+      try { await panicWipe(); const fresh = await ensureNickname(); setName(fresh); setSavedName(fresh); setNameSaved(false); setMentions(false); setErased(true); } catch { setFailed(true); } finally { setClearing(false); }
     })()} />
     <AppText variant="caption" tone="muted">{t('mobile.quick_erase_settings')}</AppText>
     {erased && <AppText tone="muted">{t('mobile.wipe_done')}</AppText>}

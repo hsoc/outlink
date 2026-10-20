@@ -1,11 +1,12 @@
 # Mobile architecture
 
 Outlink ships Android and iOS applications only. There is no desktop runtime,
-account bootstrap, wallet, old Nearby session, or push
-notification extension in the application dependency graph.
+account bootstrap, wallet, old Nearby session, or configured remote push service.
+Local mention alerts use the Expo notification SDK through a platform port; remote
+registration and notification background modes remain disabled.
 
-`src/app/` owns four screens: chat, appearance settings, bundled license notices,
-and the root layout. They reuse the original shared controls and theme.
+`src/app/` owns chat, contacts, settings, bundled license notices, native-link
+handling, and the root layout. They reuse the original shared controls and theme.
 `src/services/bitchat/` owns the Bluetooth codec, fragmentation, Noise sessions,
 receipts, verification, durable contacts/outbox/gossip, and bounded in-memory room state. It talks directly to the retained
 BLE port rather than suspending an unrelated messaging service.
@@ -92,3 +93,9 @@ Contact persistence distinguishes explicit trust/save decisions from temporary
 24-hour discoveries. Queue identity metadata survives until its pending mail is
 settled; expiry cannot silently repin or authorize new sends. The directory uses
 virtualized rows and bounded loaded-history data; see [contact retention](protocols/contact-retention.md).
+
+[Public mentions](protocols/mentions.md) use the saved shared nickname and existing
+plain-text messages. New-message callbacks feed a bounded notification service;
+history hydration does not. The notification port isolates OS permission and
+local scheduling from protocol code. Wipe invalidates/drains alert work and
+attempts to clear only mention notifications before deleting local data.

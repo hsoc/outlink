@@ -88,5 +88,15 @@
     "files": [
       "licenses/third-party/common/sqlite.txt"
     ]
+  },
+  {
+    "id": "firebase-messaging",
+    "name": "Firebase Android Cloud Messaging",
+    "version": "25.0.1",
+    "license": "Apache-2.0",
+    "repository": "https://github.com/firebase/firebase-android-sdk",
+    "files": [
+      "licenses/third-party/common/firebase-messaging-Apache-2.0.txt"
+    ]
   }
 ]

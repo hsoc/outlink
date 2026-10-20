@@ -97,3 +97,9 @@ bridge choices. Choosing an area or relay policy never enables bridging.
 Joined location channels show an explicit Active recently count and explain its
 three-minute window, inclusion of self, and identity-based estimate. Disconnected
 relays show unavailable rather than implying zero users or live presence.
+
+Public chat sender names can insert a plain-text nickname mention. Mentions of
+the saved shared nickname receive an accent bubble outline and a text label,
+independent of OS permissions. Local mention notifications are explicitly opt-in
+in Settings and use generic previews without names, text or area codes. Explain
+that a live connection is required and that this does not add remote push.

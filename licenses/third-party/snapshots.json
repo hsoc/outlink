@@ -94,6 +94,16 @@
       "path": "common/qrcode-generator-MIT.txt",
       "source": "https://github.com/kazuhikoarase/qrcode-generator/blob/master/LICENSE; reviewed against qrcode-generator@2.0.4 package metadata and dist/qrcode.mjs copyright header. The npm archive omits LICENSE.",
       "sha256": "470cb367c0231951b7d2ddf4b45731e095b9ecdcaccf684b2415baea11d890d8"
+    },
+    {
+      "path": "common/badgin-MIT.txt",
+      "source": "https://github.com/jaulz/badgin/blob/master/LICENSE (Git blob bb02b4ba8ca6a4350fdffd025f24b07c8f962f68)",
+      "sha256": "85a1097da0ce9fd3e1b5a76dd9947730e9393379841421a642dab1cfe33c6434"
+    },
+    {
+      "path": "common/firebase-messaging-Apache-2.0.txt",
+      "source": "https://github.com/firebase/firebase-android-sdk LICENSE (Git blob d645695673349e3947e8e5ae42332d0ac3164cd7); applies to the Cloud Messaging SDK bundled by Expo notifications.",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
     }
   ],
   "npmOverrides": {
@@ -261,6 +271,11 @@
       "version": "2.0.4",
       "integrity": "sha512-mZSiP6RnbHl4xL2Ap5HfkjLnmxfKcPWpWe/c+5XxCuetEenqmNFf1FH/ftXPCtFG5/TDobjsjz6sSNL0Sr8Z9g==",
       "file": "common/qrcode-generator-MIT.txt"
+    },
+    "badgin@1.2.3": {
+      "version": "1.2.3",
+      "integrity": "sha512-NQGA7LcfCpSzIbGRbkgjgdWkjy7HI+Th5VLxTJfW5EeaAf3fnS+xWQaQOCYiny+q6QSvxqoSO04vCx+4u++EJw==",
+      "file": "common/badgin-MIT.txt"
     }
   }
 }

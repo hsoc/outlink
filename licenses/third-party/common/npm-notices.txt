@@ -1804,6 +1804,12 @@ LICENSE
   Text: da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93
 ========================================
 
+badgin@1.2.3
+License: MIT
+Reviewed distribution notices: licenses/third-party/common/badgin-MIT.txt
+  Text: 85a1097da0ce9fd3e1b5a76dd9947730e9393379841421a642dab1cfe33c6434
+========================================
+
 balanced-match@1.0.2
 License: MIT
 Source: git://github.com/juliangruber/balanced-match.git
@@ -2391,6 +2397,13 @@ LICENSE
   Text: 3aecc12b1cb28832b5f65ab64291de96568c3f236a74d646281b4491f7bcadbf
 ========================================
 
+expo-application@57.0.3
+License: MIT
+Source: https://github.com/expo/expo.git
+LICENSE
+  Text: fb3ca4a837f5779e83cef89b78253a8949cfb9429c340309f62d0465ec6610b4
+========================================
+
 expo-asset@57.0.17
 License: MIT
 Source: https://github.com/expo/expo.git
@@ -2412,7 +2425,7 @@ LICENSE
   Text: fb3ca4a837f5779e83cef89b78253a8949cfb9429c340309f62d0465ec6610b4
 ========================================
 
-expo-constants@57.0.18
+expo-constants@57.0.22
 License: MIT
 Source: https://github.com/expo/expo.git
 LICENSE
@@ -2490,6 +2503,13 @@ LICENSE
 ========================================
 
 expo-modules-jsi@57.1.0
+License: MIT
+Source: https://github.com/expo/expo.git
+LICENSE
+  Text: fb3ca4a837f5779e83cef89b78253a8949cfb9429c340309f62d0465ec6610b4
+========================================
+
+expo-notifications@57.0.23
 License: MIT
 Source: https://github.com/expo/expo.git
 LICENSE
@@ -7873,6 +7893,32 @@ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
 LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+========================================
+
+TEXT 85a1097da0ce9fd3e1b5a76dd9947730e9393379841421a642dab1cfe33c6434
+
+MIT License
+
+Copyright (c) 2019 Julian Hundeloh
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ========================================
 

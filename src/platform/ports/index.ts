@@ -1,3 +1,4 @@
+import type { MentionNotificationsPort } from './mention-notifications';
 import type { BackgroundConnectivityPort } from './background-connectivity';
 import type { RecordsPort } from './records';
 import type { HistoryPort } from './history';
@@ -12,6 +13,7 @@ export type { PreferencesPort, LocationPort } from './mobile';
 export type { AppStatePort, AppStateStatus } from './app-state';
 export type { ProximityTransportPort, ProximityTransportSubscription } from './proximity-transport';
 export interface PlatformAdapters {
+  mentionNotifications: MentionNotificationsPort;
   backgroundConnectivity: BackgroundConnectivityPort;
   history: HistoryPort;
   records: RecordsPort;

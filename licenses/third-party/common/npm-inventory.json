@@ -1,6 +1,6 @@
 {
-  "reviewed": "2026-10-18",
-  "lockfileSha256": "bd0fffc4d7766e2ba442b8139cb325f255a5cb1a6e82648e2a95e049bbadcaa9",
+  "reviewed": "2026-10-20",
+  "lockfileSha256": "24e2f8929652f9d9c43e46dc68a196b43248d055b0e079525c747c06709aee4e",
   "scope": "All locked non-development npm packages on all platforms. Includes build utilities; not an exact binary inventory.",
   "packages": [
     {
@@ -3393,6 +3393,18 @@
       ]
     },
     {
+      "name": "badgin",
+      "version": "1.2.3",
+      "license": "MIT",
+      "integrity": "sha512-NQGA7LcfCpSzIbGRbkgjgdWkjy7HI+Th5VLxTJfW5EeaAf3fnS+xWQaQOCYiny+q6QSvxqoSO04vCx+4u++EJw==",
+      "licenseFiles": [
+        {
+          "source": "Reviewed distribution notices: licenses/third-party/common/badgin-MIT.txt",
+          "sha256": "85a1097da0ce9fd3e1b5a76dd9947730e9393379841421a642dab1cfe33c6434"
+        }
+      ]
+    },
+    {
       "name": "balanced-match",
       "version": "1.0.2",
       "license": "MIT",
@@ -4486,6 +4498,20 @@
       ]
     },
     {
+      "name": "expo-application",
+      "version": "57.0.3",
+      "license": "MIT",
+      "integrity": "sha512-t/CxeLio0NjY9/cOak1tQp62/hAUjzJxmhR4rVUR7K5bb9YoEtfl1ZekTn+Iuh+dYOMYzF0l72ODMSmY3CR1NA==",
+      "repository": "https://github.com/expo/expo.git",
+      "homepage": "https://docs.expo.dev/versions/latest/sdk/application/",
+      "licenseFiles": [
+        {
+          "source": "LICENSE",
+          "sha256": "fb3ca4a837f5779e83cef89b78253a8949cfb9429c340309f62d0465ec6610b4"
+        }
+      ]
+    },
+    {
       "name": "expo-asset",
       "version": "57.0.17",
       "license": "MIT",
@@ -4529,9 +4555,9 @@
     },
     {
       "name": "expo-constants",
-      "version": "57.0.18",
+      "version": "57.0.22",
       "license": "MIT",
-      "integrity": "sha512-cLDwDOniPfuCZPHNY++cAY2ZkK97u5aobbBvilPK2LLmaWxR4ZpD31LWUIzUDLrwMPxLjmh1uURnbeYEf0Mivw==",
+      "integrity": "sha512-+mBjnzMWMKIrQa7BP7LTDRC0W7cI+q12/sZns4HzVQJGzgGoAdRJSTEKiObxIw/3EswKXlESkRob8upiL95Q4A==",
       "repository": "https://github.com/expo/expo.git",
       "homepage": "https://docs.expo.dev/versions/latest/sdk/constants/",
       "licenseFiles": [
@@ -4688,6 +4714,20 @@
       "integrity": "sha512-a5ckeHfnbYfonhcHGkM0EU/a0Keh+/OufXy/HyFS+spr5Ib0N4Oh1ZsSYFQhp5xdOUFkVofKRhfH+VmcccIIpA==",
       "repository": "https://github.com/expo/expo.git",
       "homepage": "https://github.com/expo/expo/tree/main/packages/expo-modules-jsi",
+      "licenseFiles": [
+        {
+          "source": "LICENSE",
+          "sha256": "fb3ca4a837f5779e83cef89b78253a8949cfb9429c340309f62d0465ec6610b4"
+        }
+      ]
+    },
+    {
+      "name": "expo-notifications",
+      "version": "57.0.23",
+      "license": "MIT",
+      "integrity": "sha512-KdHROY5tvbzlDJImJKF91F8GRpV4hP+RLPC7NJgiFNyzb0clETpV0hJNdbFrfyubZf+cqx88+WuwFsH9Yl+kzg==",
+      "repository": "https://github.com/expo/expo.git",
+      "homepage": "https://docs.expo.dev/versions/latest/sdk/notifications/",
       "licenseFiles": [
         {
           "source": "LICENSE",

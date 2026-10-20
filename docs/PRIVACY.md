@@ -98,3 +98,9 @@ for expiry, directory visibility and deletion limits.
 The main-screen app icon also supports immediate full local erasure with three
 activations within 1.5 seconds, without confirmation. Settings retains its
 confirmation dialog. See [quick erase](protocols/quick-erase.md) for scope and limits.
+
+Public nickname mentions can trigger optional local notifications after receipt.
+Previews omit message text, names and area codes; no push tokens are requested or
+uploaded. Notification permission does not change background delivery limits.
+See [mentions](protocols/mentions.md) for matching, duplicate-name behavior,
+retention, rate limits and erasure cleanup.

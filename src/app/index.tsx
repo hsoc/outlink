@@ -22,6 +22,7 @@ import type { GeoMessage } from '@/services/geohash/geohash-session';
 import { bytes } from '@/services/bitchat/bitchat-wire';
 import { geohashService, geohashStore } from '@/services/geohash/geohash.service';
 import { MAX_GEO_CONTENT_BYTES } from '@/services/geohash/geohash-protocol';
+import { appendMention, mentionMatcher, mentionTargetName } from '@/lib/mentions';
 import { panicWipe } from '@/services/bitchat/panic';
 import { QuickEraseButton } from '@/components/bitchat/QuickEraseButton';
 import { normalizeGeohash } from '@/services/geohash/geohash';
@@ -45,6 +46,7 @@ export default function Chats() {
   const draft = workspace.drafts[draftKey] ?? '';
   const setDraft = (value: string) => workspaceStore.setState(state => ({ drafts: { ...state.drafts, [draftKey]: value } }));
   const [name, setName] = useState(''), [ready, setReady] = useState(false);
+  const mentioned = useMemo(() => mentionMatcher(name), [name]);
   const [working, setWorking] = useState(false), [editingArea, setEditingArea] = useState(false);
   const [wiping, setWiping] = useState(false), [wipeStatus, setWipeStatus] = useState<'done' | 'failed' | null>(null);
   const wipingRef = useRef(false);
@@ -223,19 +225,30 @@ export default function Chats() {
             <AppButton label={t('mobile.older')} variant="text" size="sm" disabled={busy} onPress={() => void operate(async () => { atLatest.current = false; await (mode === 'mesh' ? bitchatService.older() : geoRecipient ? geohashService.olderPrivate() : geohashService.older()); })} />
             <AppButton label={t('mobile.latest')} variant="text" size="sm" disabled={busy} onPress={() => void operate(async () => { atLatest.current = true; await (mode === 'mesh' ? bitchatService.latest() : geohashService.restore(geo.hash)); listRef.current?.scrollToEnd({ animated: true }); })} />
           </View> : null}
-          renderItem={({ item }) => <View style={{
+          renderItem={({ item }) => {
+            const publicChat = mode === 'mesh' ? !recipient : !geoRecipient;
+            const canMention = publicChat && !item.outgoing;
+            const mentionName = mentionTargetName(item.name, 'bridge' in item ? item.bridge?.pubkey : undefined);
+            const isMentioned = canMention && mentioned(item.content);
+            return <View style={{
             alignSelf: item.outgoing ? 'flex-end' : 'flex-start', maxWidth: uiDensity.messageBubbleMaxWidth,
             paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.xs,
+            borderWidth: isMentioned ? uiDensity.selectedControlRingWidth : 0, borderColor: c.accent,
             borderRadius: radius.xl,
             borderEndStartRadius: item.outgoing ? radius.xl : radius.xs,
             borderEndEndRadius: item.outgoing ? radius.xs : radius.xl,
             backgroundColor: item.outgoing ? c.accentSoft : c.surfaceElevated,
           }}>
-            <AppText variant="caption" tone="muted" selectable accessibilityLabel={item.name + ('pubkey' in item ? ' · ' + item.pubkey : '')}>{item.name}{'pubkey' in item ? ' · ' + item.pubkey.slice(0, 8) : ''}</AppText><AppText selectable>{item.content}</AppText>
+            <AppText variant="caption" tone={canMention ? 'accent' : 'muted'} selectable={!canMention}
+              accessibilityRole={canMention ? 'button' : undefined}
+              accessibilityLabel={(canMention ? t('mobile.mention_name', { name: mentionName }) : item.name) + ('pubkey' in item ? ' · ' + item.pubkey : '')}
+              onPress={canMention ? () => setDraft(appendMention(draft, mentionName)) : undefined}>{item.name}{'pubkey' in item ? ' · ' + item.pubkey.slice(0, 8) : ''}</AppText>
+            {isMentioned && <AppText variant="caption" tone="accent">{t('mobile.mentioned_you')}</AppText>}
+            <AppText selectable>{item.content}</AppText>
             {'bridge' in item && item.bridge && <AppText variant="caption" tone="muted">{t('mobile.via_bridge')}</AppText>}
             {mode === 'geo' && !geoRecipient && 'pubkey' in item && !item.outgoing && <AppButton label={t('mobile.private_message')} variant="text" fullWidth={false} disabled={busy || !geo.privateActive} onPress={() => setPrivateTarget({ hash: geo.hash, pubkey: item.pubkey })} />}
             {item.outgoing && <AppText variant="caption" tone="muted" align="end">{t(mode === 'geo' && item.delivery === 'sent' ? 'mobile.relay_accepted' : `bitchat.${item.delivery}`)}</AppText>}
-          </View>}
+          </View>; }}
           ListEmptyComponent={<View style={{ gap: spacing.md, paddingVertical: spacing.lg }}>
             <Radar size={uiDensity.iconButtonSize} color={c.textMuted} /><AppText variant="subtitle">{t('bitchat.empty')}</AppText>
             <AppText tone="muted">{t(mode === 'geo' ? 'mobile.geo_empty_hint' : 'bitchat.empty_hint')}</AppText>

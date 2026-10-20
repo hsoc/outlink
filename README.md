@@ -17,7 +17,7 @@ phone numbers, wallets, or username registration.
 Location channels require internet access and are public. They are separate
 from encrypted Bluetooth private chats. Optional internet private messaging and
 mesh gateway/bridge features are disabled by default. There is no Tor integration,
-push delivery or file transfer. Android offers an optional ongoing-notification
+remote push delivery or file transfer. Android offers an optional ongoing-notification
 mode to retain a joined Bluetooth mesh and open relay connections in the background.
 It is off by default; iOS and internet-only sessions pause and reconnect on return.
 See [background connectivity](docs/protocols/background-connectivity.md). Messages, drafts,
@@ -31,6 +31,11 @@ with a saved random name such as `Outlink4827`; existing names are kept. See
 For immediate erasure, tap the small Outlink icon at the top left of the main
 screen **three times within 1.5 seconds**. This runs the same full-data wipe as
 Settings, **without confirmation**. See [quick erase](docs/protocols/quick-erase.md).
+
+Tap a public message’s sender name to mention them. Enable **Notify when
+mentioned** in Settings for local alerts in mesh and location channels. A live
+connection and notification permission are required. See
+[mentions and notifications](docs/protocols/mentions.md).
 
 ## Build
 

@@ -1,3 +1,4 @@
+import { mentionService } from '@/services/mentions/mentions';
 import { ensureNickname, validateNickname } from '@/services/preferences/nickname';
 import { refreshAreaRelays } from '@/services/geohash/relay-refresh';
 import type { Event } from 'nostr-tools/pure';
@@ -79,6 +80,8 @@ class BitchatService {
     remove: (peer, id) => removeRecord(`outbox:${peer}`, id),
   }, message => this.mergeMessage(message));
   private mergeMessage(message: BitchatMessage) {
+    const known = bitchatSessionStore.getState().messages.some(m => m.id === message.id && m.peer === message.peer);
+    if (!known) mentionService.received(message, 'mesh', 'public', message.bridge?.radioHint ?? meshStableId(message.peer, message.timestamp, message.content));
     bitchatSessionStore.setState(state => {
       const previous = state.messages.find(m => m.id === message.id && m.peer === message.peer);
       if (previous?.delivery === 'read' || previous?.delivery === 'delivered' && !['read', 'delivered'].includes(message.delivery)) return state;

@@ -95,7 +95,8 @@
           "recordAudioAndroid": false,
           "barcodeScannerEnabled": true
         }
-      ]
+      ],
+      "./plugins/with-local-notifications"
     ],
     "experiments": {
       "typedRoutes": false,

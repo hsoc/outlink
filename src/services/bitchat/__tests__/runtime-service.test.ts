@@ -1,3 +1,4 @@
+import { mentionService } from '@/services/mentions/mentions';
 /** @jest-environment node */
 import { ed25519, x25519 } from '@noble/curves/ed25519.js';
 import { sha256 } from '@noble/hashes/sha2.js';
@@ -17,6 +18,7 @@ import { getPublicKey } from 'nostr-tools/pure';
 import { historyOperation } from '@/services/history/history';
 const root = 'aa'.repeat(32), recipientSeed = new Uint8Array(32).fill(2), recipientKey = x25519.getPublicKey(recipientSeed);
 const carrierSeed = new Uint8Array(32).fill(3), carrierKey = x25519.getPublicKey(carrierSeed), carrierId = peerId(carrierKey);
+jest.mock('@/services/mentions/mentions', () => ({ mentionService: { received: jest.fn() } }));
 jest.mock('@/services/geohash/geohash.service', () => ({ geohashService: { acceptCarrier: jest.fn() } }));
 jest.mock('@/platform', () => ({ platform: { proximityTransport: {}, records: { get: jest.fn(), set: jest.fn(), remove: jest.fn(), list: jest.fn() },
   history: { save: jest.fn(), load: jest.fn(async () => []), get: jest.fn() }, preferences: { getItem: jest.fn(async () => null), setItem: jest.fn(async () => {}) },
@@ -128,4 +130,14 @@ it('uses the saved nickname for mesh posts even when setup or resume provides an
   expect((await active.sendPublic.mock.results.at(-1).value).name).toBe('Shared updated name');
   await bitchatService.stop(); await bitchatService.start(root, 'Old resume snapshot');
   expect(bitchatService.connection?.name).toBe('Shared updated name');
+});
+
+it('passes newly received public mesh messages to mention handling', async () => {
+  await bitchatService.start(root, 'Outlink1234');
+  const active = jest.mocked(BitchatSession).mock.results.at(-1)!.value;
+  jest.mocked(mentionService.received).mockClear();
+  const incoming = { id: 'mention-live', peer: carrierId, name: 'Carrier', content: '@Outlink1234 hello', timestamp: Date.now(), outgoing: false, delivery: 'sent' };
+  active.callbacks.message(incoming); active.callbacks.message(incoming);
+  expect(mentionService.received).toHaveBeenCalledTimes(1);
+  expect(mentionService.received).toHaveBeenCalledWith(incoming, 'mesh', 'public', expect.any(String));
 });
