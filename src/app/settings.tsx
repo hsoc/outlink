@@ -96,6 +96,7 @@ export default function Settings() {
       setClearing(true); setFailed(false);
       try { await panicWipe(); const fresh = await ensureNickname(); setName(fresh); setSavedName(fresh); setNameSaved(false); setErased(true); } catch { setFailed(true); } finally { setClearing(false); }
     })()} />
+    <AppText variant="caption" tone="muted">{t('mobile.quick_erase_settings')}</AppText>
     {erased && <AppText tone="muted">{t('mobile.wipe_done')}</AppText>}
     {failed && <AppText tone="danger">{t('mobile.failed')}</AppText>}
     <AppButton label={t('mobile.source')} variant="text" onPress={() => void platform.urlOpener.openExternalUrl('https://github.com/hsoc/outlink')} />

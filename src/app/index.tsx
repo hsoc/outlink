@@ -22,6 +22,8 @@ import type { GeoMessage } from '@/services/geohash/geohash-session';
 import { bytes } from '@/services/bitchat/bitchat-wire';
 import { geohashService, geohashStore } from '@/services/geohash/geohash.service';
 import { MAX_GEO_CONTENT_BYTES } from '@/services/geohash/geohash-protocol';
+import { panicWipe } from '@/services/bitchat/panic';
+import { QuickEraseButton } from '@/components/bitchat/QuickEraseButton';
 import { normalizeGeohash } from '@/services/geohash/geohash';
 import { ensureNickname } from '@/services/preferences/nickname';
 import { radius, spacing, uiDensity, useThemeColors } from '@/theme';
@@ -44,6 +46,8 @@ export default function Chats() {
   const setDraft = (value: string) => workspaceStore.setState(state => ({ drafts: { ...state.drafts, [draftKey]: value } }));
   const [name, setName] = useState(''), [ready, setReady] = useState(false);
   const [working, setWorking] = useState(false), [editingArea, setEditingArea] = useState(false);
+  const [wiping, setWiping] = useState(false), [wipeStatus, setWipeStatus] = useState<'done' | 'failed' | null>(null);
+  const wipingRef = useRef(false);
   const areaRequest = useRef(0);
   useEffect(() => () => { ++areaRequest.current; }, []);
   let validArea = false;
@@ -89,6 +93,20 @@ export default function Chats() {
     void ensureNickname().then(value => { if (alive) setName(value); }).catch(() => { if (alive) setActionError('other'); });
     return () => { alive = false; };
   }, []));
+  const quickErase = useCallback(() => {
+    if (wipingRef.current) return;
+    wipingRef.current = true; ++areaRequest.current;
+    setWiping(true); setWipeStatus(null); setActionError(null);
+    void (async () => {
+      try {
+        await panicWipe();
+        setName(''); setPrivateTarget(undefined); setEditingArea(false); setWorking(false); setActionError(null);
+        setWipeStatus('done');
+        try { setName(await ensureNickname()); } catch { setActionError('other'); }
+      } catch { setWipeStatus('failed'); }
+      finally { wipingRef.current = false; setWiping(false); }
+    })();
+  }, []);
   async function selectArea(precision: number) {
     const request = ++areaRequest.current, intent = sessionIntent();
     const hash = await geohashService.nearby(precision);
@@ -120,7 +138,9 @@ export default function Chats() {
     : `Internet · ${geo.connected > 0 ? t('mobile.relays_connected', { count: geo.connected }) : t('mobile.relays_disconnected')}`;
   if (!ready) return <AppScreen><AppText>Outlink</AppText></AppScreen>;
   return <AppScreen edges={['bottom']}>
-    <KeyboardAvoidingView behavior="padding" style={{ flex: 1, paddingTop: top, paddingHorizontal: spacing.lg, gap: spacing.sm, minHeight: 0 }}>
+    {wiping || wipeStatus === 'failed' ? <View style={{ paddingTop: top, paddingHorizontal: spacing.lg }}>
+      <AppText tone={wiping ? 'muted' : 'danger'} accessibilityLiveRegion="assertive">{t(wiping ? 'mobile.quick_erasing' : 'mobile.quick_erase_failed')}</AppText>
+    </View> : <KeyboardAvoidingView behavior="padding" style={{ flex: 1, paddingTop: top, paddingHorizontal: spacing.lg, gap: spacing.sm, minHeight: 0 }}>
       <View style={{ flexDirection: 'row', gap: spacing.sm }}>
         {(['mesh', 'geo'] as const).map(value => <AppButton key={value} label={t(`mobile.${value}`)} variant="secondary"
           fullWidth={false} selected={mode === value} disabled={busy} onPress={() => { setMode(value); setActionError(null); }} />)}
@@ -216,7 +236,8 @@ export default function Chats() {
         {t(actionError === 'send' ? 'mobile.send_failed' : actionError === 'join' ? (mode === 'mesh' ? 'mobile.mesh_join_failed' : 'mobile.geo_join_failed') : 'mobile.operation_failed')}
       </AppText>}
       {!actionError && workspace.error && <AppText variant="caption" tone="danger">{t('mobile.storage_failed')}</AppText>}
-    </KeyboardAvoidingView>
-    <ScreenHeader title="Outlink" back={false} right={<AppButton label={t('mobile.settings')} variant="text" onPress={() => router.push('/settings')} />} />
+      {wipeStatus === 'done' && <AppText variant="caption" tone="muted" accessibilityLiveRegion="polite">{t('mobile.wipe_done')}</AppText>}
+    </KeyboardAvoidingView>}
+    <ScreenHeader title="Outlink" back={false} left={<View><QuickEraseButton onErase={quickErase} busy={wiping} /></View>} right={<AppButton label={t('mobile.settings')} variant="text" disabled={wiping} onPress={() => router.push('/settings')} />} />
   </AppScreen>;
 }

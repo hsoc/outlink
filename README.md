@@ -27,6 +27,10 @@ Change your display name in **Settings → Public name / nickname → Save**. Ne
 with a saved random name such as `Outlink4827`; existing names are kept. See
 [display names](docs/protocols/display-names.md) for identity and privacy details.
 
+For immediate erasure, tap the small Outlink icon at the top left of the main
+screen **three times within 1.5 seconds**. This runs the same full-data wipe as
+Settings, **without confirmation**. See [quick erase](docs/protocols/quick-erase.md).
+
 ## Build
 
 Use Node.js 24 and npm, then:

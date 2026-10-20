@@ -1,4 +1,5 @@
 /** @jest-environment node */
+import { createTripleTap } from '@/lib/triple-tap';
 import { panicWipe } from '../panic';
 import { platform } from '@/platform';
 import { bitchatService, bitchatSessionStore } from '../bitchat.service';
@@ -37,4 +38,17 @@ it('surfaces failed deletion, remains disconnected, and allows an explicit retry
   expect(bitchatSessionStore.getState()).toMatchObject({ busy: false, error: true });
   expect(workspaceStore.getState().ready).toBe(false);
   await panicWipe(); expect(workspaceStore.getState().ready).toBe(true);
+});
+
+it('invokes the same full wipe only after the third quick activation', async () => {
+  let pending: Promise<void> | undefined;
+  const gesture = createTripleTap(() => { pending = panicWipe(); }, () => 100);
+  const before = jest.mocked(platform.wipeLocalData).mock.calls.length;
+  workspaceStore.setState({ ready: true, drafts: { secret: 'draft' }, internet: true });
+  gesture.tap(); gesture.tap();
+  expect(platform.wipeLocalData).toHaveBeenCalledTimes(before); expect(pending).toBeUndefined();
+  gesture.tap(); await pending;
+  expect(platform.wipeLocalData).toHaveBeenCalledTimes(before + 1);
+  expect(workspaceStore.getState()).toMatchObject({ ready: true, drafts: {}, internet: false });
+  expect(contactsStore.getState()).toMatchObject({ contacts: [], ready: false });
 });

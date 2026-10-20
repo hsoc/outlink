@@ -74,3 +74,10 @@ Location-area presets fill the editable code directly on tap; no separate locati
 button is needed. Explain the permission request before the presets are used.
 Custom codes submit through Join or the keyboard, with inline validation. Public
 name uses the same persisted random default as Nearby, never a fixed fallback.
+
+The main header offers a small Outlink app icon as a quick-erase control. Three
+activations within 1.5 seconds invoke the same full-data wipe immediately, without
+confirmation. Partial sequences reset on blur or background; do not accumulate
+taps across visits. Preserve an accessible hit target, describe the destructive
+gesture to assistive technology and in Settings, hide conversations during the
+operation, and distinguish completed erasure from a failure requiring retry.
