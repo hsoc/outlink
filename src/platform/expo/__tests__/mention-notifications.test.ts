@@ -8,7 +8,8 @@ import { dismissNotificationAsync } from 'expo-notifications/build/dismissNotifi
 import { getAllScheduledNotificationsAsync } from 'expo-notifications/build/getAllScheduledNotificationsAsync';
 import { cancelScheduledNotificationAsync } from 'expo-notifications/build/cancelScheduledNotificationAsync';
 import { setNotificationChannelAsync } from 'expo-notifications/build/setNotificationChannelAsync';
-jest.mock('react-native', () => ({ Platform: { OS: 'android' } }));
+// Keep jest-expo's React Native module intact. Replacing it with a Platform-only
+// stub breaks lazy Expo module initialization during Jest environment teardown.
 jest.mock('expo-notifications/build/NotificationsHandler', () => ({ setNotificationHandler: jest.fn() }));
 jest.mock('expo-notifications/build/NotificationPermissions', () => ({ requestPermissionsAsync: jest.fn(async () => ({ granted: true })), getPermissionsAsync: jest.fn(async () => ({ granted: true })) }));
 jest.mock('expo-notifications/build/setNotificationChannelAsync', () => ({ setNotificationChannelAsync: jest.fn(async () => {}) }));
