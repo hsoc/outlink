@@ -49,8 +49,10 @@ with a device-secured independent key and authenticated, versioned records.
 Upgrades from mobile plaintext storage are transactional and resumable; unreadable
 encrypted data is preserved rather than reset. There is no background delivery promise.
 Protocol records are encrypted through a distinct async platform port, with
-scoped keyed indexes and bounded paging. A confirmed identity wipe stops both
+scoped keyed indexes and bounded paging. An identity wipe stops both
 transports and cancels lifecycle resume before deleting local keys and data.
+Both the confirmed Settings action and the immediate triple-tap shortcut invoke
+the same operation; see [quick erase](protocols/quick-erase.md).
 See [local storage](security/local-storage.md) and the
 [compatibility inventory](protocols/compatibility.md).
 

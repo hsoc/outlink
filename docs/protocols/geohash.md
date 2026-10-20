@@ -11,9 +11,11 @@ supported subset, not a claim of implementing every Bitchat feature.
 
 Geohashes use standard longitude-first alternating coordinate bisection and
 base32 `0123456789bcdefghjkmnpqrstuvwxyz`. Manual hashes accept 1–12 characters.
-Foreground location generates precision 3, 4, or 5 hashes, selected by the user.
-Precision 5 is an approximate district-sized area, not an exact coordinate.
-Area sizes vary with latitude; the UI labels are descriptive, not boundaries.
+Foreground location offers precision 3–7: Region, City, District, Neighborhood,
+and Block. Presets show approximate grid widths and also derive a six-character
+Neighborhood code to fill an empty bridge area, without enabling bridging.
+Area sizes vary with latitude; labels describe grid cells, not boundaries or
+radio range. See [location selection](location-selection.md).
 
 Public messages are signed Nostr kind **20000** events with `g` equal to the
 exact lowercase channel and `n` containing the nickname. A random NIP-13 nonce

@@ -31,7 +31,7 @@ cryptographic primitives are reused rather than implementing ciphers.
 | Live voice | Message type inventory only | Voice bursts, codec/native audio pipeline, cancellation/order/timeout handling and UI |
 | Diagnostics | Nonce-bound ping/pong, per-ingress reply budget, contact connection check | Official-client/native verification remains outstanding |
 | Nostr carrier/gateway/bridge | Validated public carriers, consent controls, persistent uplink queues, loop/rate limits, two-island bridge and kind-1401 courier mailboxes | Tor and official-client/native verification remain outstanding |
-| Identity erasure | Confirmed full local wipe stops sessions, invalidates foreground resume, removes encryption and identity keys | Platform storage/backup erasure is not guaranteed; remote copies cannot be erased |
+| Identity erasure | Full local wipe (confirmed in Settings or immediate triple-tap shortcut) stops sessions, invalidates foreground resume, removes encryption and identity keys | Platform storage/backup erasure is not guaranteed; remote copies cannot be erased |
 
 `announceV2` (`0x2C`) is explicitly non-shipping in the pinned upstream, so
 supporting that dormant format is not a prerequisite for current-main parity.

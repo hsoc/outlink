@@ -15,7 +15,9 @@ codes, nicknames, and message content. Channel signatures do not encrypt data
 or prove physical presence. Separate channel keys do not prevent correlation
 through nicknames or network metadata.
 
-Location access is optional and requested only through Use my location. Exact
+Location access is optional and requested only when choosing a location-channel
+area preset (Region through Block). An empty bridge area is filled with the
+six-character Neighborhood code from the same location fix. Exact
 latitude/longitude are used locally to calculate an approximate area code and
 are not stored or included in events. Manual area entry does not need location
 permission. Foreground location and Bluetooth may still be subject to platform
@@ -92,3 +94,7 @@ and blocks persist. Queued mail can retain encrypted identity metadata until it
 settles; message history remains independent. Legacy ordinary discoveries receive
 one recorded upgrade window. See [contact retention](protocols/contact-retention.md)
 for expiry, directory visibility and deletion limits.
+
+The main-screen app icon also supports immediate full local erasure with three
+activations within 1.5 seconds, without confirmation. Settings retains its
+confirmation dialog. See [quick erase](protocols/quick-erase.md) for scope and limits.

@@ -46,7 +46,7 @@ backups, memory, or remote copies.
 An expired contact can still appear in Recent through retained message history.
 The conversation remains readable, but a new message requires rediscovery or an
 explicit contact-code import. Clear history does not delete trust decisions or
-cancel existing outgoing queues. Confirmed identity wipe removes all local
+cancel existing outgoing queues. Identity wipe removes all local
 contacts, temporary metadata and queues through the existing shutdown/erasure path.
 
 The existing 1,000-contact quota remains; the menu has no old 50-row rendering

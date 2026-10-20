@@ -154,7 +154,7 @@ and commits its cooldown only after relay acceptance.
 Contacts, public bundles, mailbags, outbox dispatch, relay queues, dedup state and
 acknowledgments use encrypted protected records. Private prekey seeds use secure
 storage. Clear history keeps these delivery records, as stated in the UI. The
-confirmed identity wipe stops transports, waits for protocol work and contact
+identity wipe stops transports, waits for protocol work and contact
 mutations, invalidates queued joins/resume, and removes both protected records
 and private prekeys with the old identity keys.
 
