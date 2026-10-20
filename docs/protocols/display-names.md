@@ -1,6 +1,9 @@
 # Display names
 
-Open **Settings → Public name / nickname**, edit the name, and tap **Save**. This is the only name editor for both mesh and location channels. Setup shows
+Open **Settings → Public name / nickname**, edit the name, and tap **Save**.
+Save works with the keyboard open; the keyboard’s Done action also saves.
+A successful save dismisses the keyboard and displays confirmation.
+This is the only name editor for both mesh and location channels. Setup shows
 the saved name and a Settings link; joining never saves a second form value.
 Names are trimmed,
 nonempty, and limited to 64 UTF-8 bytes; the settings input also limits entry to

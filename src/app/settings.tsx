@@ -8,7 +8,7 @@ import { clearHistory } from '@/services/history/history';
 import { bitchatService, bitchatSessionStore } from '@/services/bitchat/bitchat.service';
 import { geohashService, geohashStore } from '@/services/geohash/geohash.service';
 import { router, useFocusEffect } from 'expo-router';
-import { ScrollView, Switch, View } from 'react-native';
+import { Keyboard, ScrollView, Switch, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { platform } from '@/platform';
 import { AppScreen } from '@/components/common/AppScreen';
@@ -36,19 +36,24 @@ export default function Settings() {
   useEffect(() => { void restoreWorkspace().catch(() => setFailed(true)); }, []);
   const { t } = useTranslation(), top = useScreenHeaderClearance();
   const preference = useThemeStore(s => s.preference), accent = useThemeStore(s => s.accent);
-  return <AppScreen edges={['bottom']}><ScrollView contentContainerStyle={{ padding: spacing.lg, paddingTop: top, gap: spacing.lg }}>
+  const nameSaveDisabled = !nameReady || clearing || networkBusy || backgroundBusy || meshBusy || geoBusy || !name.trim() || new TextEncoder().encode(name.trim()).length > 64 || name.trim() === savedName;
+  async function saveName() {
+    if (nameSaveDisabled) return;
+    setClearing(true); setFailed(false); setNameSaved(false);
+    try {
+      const value = await saveNickname(name);
+      bitchatService.rename(value); geohashService.rename(value);
+      setName(value); setSavedName(value); setNameSaved(true);
+      Keyboard.dismiss();
+    } catch { setFailed(true); } finally { setClearing(false); }
+  }
+  return <AppScreen edges={['bottom']}><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: spacing.lg, paddingTop: top, gap: spacing.lg }}>
     <AppInput label={t('mobile.shared_public_name')} value={name} maxLength={32} editable={nameReady && !clearing && !meshBusy && !geoBusy}
+      returnKeyType="done" onSubmitEditing={() => void saveName()}
       onChangeText={value => { setName(value); setNameSaved(false); }} />
     <AppText variant="caption" tone="muted">{t('mobile.name_hint')}</AppText>
-    <AppButton label={t('common.save')} variant="secondary" disabled={!nameReady || clearing || networkBusy || backgroundBusy || meshBusy || geoBusy || !name.trim() || new TextEncoder().encode(name.trim()).length > 64 || name.trim() === savedName}
-      onPress={() => void (async () => {
-        setClearing(true); setFailed(false); setNameSaved(false);
-        try {
-          const value = await saveNickname(name);
-          bitchatService.rename(value); geohashService.rename(value);
-          setName(value); setSavedName(value); setNameSaved(true);
-        } catch { setFailed(true); } finally { setClearing(false); }
-      })()} />
+    <AppButton label={t('common.save')} variant="secondary" disabled={nameSaveDisabled}
+      onPress={() => void saveName()} />
     {nameSaved && <AppText variant="caption" tone="muted" accessibilityLiveRegion="polite">{t('mobile.name_saved')}</AppText>}
     <View style={{ gap: spacing.sm }}>
       <AppText variant="subtitle">{t('mobile.mention_notifications')}</AppText>
