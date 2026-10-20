@@ -13,7 +13,7 @@ import { hexToBytes } from '@noble/hashes/utils.js';
 import { platform } from '@/platform';
 import { mobileIdentity } from '@/services/bitchat/mobile-identity';
 import { channelKey, normalizeGeoRelays } from './geohash-protocol';
-import { normalizeGeohash } from './geohash';
+import { encodeGeohash, normalizeGeohash } from './geohash';
 import { GeohashSession, type GeoMessage } from './geohash-session';
 export const DEFAULT_GEO_RELAYS = ['wss://relay.damus.io/', 'wss://nos.lol/'];
 type State = { active: boolean; busy: boolean; hash: string; connected: number; present: number; messages: GeoMessage[]; privateMessages: BitchatMessage[]; privatePeers: string[]; privateThreads: (GeoThread & { blocked: boolean; migrating: boolean })[]; publicIdentity: string; rotatesAt: number; privateActive: boolean; privateConnected: number; error: boolean };
@@ -251,10 +251,11 @@ class GeohashService {
     this.session?.stop(); this.session = undefined;
     geohashStore.setState(state => ({ active: false, busy: false, connected: 0, present: 0, messages: state.messages.map(message => message.delivery === 'sending' ? { ...message, delivery: 'failed' as const } : message) }));
   }
-  async nearby(precision: number): Promise<string> {
-    const { encodeGeohash } = await import('./geohash');
+  async nearby(precision: number): Promise<{ hash: string; neighborhood: string }> {
+    if (!Number.isInteger(precision) || precision < 1 || precision > 12) throw new Error('Invalid geohash precision');
     const { latitude, longitude } = await platform.location.currentCoordinates();
-    return encodeGeohash(latitude, longitude, precision);
+    const precise = encodeGeohash(latitude, longitude, Math.max(6, precision));
+    return { hash: precise.slice(0, precision), neighborhood: precise.slice(0, 6) };
   }
 }
 export const geohashService = new GeohashService();

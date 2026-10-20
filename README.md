@@ -6,8 +6,9 @@ phone numbers, wallets, or username registration.
 - **Nearby:** Bluetooth mesh public chat and Noise-encrypted private messages.
 - **Location channels:** public Bitchat geohash chat and presence over Nostr.
   Enter an area code manually, or choose an approximate area using optional
-  foreground location access. Region, City, and District fill the code directly;
-  custom codes can be submitted with Join. Exact coordinates are never included
+  foreground location access. Region, City, District, Neighborhood, and Block
+  show approximate sizes and fill the code directly. An empty bridge area also
+  receives the Neighborhood code. Custom codes can be submitted with Join. Exact coordinates are never included
   in events. See [location selection](docs/protocols/location-selection.md).
 - The existing theme, typography, shared controls, light/dark modes, accents,
   and localized Bitchat strings are retained. New location copy falls back to

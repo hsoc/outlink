@@ -109,9 +109,9 @@ export default function Chats() {
   }, []);
   async function selectArea(precision: number) {
     const request = ++areaRequest.current, intent = sessionIntent();
-    const hash = await geohashService.nearby(precision);
+    const { hash, neighborhood } = await geohashService.nearby(precision);
     if (request !== areaRequest.current || intent !== sessionIntent()) return;
-    workspaceStore.setState({ hash, precision });
+    workspaceStore.setState(state => ({ hash, precision, bridgeCell: state.bridgeCell.trim() ? state.bridgeCell : neighborhood }));
   }
   async function join() {
     const intent = sessionIntent();
@@ -157,7 +157,7 @@ export default function Chats() {
         {mode === 'geo' && <>
           <AppText variant="caption" tone="muted">{t('mobile.area_picker_title')}</AppText>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-            {[3, 4, 5].map(value => <AppButton key={value} label={t(`mobile.precision_${value}`)} fullWidth={false} variant="secondary"
+            {[3, 4, 5, 6, 7].map(value => <AppButton key={value} label={t('mobile.area_preset', { area: t(`mobile.precision_${value}`), size: t(`mobile.area_size_${value}`) })} fullWidth={false} variant="secondary"
               selected={!!hash && precision === value} onPress={() => void operate(() => selectArea(value))} disabled={busy} />)}
           </View>
           <AppText variant="caption" tone="muted">{t('mobile.area_picker_hint')}</AppText>

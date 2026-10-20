@@ -10,6 +10,7 @@ import type { GeoSocket } from '../geohash-session';
 jest.mock('@/platform', () => { const secrets = new Map([['outlink.mobile.identity', 'aa'.repeat(32)]]); return { platform: {
   preferences: { getItem: jest.fn(async (key: string) => key === 'mobile.nickname' ? 'Outlink1234' : JSON.stringify({ autoAreaRelays: false, internet: false })), setItem: jest.fn(async () => {}) },
   secureStorage: { getItem: jest.fn(async (key: string) => secrets.get(key) ?? null), setItem: jest.fn(async (key: string, value: string) => { secrets.set(key, value); }), deleteItem: jest.fn(async (key: string) => { secrets.delete(key); }) },
+  location: { currentCoordinates: jest.fn(async () => ({ latitude: 57.64911, longitude: 10.40744 })) },
   history: { load: async () => [], save: async () => {} }, records: { list: async () => [] },
 } }; });
 jest.mock('../relay-refresh', () => ({ refreshAreaRelays: jest.fn(async () => {}), stopRelayRefresh: jest.fn(async () => {}) }));
@@ -115,4 +116,22 @@ it('does not publish with a stale name when reading the saved nickname fails', a
   jest.mocked(platform.preferences.getItem).mockImplementationOnce(async () => { throw new Error('Name storage unavailable'); });
   await expect(geohashService.send('must not publish')).rejects.toThrow('Name storage unavailable');
   expect(sockets.flatMap(s => (s.send as jest.Mock).mock.calls.map(([data]) => JSON.parse(data))).some(frame => frame[0] === 'EVENT' && frame[1].content === 'must not publish')).toBe(false);
+});
+
+it('derives all five preset codes and the six-character bridge neighborhood from the same location fix', async () => {
+  const expected = ['u4p', 'u4pr', 'u4pru', 'u4pruy', 'u4pruyd'];
+  for (let i = 0; i < expected.length; i++) {
+    const before = jest.mocked(platform.location.currentCoordinates).mock.calls.length;
+    expect(await geohashService.nearby(i + 3)).toEqual({ hash: expected[i], neighborhood: 'u4pruy' });
+    expect(platform.location.currentCoordinates).toHaveBeenCalledTimes(before + 1);
+  }
+});
+it('rejects a denied location lookup instead of inventing a bridge suffix', async () => {
+  jest.mocked(platform.location.currentCoordinates).mockRejectedValueOnce(new Error('Location denied'));
+  await expect(geohashService.nearby(3)).rejects.toThrow('Location denied');
+});
+
+it('validates precision before requesting coordinates', async () => {
+  await expect(geohashService.nearby(0)).rejects.toThrow('Invalid geohash precision');
+  expect(platform.location.currentCoordinates).not.toHaveBeenCalled();
 });

@@ -88,3 +88,8 @@ incoming bubbles align to the start with the elevated surface. A smaller lower
 corner points toward the sender side. Preserve selectable content, sender/key
 labels, bridge attribution, private-message actions, and delivery status. Use the
 same treatment for mesh and location conversations in both themes and RTL.
+
+Location presets cover Region through Block and include approximate grid widths,
+explicitly distinguished from radio range. Derive the six-character bridge area
+from the same location fix, fill it only when empty, and preserve custom or active
+bridge choices. Choosing an area or relay policy never enables bridging.

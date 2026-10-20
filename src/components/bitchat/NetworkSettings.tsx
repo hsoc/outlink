@@ -33,7 +33,7 @@ export function NetworkSettings({ disabled, onBusyChange }: { disabled: boolean;
     <AppText variant="subtitle">{t('mobile.network_reach')}</AppText>
     <AppText tone="muted">{t('mobile.courier_hint')}</AppText>
     <AppInput label={t('mobile.gateway_area')} value={hash ?? workspace.hash} onChangeText={setHash} maxLength={12} autoCapitalize="none" autoCorrect={false} editable={!disabled && !busy} />
-    <AppInput label={t('mobile.bridge_area')} value={cell ?? workspace.bridgeCell} onChangeText={setCell} maxLength={6} autoCapitalize="none" autoCorrect={false} editable={!disabled && !busy} />
+    <AppInput label={t('mobile.bridge_area')} description={t('mobile.bridge_area_hint')} value={cell ?? workspace.bridgeCell} onChangeText={setCell} maxLength={6} autoCapitalize="none" autoCorrect={false} editable={!disabled && !busy} />
     <AppButton label={t('mobile.automatic_area_relays')} variant="secondary" selected={workspace.autoAreaRelays} disabled={disabled || busy || !workspace.ready} onPress={() => void apply({ autoAreaRelays: !workspace.autoAreaRelays })} />
     <AppText variant="caption" tone="muted">{t('mobile.automatic_area_hint')}</AppText>
     <AppInput label={t('mobile.relays')} value={relays ?? workspace.relays} onChangeText={setRelays} maxLength={1536} multiline autoCapitalize="none" autoCorrect={false} editable={!disabled && !busy} />
