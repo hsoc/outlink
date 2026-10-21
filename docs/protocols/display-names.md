@@ -52,3 +52,11 @@ and queued messages keep the label captured when they were created.
 Regression tests exercise saved-name startup, posting after a persisted edit
 without a direct rename callback, restart with a stale name snapshot, the signed
 location event nickname tag and displayed local echo, and the local private label.
+
+The main chat/setup screen subscribes to the persisted nickname store. Save updates
+its displayed name and mention matching immediately, without Join, reconnection,
+or a focus refresh. Preference loads publish inside the serialized storage
+operation so an older asynchronous screen callback cannot overwrite a newer
+saved display name. Failed writes do not publish an unsaved value; full identity
+wipe clears this reactive state. Existing message history retains its original
+sender labels.

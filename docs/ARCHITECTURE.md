@@ -106,3 +106,8 @@ Group membership and key epochs are serialized separately from network waits;
 UI stores contain metadata, never symmetric keys. Group messages use their own
 encrypted histories/drafts and never enter public, bridge, geohash or courier
 send paths. Full wipe removes group state; history clearing retains membership.
+
+The persisted nickname store publishes only completed storage reads/writes from
+the serialized preference boundary. Chat/setup and mention highlighting observe
+it directly instead of maintaining another asynchronous screen copy. Identity
+erasure clears this transient store as well as the persisted preference.

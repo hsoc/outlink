@@ -1,3 +1,4 @@
+import { resetNickname } from '@/services/preferences/nickname';
 import { mentionService } from '@/services/mentions/mentions';
 import { invalidateSessionIntent } from '@/services/history/lifecycle';
 import { bitchatService, bitchatSessionStore } from './bitchat.service';
@@ -10,7 +11,7 @@ import { resetMobileIdentity } from './mobile-identity';
 let wiping: Promise<void> | undefined;
 export function panicWipe(): Promise<void> {
   return wiping ??= (async () => {
-    invalidateSessionIntent();
+    invalidateSessionIntent(); resetNickname();
     workspaceStore.setState({ keepBackground: false, backgroundError: false });
     // Native notification/service cleanup must not prevent transport shutdown and key deletion.
     await platform.backgroundConnectivity?.stop().catch(() => {});
@@ -22,6 +23,7 @@ export function panicWipe(): Promise<void> {
       await platform.wipeLocalData();
       await resetMobileIdentity();
     });
+    resetNickname();
     bitchatService.resetLocalState(); geohashService.clearMessages();
     geohashStore.setState({ hash: '' }); contactsStore.setState({ contacts: [], ready: false });
     workspaceStore.setState({ ready: true });

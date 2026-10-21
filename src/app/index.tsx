@@ -27,7 +27,7 @@ import { appendMention, mentionMatcher, mentionTargetName } from '@/lib/mentions
 import { panicWipe } from '@/services/bitchat/panic';
 import { QuickEraseButton } from '@/components/bitchat/QuickEraseButton';
 import { normalizeGeohash } from '@/services/geohash/geohash';
-import { ensureNickname } from '@/services/preferences/nickname';
+import { ensureNickname, nicknameStore } from '@/services/preferences/nickname';
 import { radius, spacing, uiDensity, useThemeColors } from '@/theme';
 
 export default function Chats() {
@@ -46,7 +46,8 @@ export default function Chats() {
   const draftKey = mode === 'mesh' ? `mesh:${recipient ?? 'public'}` : `geo:${hash.trim().toLowerCase().replace(/^#/, '')}${geoRecipient ? ':private:' + geoRecipient : ''}`;
   const draft = workspace.drafts[draftKey] ?? '';
   const setDraft = (value: string) => workspaceStore.setState(state => ({ drafts: { ...state.drafts, [draftKey]: value } }));
-  const [name, setName] = useState(''), [ready, setReady] = useState(false);
+  const name = useStore(nicknameStore, state => state.name);
+  const [ready, setReady] = useState(false);
   const mentioned = useMemo(() => mentionMatcher(name), [name]);
   const [working, setWorking] = useState(false), [editingArea, setEditingArea] = useState(false);
   const [wiping, setWiping] = useState(false), [wipeStatus, setWipeStatus] = useState<'done' | 'failed' | null>(null);
@@ -70,10 +71,10 @@ export default function Chats() {
     m.recipient && (m.peer === recipient || m.recipient === recipient) : !m.recipient), [mode, recipient, mesh.messages, geo.messages, geo.privateMessages, geoRecipient]);
   useEffect(() => {
     let alive = true;
-    void Promise.all([ensureNickname(), restoreWorkspace(), bitchatService.restore(), contactsService.restore()]).then(async ([value]) => {
+    void Promise.all([ensureNickname(), restoreWorkspace(), bitchatService.restore(), contactsService.restore()]).then(async () => {
       const savedHash = workspaceStore.getState().hash;
       if (savedHash) await geohashService.restore(savedHash).catch(() => {});
-      if (alive) { setName(value); setReady(true); }
+      if (alive) setReady(true);
     }).catch(() => { if (alive) { setReady(true); setActionError('other'); } });
     return () => { alive = false; };
   }, [t]);
@@ -93,7 +94,7 @@ export default function Chats() {
   }
   useFocusEffect(useCallback(() => {
     let alive = true;
-    void ensureNickname().then(value => { if (alive) setName(value); }).catch(() => { if (alive) setActionError('other'); });
+    void ensureNickname().catch(() => { if (alive) setActionError('other'); });
     return () => { alive = false; };
   }, []));
   const quickErase = useCallback(() => {
@@ -103,9 +104,9 @@ export default function Chats() {
     void (async () => {
       try {
         await panicWipe();
-        setName(''); setPrivateTarget(undefined); setEditingArea(false); setWorking(false); setActionError(null);
+        setPrivateTarget(undefined); setEditingArea(false); setWorking(false); setActionError(null);
         setWipeStatus('done');
-        try { setName(await ensureNickname()); } catch { setActionError('other'); }
+        try { await ensureNickname(); } catch { setActionError('other'); }
       } catch { setWipeStatus('failed'); }
       finally { wipingRef.current = false; setWiping(false); }
     })();
@@ -119,7 +120,6 @@ export default function Chats() {
   async function join() {
     const intent = sessionIntent();
     const value = await ensureNickname();
-    setName(value);
     const identity = mode === 'mesh' ? await mobileIdentity() : undefined;
     if (intent !== sessionIntent()) throw new Error('Join canceled');
     if (identity) await bitchatService.start(identity, value);
