@@ -1,3 +1,4 @@
+import { groupCommand } from '@/services/bitchat/compatibility/group-commands';
 import { sessionIntent } from '@/services/history/lifecycle';
 import { isChatAtLatest } from '@/lib/chat-scroll';
 import { areaRelays } from '@/services/geohash/relay-directory';
@@ -125,7 +126,12 @@ export default function Chats() {
     else { await geohashService.join(hash, value, workspace.autoAreaRelays ? areaRelays(hash) : relays.split(/\s+/).filter(Boolean)); await bitchatService.refreshNetwork(); setEditingArea(false); }
   }
   async function send() {
-    if (mode === 'mesh') await bitchatService.send(draft, recipient, workspace.nearbyOnly);
+    const command = mode === 'mesh' ? groupCommand(draft) : null;
+    if (command) {
+      if (command.action === 'create') { const id = await bitchatService.createGroup(command.argument); router.push({ pathname: '/groups', params: { id } }); }
+      else if (command.action === 'list') router.push('/groups');
+      else throw new Error('Select a private group for this command');
+    } else if (mode === 'mesh') await bitchatService.send(draft, recipient, workspace.nearbyOnly);
     else if (geoRecipient) await geohashService.sendPrivate(geoRecipient, draft);
     else await geohashService.send(draft);
     workspaceStore.setState(state => state.drafts[draftKey] === draft ? { drafts: { ...state.drafts, [draftKey]: '' }, ...(mode === 'mesh' && !recipient ? { nearbyOnly: false } : {}) } : state);
@@ -133,7 +139,8 @@ export default function Chats() {
   // Disconnected peers are marked lastSeen=0 by BitchatSession; avoid a clock read during render.
   const onlinePeerCount = mesh.peers.filter(p => p.lastSeen > 0).length;
   const hasMeshPeers = onlinePeerCount > 0;
-  const canSendPublicMesh = hasMeshPeers || (workspace.bridge && !workspace.nearbyOnly);
+  const groupAction = mode === 'mesh' && /^\/group(?:\s|$)/i.test(draft.trim());
+  const canSendPublicMesh = groupAction && mesh.active || hasMeshPeers || (workspace.bridge && !workspace.nearbyOnly);
   const isComposing = active || (mode === 'mesh' ? mesh.messages.length > 0 || savedContacts.length > 0 || !!recipient : geo.messages.length > 0 || geo.privateMessages.length > 0 || geo.privatePeers.length > 0);
   const transportHint = mode === 'mesh'
     ? `Bluetooth · ${mesh.active ? (hasMeshPeers ? t('mobile.mesh_connected', { count: onlinePeerCount }) : t('mobile.mesh_searching')) : t('mobile.disconnected')}`
@@ -176,6 +183,7 @@ export default function Chats() {
         {mode === 'mesh' ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
           <AppButton label={t('bitchat.public')} variant="secondary" fullWidth={false} selected={!recipient} onPress={() => setRecipient(undefined)} />
           {recipient && <AppButton label={`${selectedName} · ${t(selectedOnline ? 'mobile.mesh_online' : 'mobile.mesh_offline')}`} labelNumberOfLines={1} variant="secondary" fullWidth={false} selected onPress={() => router.push('/contacts')} />}
+          <AppButton label={t('groups.title')} variant="text" fullWidth={false} onPress={() => router.push('/groups')} />
           <AppButton label={t('mobile.contacts')} variant="text" fullWidth={false} onPress={() => router.push('/contacts')} />
         </View> : <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, alignItems: 'center' }}><AppText variant="caption" tone="muted">#{geo.hash}</AppText><AppButton label={t('mobile.change_area')} variant="text" fullWidth={false} disabled={busy} onPress={() => setEditingArea(true)} /></View>}
         {mode === 'geo' && <View style={{ gap: spacing.xs }}>

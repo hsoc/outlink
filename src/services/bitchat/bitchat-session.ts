@@ -1,3 +1,4 @@
+import { groupEnvelope } from './compatibility/group-protocol';
 import { MeshRouting, nextRoute, selectFanout, relayTiming } from './compatibility/routing';
 import { verificationResponseBytes } from './compatibility/verification';
 import { GossipCache, decodeSync } from './compatibility/gossip';
@@ -19,7 +20,7 @@ export type BitchatMessage = { id: string; peer: string; recipient?: string; nam
 type KnownPeer = BitchatPeer & { ingress: string; noiseKey: Uint8Array; signingKey: Uint8Array };
 type Negotiation = { handshake: BitchatHandshake; at: number; promise: Promise<void>;
   resolve: () => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> };
-type Callbacks = { extension?(packet: BitchatPacket, context: ExtensionContext): Promise<boolean>; peer: (peer: BitchatPeer) => void; message: (message: BitchatMessage) => void;
+type Callbacks = { groupState?(peer: BitchatPeer, payload: Uint8Array, invite: boolean): Promise<void>; extension?(packet: BitchatPacket, context: ExtensionContext): Promise<boolean>; peer: (peer: BitchatPeer) => void; message: (message: BitchatMessage) => void;
   receipt: (id: string, sender: string, status: 'sent' | 'delivered' | 'read' | 'failed') => void; error: (error: Error) => void };
 
 /** MIT implementation of the Bitchat bearer/session rules, with bounded ephemeral state. */
@@ -173,6 +174,16 @@ export class BitchatSession {
     const packet = signPacket(this.packet(type, payload, peer), this.identity.signingSeed);
     await this.broadcast(packet, undefined, link);
     if (type === BitchatType.prekeys) this.gossip.add(packet);
+  }
+  groupArchive(id?: string): BitchatPacket[] { return this.gossip.entries().filter(packet => packet.type === BitchatType.group && (!id || groupEnvelope(packet.payload).id === id)); }
+  async sendGroupState(peer: string, data: Uint8Array, invite: boolean): Promise<void> {
+    const cipher = await this.ensureCipher(peer);
+    await this.broadcast(this.packet(BitchatType.encrypted, cipher.seal(join(Uint8Array.of(invite ? 6 : 7), data)), peer));
+  }
+  async sendGroup(data: Uint8Array): Promise<void> {
+    if (!this.running || !this.links.size) throw new Error('No Bluetooth route');
+    const packet = this.packet(BitchatType.group, data);
+    await this.broadcast(packet); this.remember(this.seen, packetId(packet)); this.gossip.add(packet);
   }
   async sendReceipt(peer: string, id: string, status: 'delivered' | 'read') {
     if (!id || bytes(id).length > 255) throw new Error('Invalid receipt ID');
@@ -445,6 +456,10 @@ export class BitchatSession {
         finally { this.syncSending.delete(ingress); }
       })();
       return;
+    } else if (packet.type === BitchatType.group) {
+      if (!isBroadcast(packet) || packet.route?.length) return;
+      if (!await this.callbacks.extension?.(packet, { link: ingress, authenticated: false })) return;
+      this.gossip.add(packet);
     } else if ([BitchatType.courier, BitchatType.prekeys, BitchatType.carrier].includes(packet.type as 4 | 36 | 40)) {
       const known = this.peers.get(packet.sender);
       if (packet.type === BitchatType.prekeys && !known) {
@@ -541,6 +556,8 @@ export class BitchatSession {
         this.callbacks.message({ id: messageId, peer: peer.id, recipient: this.id, name: peer.name,
           content, timestamp: packet.timestamp, outgoing: false, delivery: 'delivered' });
       await this.broadcast(this.packet(BitchatType.encrypted, cipher.seal(join(Uint8Array.of(3), bytes(messageId))), peer.id));
+    } else if ((plain[0] === 6 || plain[0] === 7) && !oldSession) {
+      await this.callbacks.groupState?.(peer, plain.subarray(1), plain[0] === 6);
     } else if (plain[0] === 2 || plain[0] === 3) {
       const messageId = text(plain.subarray(1));
       if (bytes(messageId).length <= 255) this.callbacks.receipt(messageId, peer.id, plain[0] === 2 ? 'read' : 'delivered');

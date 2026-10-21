@@ -52,3 +52,12 @@ it('keeps the newest signed generation per prekey owner and caps the prekey goss
   cache.add(latest); cache.add({ ...latest, timestamp: now + 10, payload: payload(now) });
   expect(cache.entries(now).find(packet => packet.sender === latest.sender)?.payload).toEqual(latest.payload);
 });
+
+it('requests group bit 10 and retains opaque group history for six hours', () => {
+  const now = Date.now(), cache = new GossipCache();
+  const group = { ...packet(now - 3600000), type: 37 };
+  cache.add(group);
+  expect(decodeSync(cache.request(now)).types! & 1 << 10).toBe(1 << 10);
+  expect(cache.missing({ p: 7, m: 1, data: new Uint8Array(), types: 1 << 10 }, now)).toEqual([group]);
+  expect(cache.entries(now + 21600000)).toEqual([]);
+});

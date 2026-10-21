@@ -221,5 +221,31 @@
     "change_name": "Change name in Settings",
     "name_hint": "Shown in Nearby, public location messages, and contact codes. Changing your name keeps your identity and conversations. New profiles start with Outlink followed by four random digits.",
     "name_saved": "Name saved for Nearby and location channels. New messages use this name; nearby peers receive it through discovery announcements."
+  },
+  "groups": {
+    "title": "Private groups",
+    "name": "Group name",
+    "create": "Create group",
+    "all": "All groups",
+    "members": "Members",
+    "leave": "Leave group",
+    "leave_hint": "Leave this group and delete its local key? A new invitation after a key rotation is required to rejoin.",
+    "creator_leave_hint": "Leaving as creator ends your ability to manage this group. Other members keep their existing keys. Create a new group to start again.",
+    "privacy_hint": "Encrypted Bluetooth group chat. No internet relay or courier delivery. Membership does not mean someone is online. Sent messages have no per-member delivery confirmation.",
+    "connect_hint": "Join Nearby on the chat screen to create, manage or send to Bluetooth groups.",
+    "empty": "No private groups",
+    "empty_hint": "Create a group and invite nearby people with group-capable apps, or accept an invitation here.",
+    "invitation": "Invitation",
+    "accept": "Accept invitation",
+    "invite": "Invite a member",
+    "invite_hint": "Only reachable group-capable peers appear. Invite and key updates are retried on reconnect. Official Bitchat clients may reject groups larger than 16; Outlink uses the wire format’s maximum of 255.",
+    "creator": "Creator",
+    "you": "You",
+    "remove": "Remove member",
+    "remove_hint": "Remove this member and rotate the group key? Offline members receive the new key when they reconnect to the creator.",
+    "older": "Load earlier messages",
+    "message": "Group message or /group command",
+    "commands_hint": "/group create <name> · /group invite @name · /group remove @name · /group members · /group leave · /group list. Use a full fingerprint if names are ambiguous. Joining requires an invitation.",
+    "failed": "Group action failed. Check the name or command, Bluetooth connection and member permissions."
   }
 }

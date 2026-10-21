@@ -4,7 +4,7 @@ import { ed25519, x25519 } from '@noble/curves/ed25519.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { saveNickname } from '@/services/preferences/nickname';
 import { bytesToHex } from '@noble/hashes/utils.js';
-import { bitchatService, bitchatSessionStore } from '../bitchat.service';
+import { bitchatService, bitchatSessionStore, meshGroupsStore } from '../bitchat.service';
 import { contactsService, contactsStore } from '../compatibility/contacts';
 import { memoryStorage } from '../test-support/protocol-storage';
 import { BitchatSession } from '../bitchat-session';
@@ -140,4 +140,19 @@ it('passes newly received public mesh messages to mention handling', async () =>
   active.callbacks.message(incoming); active.callbacks.message(incoming);
   expect(mentionService.received).toHaveBeenCalledTimes(1);
   expect(mentionService.received).toHaveBeenCalledWith(incoming, 'mesh', 'public', expect.any(String));
+});
+
+it('isolates group history and drafts from public chats and clears group memory with history', async () => {
+  await bitchatService.start(root, 'Outlink1234');
+  const id = await bitchatService.createGroup('Crew');
+  expect(meshGroupsStore.getState().groups[0]).toMatchObject({ id, name: 'Crew', status: 'joined' });
+  expect(meshGroupsStore.getState().groups[0]).not.toHaveProperty('key');
+  const before = meshGroupsStore.getState().historyEpoch;
+  meshGroupsStore.setState({ messages: [{ id: 'm', group: id, sender: 'self', name: 'Me', content: 'secret', timestamp: Date.now(), outgoing: true }] });
+  bitchatService.clearMessages();
+  expect(meshGroupsStore.getState().messages).toEqual([]);
+  expect(meshGroupsStore.getState().historyEpoch).toBe(before + 1);
+  await bitchatService.stop();
+  expect(meshGroupsStore.getState().groups[0].id).toBe(id);
+  bitchatService.resetLocalState(); expect(meshGroupsStore.getState().groups).toEqual([]);
 });

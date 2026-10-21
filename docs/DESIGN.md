@@ -103,3 +103,9 @@ the saved shared nickname receive an accent bubble outline and a text label,
 independent of OS permissions. Local mention notifications are explicitly opt-in
 in Settings and use generic previews without names, text or area codes. Explain
 that a live connection is required and that this does not add remote push.
+
+Private Bluetooth groups have a separate group list and conversation, using shared
+bubbles and controls. Offer buttons alongside `/group` commands, explicit invitation
+acceptance, creator management, and full member fingerprints. Keep roster membership
+separate from live reachability. Distinguish encrypted group broadcasts from public
+mesh and 1:1 receipt semantics; explain local leave and creator departure.

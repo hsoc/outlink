@@ -3,7 +3,7 @@
 Report vulnerabilities through the repository's private reporting channel when
 available: https://github.com/hsoc/outlink/security/advisories/new.
 
-Bluetooth private chat uses the retained Bitchat Noise XX implementation and
+Bluetooth 1:1 private chat uses the retained Bitchat Noise XX implementation and
 stable device keys in platform secure storage. Public mesh and geohash messages
 are public. Fingerprint comparison remains necessary for peer verification.
 There is no assertion of an independent security audit or guaranteed anonymity.
@@ -15,8 +15,9 @@ Historical signing keys, relays, nicknames, and radio metadata still have privac
 implications. See docs/PRIVACY.md and docs/protocols/geohash.md.
 
 No remote-event content is executed, rendered as HTML, or used as a relay URL.
-No internet push, Tor, Nostr private-message fallback, or background delivery is
-implemented in the mobile-only app. Do not send sensitive data in public channels.
+Remote push and Tor are not implemented. Optional Bitchat internet private
+messages and Android background connectivity have documented delivery limits;
+local mention alerts do not add remote wake-up. Do not send sensitive data in public channels.
 
 ## Local storage
 
@@ -36,3 +37,14 @@ parsing to reduce exposure to the remaining decode-uri-component finding.
 No blanket SDK upgrade, forced overrides, or audit suppression was applied.
 See the [dependency assessment](docs/security/dependency-review.md) for exact
 versions, paths, remaining risks, and validation.
+
+## Private Bluetooth groups
+
+Group state requires both authenticated Noise creator identity and a signed,
+pinned creator roster; encrypted group messages require a roster-member signature.
+Removal rotates keys without giving the removed peer the replacement key. Keys
+and membership records are authenticated/encrypted under the local storage key.
+The explicit [group security profile](docs/protocols/private-groups.md) describes
+metadata exposure, replay/epoch checks, consent, departure, retention, resource
+bounds and the intentional 255-versus-16-member compatibility difference. This
+creator-managed symmetric-key design is not MLS and is not independently audited.

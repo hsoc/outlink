@@ -1,3 +1,4 @@
+import { GroupRuntime, type GroupInfo, type GroupMessage } from './compatibility/group-runtime';
 import { mentionService } from '@/services/mentions/mentions';
 import { ensureNickname, validateNickname } from '@/services/preferences/nickname';
 import { refreshAreaRelays } from '@/services/geohash/relay-refresh';
@@ -56,7 +57,9 @@ function contactsStoreLookup(sender: string) {
     try { if (!contact.npub) return false; const decoded = decodeNpub(contact.npub); return decoded.type === 'npub' && decoded.data === sender; } catch { return false; }
   });
 }
+export const meshGroupsStore = createStore<{ groups: GroupInfo[]; messages: GroupMessage[]; self: string; historyEpoch: number }>(() => ({ groups: [], messages: [], self: '', historyEpoch: 0 }));
 class BitchatService {
+  private groups?: GroupRuntime;
   connection?: { account: string; name: string };
   private prekeys?: PrekeyRuntime;
   private couriers?: CourierRuntime;
@@ -181,6 +184,8 @@ class BitchatService {
       if (session.directPeers().includes(peer)) {
         await session.authenticateDirect(peer);
         await this.flushReceipts(peer);
+      } else if (this.groups?.needsConnection(contact.fingerprint) && !bitchatSessionStore.getState().peers.find(p => p.id === peer)?.secure) {
+        await session.rekey(peer);
       }
       if (session !== this.session) return;
       await this.couriers?.encounter(hexToBytes(contact.noiseKey), contact.favorite ? 'favorite' : 'verified', session.authenticatedDirect(peer),
@@ -191,6 +196,10 @@ class BitchatService {
     this.encounters.set(peer, work); return work;
   }
   private async extension(packet: BitchatPacket, context: ExtensionContext): Promise<boolean> {
+    if (packet.type === BitchatType.group) {
+      if (!this.groups) return false;
+      await this.groups.receiveMessage(packet.payload); return true;
+    }
     if (packet.type === BitchatType.prekeys) {
       if (!context.signingKey || !context.noiseKey || !this.prekeys || !isBroadcast(packet)) return false;
       const bundle = decodePrekeys(packet.payload, context.signingKey);
@@ -300,7 +309,7 @@ class BitchatService {
         if (count > 0) void this.flushAll().catch(() => bitchatSessionStore.setState({ error: true }));
       }, error: () => bitchatSessionStore.setState({ error: true }),
     }, protocolStorage);
-    session.setCapabilities(1 | (options.gateway ? 4 : 0) | (options.bridge ? 128 : 0));
+    session.setCapabilities(9 | (options.gateway ? 4 : 0) | (options.bridge ? 128 : 0));
     await this.network.start();
     geohashService.meshFallback = (event, hash) => this.network?.uplinkGeo(event, hash) ?? Promise.resolve(false);
   }
@@ -339,6 +348,7 @@ class BitchatService {
   private hydrated = false;
   private historyVersion = 0;
   clearMessages(): void {
+    meshGroupsStore.setState(s => ({ messages: [], historyEpoch: s.historyEpoch + 1 }));
     ++this.historyVersion; this.before = undefined;
     bitchatSessionStore.setState({ messages: [] });
   }
@@ -385,11 +395,21 @@ class BitchatService {
         this.prekeys = new PrekeyRuntime(this.identity, protocolStorage, { get: () => platform.secureStorage.getItem(prekeyKey), set: value => platform.secureStorage.setItem(prekeyKey, value) });
         await this.prekeys.bundle(); this.couriers = new CourierRuntime(protocolStorage);
         name = await ensureNickname();
+        const groups = new GroupRuntime(this.identity, protocolStorage, {
+          state: async (peer, data, invite) => { if (this.groups !== groups || !this.session || contactsService.get(peer)?.blocked) throw new Error('Group session unavailable'); await this.session.sendGroupState(peer, data, invite); },
+          broadcast: async data => { if (this.groups !== groups || !this.session) throw new Error('Group session unavailable'); await this.session.sendGroup(data); },
+          changed: list => meshGroupsStore.setState({ groups: list, self: groups.self.fingerprint }),
+          message: message => this.storeGroupMessage(message),
+        });
+        this.groups = groups; await groups.restore();
         this.session = new BitchatSession(platform.proximityTransport, this.identity, name, {
+          groupState: async (peer, payload, invite) => { if (!contactsService.get(peer.id)?.blocked) { const changed = await this.groups?.receiveState(peer, payload, invite); if (changed) await this.replayGroups(); } },
           extension: (packet, context) => this.extension(packet, context),
           peer: peer => {
             const pin = contactsService.get(peer.id);
             if (pin?.blocked || pin && pin.noiseKey !== peer.noisePublicKey) return;
+            if (!peer.secure) this.groups?.disconnected(peer.id);
+            if (peer.authenticatedCapabilities) void this.track(this.groups?.sync(peer) ?? Promise.resolve()).catch(() => bitchatSessionStore.setState({ error: true }));
             const old = bitchatSessionStore.getState().peers.find(p => p.id === peer.id);
             bitchatSessionStore.setState(state => {
               const peers = state.peers.filter(p => p.id !== peer.id); peers.push({ ...peer }); return { peers };
@@ -409,7 +429,8 @@ class BitchatService {
           receipt: (id, sender, delivery) => { void this.track(this.receipt(id, sender, delivery)).catch(() => bitchatSessionStore.setState({ error: true })); },
           error: () => bitchatSessionStore.setState({ error: true }),
         }, randomBytes, { ...await gossipArchive(() => bitchatSessionStore.setState({ error: true })), pins: contactsStore.getState().contacts.filter(contact => contact.verified || contact.favorite).map(contact => ({ id: contact.id, noiseKey: contact.noiseKey, signingKey: contact.signingKey })) });
-        this.session.setCapabilities(1);
+        await this.replayGroups();
+        this.session.setCapabilities(9);
         await this.session.start();
         this.connection = { account, name: this.session.nickname ?? name };
         bitchatSessionStore.setState({ active: true, busy: false, id: this.session.id, account });
@@ -447,8 +468,10 @@ class BitchatService {
     const mailbox = this.mailbox; this.mailbox = undefined; this.internetConnections = 0;
     mailbox?.stop(); await mailbox?.settled();
     const session = this.session; this.session = undefined;
-    try { if (session) await session.stop(); await this.outbox.idle(); await Promise.allSettled([...this.operations]); await Promise.allSettled([...this.flushes.values()]); await this.flushingAll?.catch(() => {}); await Promise.allSettled([...this.encounters.values()]); await this.network?.idle(); await this.prekeys?.idle(); await this.couriers?.idle(); await contactsService.idle(); }
+    const groups = this.groups; this.groups = undefined;
+    try { if (session) await session.stop(); await this.outbox.idle(); await Promise.allSettled([...this.operations]); await Promise.allSettled([...this.flushes.values()]); await this.flushingAll?.catch(() => {}); await Promise.allSettled([...this.encounters.values()]); await this.network?.idle(); await this.prekeys?.idle(); await this.couriers?.idle(); await contactsService.idle(); await groups?.idle(); }
     finally {
+      groups?.stop();
       this.identity?.noiseSeed.fill(0); this.identity?.signingSeed.fill(0);
       this.identity = undefined; this.account = undefined; this.prekeys = undefined; this.couriers = undefined; this.network = undefined; this.lastPrekeys = 0;
       bitchatSessionStore.setState(state => ({ active: false, busy: false, peers: [], bridgeRelays: 0, privateRelays: 0, messages: state.messages.map(message => message.delivery === 'sending' ? { ...message, delivery: 'failed' as const } : message) }));
@@ -558,7 +581,59 @@ class BitchatService {
       !m.outgoing && m.peer === peer && m.id === id ? { ...m, delivery: 'read' } : m) }));
     if (this.session) { try { await this.flushReceipts(peer); } catch { /* Keep the durable acknowledgment for reconnect. */ } }
   }
-  resetLocalState() { this.hydrated = false; this.before = undefined; ++this.historyVersion; bitchatSessionStore.setState(empty, true); }
+  private async replayGroups(id?: string) {
+    const groups = this.groups;
+    for (const packet of this.session?.groupArchive?.(id) ?? []) {
+      if (!groups || groups !== this.groups) return;
+      try { await groups.receiveMessage(packet.payload); } catch { /* Opaque cache entries may belong to another key or contain invalid ciphertext. */ }
+    }
+  }
+  private async storeGroupMessage(message: GroupMessage) {
+    if (contactsStore.getState().contacts.some(c => c.fingerprint === message.sender && c.blocked)) return;
+    await historyOperation(async () => {
+      const room = `group:${message.group}`, id = `${message.sender}:${message.id}`;
+      if (await platform.history.get(room, id)) return;
+      await platform.history.save(room, id, JSON.stringify(message));
+      meshGroupsStore.setState(state => ({ messages: [...state.messages, message].sort((a, b) => a.timestamp - b.timestamp).slice(-500) }));
+    });
+  }
+  async groupHistory(id: string, before?: number) {
+    const rows = await historyOperation(() => platform.history.load(`group:${id}`, before));
+    return { messages: rows.map(row => JSON.parse(row.value) as GroupMessage), before: rows[0]?.sequence };
+  }
+  createGroup(name: string) { return this.track((async () => { const groups = this.groups; if (!groups) throw new Error('Join Bluetooth first'); return groups.create(name, await ensureNickname()); })()); }
+  acceptGroup(id: string) { const groups = this.groups; if (!groups) return Promise.reject(new Error('Join Bluetooth first')); return this.track(groups.accept(id).then(() => this.replayGroups(id))); }
+  leaveGroup(id: string) { if (!this.groups) return Promise.reject(new Error('Join Bluetooth first')); return this.track(this.groups.leave(id)); }
+  sendGroup(id: string, content: string) { return this.track((async () => { const groups = this.groups; if (!groups) throw new Error('Join Bluetooth first'); await groups.send(id, await ensureNickname(), content); })()); }
+  private async syncGroups() {
+    const groups = this.groups; if (!groups) return;
+    await Promise.allSettled(bitchatSessionStore.getState().peers.filter(p => p.secure && p.authenticatedCapabilities && !contactsService.get(p.id)?.blocked).map(p => groups.sync(p)));
+  }
+  inviteGroup(id: string, peerId: string) {
+    return this.track((async () => {
+      const session = this.session, groups = this.groups; if (!session || !groups) throw new Error('Join Bluetooth first');
+      if (contactsService.get(peerId)?.blocked) throw new Error('Contact blocked');
+      let peer = bitchatSessionStore.getState().peers.find(p => p.id === peerId);
+      if (!peer?.lastSeen || !(peer.capabilities! & 8)) throw new Error('Group-capable live peer required');
+      if (!peer.authenticatedCapabilities) {
+        await session.rekey(peerId);
+        await new Promise<void>((resolve, reject) => {
+          const check = () => bitchatSessionStore.getState().peers.find(p => p.id === peerId)?.authenticatedCapabilities;
+          if (check()) { resolve(); return; }
+          const timer = setTimeout(() => { unsubscribe(); reject(new Error('Group peer authentication timed out')); }, 10000);
+          const unsubscribe = bitchatSessionStore.subscribe(() => { if (check()) { clearTimeout(timer); unsubscribe(); resolve(); } });
+        });
+      }
+      if (this.groups !== groups || this.session !== session) throw new Error('Group session changed');
+      peer = bitchatSessionStore.getState().peers.find(p => p.id === peerId);
+      if (!peer) throw new Error('Peer left');
+      await groups.invite(id, peer); await this.syncGroups();
+    })());
+  }
+  removeGroupMember(id: string, fingerprint: string) {
+    return this.track((async () => { const groups = this.groups; if (!groups) throw new Error('Join Bluetooth first'); await groups.remove(id, fingerprint); await this.syncGroups(); })());
+  }
+  resetLocalState() { meshGroupsStore.setState(s => ({ groups: [], messages: [], self: '', historyEpoch: s.historyEpoch + 1 })); this.hydrated = false; this.before = undefined; ++this.historyVersion; bitchatSessionStore.setState(empty, true); }
   removeIdentity(account: string): Promise<void> {
     return this.transition(async () => {
       if (this.account === account) await this.stopInternal();

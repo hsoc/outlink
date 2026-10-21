@@ -53,3 +53,15 @@ Confirm priorities with the maintainer before starting a major new feature.
 
 Before preparing a release or writing a changelog, read `docs/RELEASING.md` and
 follow its changelog conventions.
+
+# Private Bluetooth groups
+
+Private groups are explicitly authorized project scope. Read
+[`docs/protocols/private-groups.md`](docs/protocols/private-groups.md) before changes
+to group protocols, storage, commands or UI. Preserve creator/Noise identity
+binding, roster signing-key checks, monotonic epochs and removal-key isolation.
+Never route group payloads through public chat, geohash, bridge or courier paths.
+The 16-member upstream product policy is deliberately removed; the one-byte
+wire count and anti-abuse/resource bounds remain. Keep capability advertisement,
+receive/send lifecycle, encrypted persistence, gossip, wipe and documentation in
+sync. Do not claim unlimited size or physical interoperability from codec tests.

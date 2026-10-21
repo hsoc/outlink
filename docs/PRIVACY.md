@@ -104,3 +104,13 @@ Previews omit message text, names and area codes; no push tokens are requested o
 uploaded. Notification permission does not change background delivery limits.
 See [mentions](protocols/mentions.md) for matching, duplicate-name behavior,
 retention, rate limits and erasure cleanup.
+
+Private Bluetooth groups encrypt content with a creator-managed epoch key;
+authenticated Noise sessions carry invitations and key updates. Members receive
+the roster and signing identities. Nonmembers can relay opaque group packets and
+observe group ID, epoch, outer radio identity, timing and size. Membership persists
+through disconnection, so the roster is not an online-user list. Group keys,
+rosters, invitation decisions, histories and drafts are encrypted locally and
+removed by full wipe; removal/leave cannot erase other members' saved copies.
+See [private groups](protocols/private-groups.md) for consent, rotation, local leave,
+retention, protocol limits and official-client differences.

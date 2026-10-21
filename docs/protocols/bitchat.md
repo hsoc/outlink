@@ -29,7 +29,8 @@ Implemented:
 The separate geohash transport is described in [geohash.md](geohash.md).
 Courier/prekey runtime and gateway/bridge carriers are implemented; see
 [courier and bridge](courier-and-bridge.md) for lifecycle, consent and limits.
-Groups, board posts, files, voice and rotating-ID presence remain unimplemented.
+Private groups are implemented; see [private groups](private-groups.md).
+Board posts, files, voice and rotating-ID presence remain unimplemented.
 The outbox retries when a route becomes available; delivery is not guaranteed. Optional favorite internet delivery uses the independent private
 envelope implementation described in the compatibility inventory.
 
@@ -157,6 +158,7 @@ Decrypted payload begins with one type byte:
 | `0x01` | Private-message TLVs: `0x00` message ID, `0x01` UTF-8 text |
 | `0x02` | Read receipt: original message ID as UTF-8 |
 | `0x03` | Delivery receipt: original message ID as UTF-8 |
+| `0x06` / `0x07` | Creator-authenticated group invitation / state update: [TLV16 profile](private-groups.md) |
 | `0x10` | Verification challenge: one-byte TLVs `1` target Noise key hex, `2` nonce[16] |
 | `0x11` | Verification response: same TLVs plus `3` Ed25519 signature[64] |
 | `0x21` | Version `1`, then TLVs: `0x01` capabilities, `0x02` signing key |
@@ -166,8 +168,9 @@ Reserved session replacement and encrypted capability updates are detailed in
 [connection lifecycle](connection-and-internet.md). Their sender
 must match the outgoing message's intended recipient before updating its status.
 Private message IDs are deduplicated separately from outer encrypted packets.
-Unknown private payload types are ignored. Files/voice/group payloads are not
-advertised as supported and are not accepted.
+Unknown private payload types are ignored. Group controls use `0x06`/`0x07` and
+group broadcasts use `0x25`, with capability bit 3 advertised only with the full
+runtime. Files/voice payloads are not advertised or accepted.
 
 ## Mesh forwarding and resource limits
 

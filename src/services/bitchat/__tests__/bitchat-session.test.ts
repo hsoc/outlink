@@ -1,3 +1,4 @@
+import { GroupRuntime, type GroupInfo, type GroupMessage } from '../compatibility/group-runtime';
 /** @jest-environment node */
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { GossipCache } from '../compatibility/gossip';
@@ -49,14 +50,14 @@ async function until(check: () => boolean) {
   while (!check()) { if (Date.now() > deadline) throw new Error('Mesh test timed out'); await new Promise((r) => setTimeout(r, 10)); }
 }
 const sessions: BitchatSession[] = [];
-function node(id: string, n: number, frameSize = 185, extension?: (packet: BitchatPacket, context: ExtensionContext) => Promise<boolean>) {
+function node(id: string, n: number, frameSize = 185, extension?: (packet: BitchatPacket, context: ExtensionContext) => Promise<boolean>, groupState?: (peer: BitchatPeer, payload: Uint8Array, invite: boolean) => Promise<void>) {
   const r = radio(id, frameSize), peers = new Map<string, BitchatPeer>(), messages: BitchatMessage[] = [];
   const receipts: [string, string, string][] = [];
   const noiseSeed = new Uint8Array(32).fill(n);
   let counter = 1;
   const identity = { noiseSeed, noisePublicKey: x25519.getPublicKey(noiseSeed), signingSeed: new Uint8Array(32).fill(n + 10) };
   const session = new BitchatSession(r.port, identity, id,
-    { extension, peer: (p) => peers.set(p.id, { ...p }), message: (m) => messages.push(m),
+    { extension, groupState, peer: (p) => peers.set(p.id, { ...p }), message: (m) => messages.push(m),
       receipt: (message, sender, status) => receipts.push([message, sender, status]), error: jest.fn() },
     (length) => new Uint8Array(length).fill(counter++));
   sessions.push(session); return { r, session, peers, messages, receipts, identity };
@@ -403,4 +404,43 @@ it('announces renames while preserving identity and an established encrypted ses
   expect(publicMessage.name).toBe('Alice Updated');
   expect(b.messages.find(m => m.content === 'public after rename')?.name).toBe('Alice Updated');
   expect(() => a.session.rename(' ')).toThrow(); expect(a.session.nickname).toBe('Alice Updated');
+});
+
+it('delivers encrypted group invitations and messages across a nonmember Bluetooth relay and restores membership', async () => {
+  function groupNode(label: string, n: number, storage = memoryStorage()) {
+    let runtime!: GroupRuntime; let groups: GroupInfo[] = []; const delivered: GroupMessage[] = [];
+    const result = node(label, n, 185, async packet => {
+      if (packet.type !== 37) return false;
+      await runtime.receiveMessage(packet.payload); return true;
+    }, async (peer, data, invite) => { await runtime.receiveState(peer, data, invite); });
+    runtime = new GroupRuntime(result.identity, storage, {
+      state: (peer, data, invite) => result.session.sendGroupState(peer, data, invite),
+      broadcast: data => result.session.sendGroup(data), changed: values => { groups = values; },
+      message: async message => { if (!delivered.some(m => m.id === message.id)) delivered.push(message); },
+    });
+    result.session.setCapabilities(8);
+    return { ...result, runtime, storage, delivered, groups: () => groups };
+  }
+  const a = groupNode('Alice', 21), relay = groupNode('Relay', 22), b = groupNode('Bob', 23);
+  await Promise.all([a.runtime.restore(), relay.runtime.restore(), b.runtime.restore()]);
+  await Promise.all([a.session.start(), relay.session.start(), b.session.start()]);
+  connect(a.r, relay.r); connect(relay.r, b.r);
+  await until(() => (a.peers.get(b.session.id)?.lastSeen ?? 0) > 0 && (b.peers.get(a.session.id)?.lastSeen ?? 0) > 0);
+  await a.session.rekey(b.session.id);
+  await until(() => !!a.peers.get(b.session.id)?.authenticatedCapabilities && !!b.peers.get(a.session.id)?.authenticatedCapabilities);
+  const id = await a.runtime.create('Crew', 'Alice');
+  await a.runtime.invite(id, a.peers.get(b.session.id)!); await a.runtime.sync(a.peers.get(b.session.id)!);
+  await until(() => b.groups().some(g => g.id === id && g.status === 'invited'));
+  await b.runtime.accept(id); await a.runtime.send(id, 'Alice', 'group secret over relay');
+  await until(() => b.delivered.some(m => m.content === 'group secret over relay'));
+  expect(relay.delivered).toEqual([]);
+  expect(relay.r.wire.every(wire => !Buffer.from(wire).includes(Buffer.from('group secret over relay')))).toBe(true);
+  // The member comes back with the same identity and encrypted membership records.
+  await b.session.stop(); b.runtime.stop();
+  await a.runtime.send(id, 'Alice', 'missed while disconnected');
+  const resumed = groupNode('Bob-restarted', 23, b.storage); await resumed.runtime.restore(); await resumed.session.start();
+  connect(relay.r, resumed.r);
+  await until(() => resumed.delivered.some(m => m.content === 'missed while disconnected'));
+  expect(resumed.groups()[0]).toMatchObject({ id, status: 'joined' });
+  a.runtime.stop(); relay.runtime.stop(); resumed.runtime.stop();
 });

@@ -71,3 +71,9 @@ This does not promise deletion of flash remnants or backup/remote copies.
 Additional integration tests cover encrypted protocol-record scope isolation,
 bounded pagination, survival across chat deletion/reopen, rejection of lost keys
 when only protocol records remain, and erasure followed by a fresh encryption key.
+
+Private Bluetooth group epoch keys and roster/invitation/revocation metadata use
+the authenticated encrypted protected-record store. Group conversations use
+separate encrypted history rooms and workspace drafts. No group key is exposed
+in UI stores. Full wipe removes them with the database/key; Clear history retains
+membership and protocol gossip. See [private groups](../protocols/private-groups.md).

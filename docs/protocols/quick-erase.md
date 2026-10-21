@@ -30,3 +30,8 @@ Automated tests cover the activation window, incomplete/slow sequences, resets,
 clock reversal, and invocation of the shared wipe only on the third activation.
 Existing wipe tests cover coalescing, transport shutdown, deletion, failure, and
 retry. Physical-device testing remains omitted at the maintainer's request.
+
+Private Bluetooth group keys, rosters, invitations, revocation retry metadata,
+drafts and histories are included in full local erasure. Group UI metadata and
+message buffers reset with the other local stores. This cannot erase copies
+already retained by group members or relays.

@@ -86,7 +86,7 @@ export class GossipCache {
   constructor(private readonly onChange?: (id: string, packet?: BitchatPacket) => void) {}
   entries(now = Date.now()): BitchatPacket[] {
     for (const [id, packet] of this.packets) {
-      const age = packet.type === 2 ? 21600000 : packet.type === 36 ? 86400000 : 900000;
+      const age = [2, 37].includes(packet.type) ? 21600000 : packet.type === 36 ? 86400000 : 900000;
       if (now - packet.timestamp > age || packet.timestamp > now + 60000) this.remove(id);
     }
     return [...this.packets.values()];
@@ -110,9 +110,9 @@ export class GossipCache {
     while (this.packets.size > 1000 || this.total > 8 * 1024 * 1024) this.remove(this.packets.keys().next().value!);
   }
   request(now = Date.now()): Uint8Array {
-    const packets = this.entries(now).filter(packet => [1, 2, 36].includes(packet.type)).sort((a, b) => b.timestamp - a.timestamp);
+    const packets = this.entries(now).filter(packet => [1, 2, 36, 37].includes(packet.type)).sort((a, b) => b.timestamp - a.timestamp);
     const filter = buildFilter(packets.map(gossipId));
-    return encodeSync({ ...filter, types: 515, since: filter.included && filter.included < packets.length ? packets[filter.included - 1].timestamp : undefined });
+    return encodeSync({ ...filter, types: 1539, since: filter.included && filter.included < packets.length ? packets[filter.included - 1].timestamp : undefined });
   }
   missing(request: SyncRequest, now = Date.now()): BitchatPacket[] {
     const known = new Set(decodeFilter(request.p, request.m, request.data));

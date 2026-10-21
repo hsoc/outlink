@@ -3,7 +3,11 @@
 An MIT-licensed Bitchat-compatible messenger for **Android and iOS**. No accounts,
 phone numbers, wallets, or username registration.
 
-- **Nearby:** Bluetooth mesh public chat and Noise-encrypted private messages.
+- **Nearby:** Bluetooth mesh public chat, Noise-encrypted private messages, and
+  invitation-based encrypted private groups. Open **Private groups** to create,
+  accept invitations and inspect members. Buttons and `/group` commands are
+  supported. See [private groups](docs/protocols/private-groups.md) for instructions,
+  key rotation, offline behavior and the 255-member wire/official-client limits.
 - **Location channels:** public Bitchat geohash chat and presence over Nostr.
   Enter an area code manually, or choose an approximate area using optional
   foreground location access. Region, City, District, Neighborhood, and Block

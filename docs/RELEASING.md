@@ -3,7 +3,7 @@
 Run the **Build Mobile Apps** workflow from the Actions tab. Android defaults to
 on; iOS is optional. There are no desktop build targets or desktop credentials.
 Both use the existing Outlink production application ID `io.github.hsoc.outlink`.
-Development builds use `.dev`. The public version is `1.0.0` (Git tag `v1.0.0`). Android version code and iOS
+Development builds use `.dev`. The public app version is `1.0.0`; changing it does not require a Git tag. Android version code and iOS
 build number are 14; keep increasing these counters even when changing the
 public version scheme.
 
@@ -58,3 +58,10 @@ build. Bundle export and protocol unit tests do not establish radio-level or
 signed binary interoperability.
 
 The runner/Xcode pairing follows the [runner image inventory](https://github.com/actions/runner-images/blob/main/images/macos/macos-26-Readme.md) and [Expo SDK requirements](https://docs.expo.dev/versions/v57.0.0/).
+
+
+Private Bluetooth groups require the updated application bundle. Automated
+validation includes independent group crypto checks and simulated multi-hop group
+invitation/message/backfill tests. The maintainer has explicitly omitted physical
+device testing; the physical release checks above remain unverified, rather than
+being implied by successful automated checks. See [private groups](protocols/private-groups.md).

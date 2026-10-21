@@ -5,7 +5,7 @@ account bootstrap, wallet, old Nearby session, or configured remote push service
 Local mention alerts use the Expo notification SDK through a platform port; remote
 registration and notification background modes remain disabled.
 
-`src/app/` owns chat, contacts, settings, bundled license notices, native-link
+`src/app/` owns chat, contacts, private groups, settings, bundled license notices, native-link
 handling, and the root layout. They reuse the original shared controls and theme.
 `src/services/bitchat/` owns the Bluetooth codec, fragmentation, Noise sessions,
 receipts, verification, durable contacts/outbox/gossip, and bounded in-memory room state. It talks directly to the retained
@@ -99,3 +99,10 @@ plain-text messages. New-message callbacks feed a bounded notification service;
 history hydration does not. The notification port isolates OS permission and
 local scheduling from protocol code. Wipe invalidates/drains alert work and
 attempts to clear only mention notifications before deleting local data.
+
+[Private Bluetooth groups](protocols/private-groups.md) reuse the BLE bearer,
+Noise control sessions, authenticated protected storage and opaque gossip cache.
+Group membership and key epochs are serialized separately from network waits;
+UI stores contain metadata, never symmetric keys. Group messages use their own
+encrypted histories/drafts and never enter public, bridge, geohash or courier
+send paths. Full wipe removes group state; history clearing retains membership.
