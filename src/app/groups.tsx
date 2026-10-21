@@ -1,4 +1,4 @@
-import { displayNickname } from '@/lib/nicknames';
+import { displayNickname, duplicateNicknames, nicknameKey } from '@/lib/nicknames';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
@@ -16,6 +16,7 @@ import { type GroupMessage } from '@/services/bitchat/compatibility/group-runtim
 import { groupCommand } from '@/services/bitchat/compatibility/group-commands';
 import { contactsStore } from '@/services/bitchat/compatibility/contacts';
 import { workspaceStore } from '@/services/history/workspace';
+import { nicknameStore } from '@/services/preferences/nickname';
 import { platform } from '@/platform';
 import { radius, spacing, uiDensity, useThemeColors } from '@/theme';
 
@@ -28,6 +29,7 @@ export default function Groups() {
 function GroupScreen() {
   const { t } = useTranslation(), c = useThemeColors(), top = useScreenHeaderClearance();
   const state = useStore(meshGroupsStore), mesh = useStore(bitchatSessionStore), contacts = useStore(contactsStore, s => s.contacts);
+  const ownName = useStore(nicknameStore, s => s.name);
   const params = useLocalSearchParams<{ id?: string }>();
   const [selected, setSelected] = useState<string | undefined>(params.id), [name, setName] = useState('');
   const draftKey = `group:${selected ?? ''}`;
@@ -39,6 +41,8 @@ function GroupScreen() {
   const historyKey = `${selected}:${state.self}:${state.historyEpoch}`;
   const working = useRef(false), revision = useRef(0);
   const group = state.groups.find(g => g.id === selected), creator = group?.creator === state.self;
+  const duplicates = useMemo(() => duplicateNicknames(mesh.active ? (group?.members ?? []).filter(m => m.fingerprint === state.self || mesh.peers.some(p => p.fingerprint === m.fingerprint && p.lastSeen > 0)).map(m => ({ name: m.nickname, identity: m.fingerprint })) : []), [mesh.active, mesh.peers, group, state.self]);
+  const nearbyDuplicates = useMemo(() => duplicateNicknames(mesh.active ? [...mesh.peers.filter(p => p.lastSeen > 0).map(p => ({ name: p.name, identity: p.id })), { name: ownName, identity: mesh.id }] : []), [mesh.active, mesh.peers, ownName, mesh.id]);
   useEffect(() => {
     let alive = true; ++revision.current;
     void (async () => {
@@ -74,11 +78,11 @@ function GroupScreen() {
         if (command.action === 'invite' || command.action === 'remove') {
           const target = command.argument.replace(/^@/, '');
           if (command.action === 'invite') {
-            const peers = mesh.peers.filter(p => p.id === target || p.fingerprint === target || p.name === target || displayNickname(p.name, p.fingerprint) === target);
+            const peers = mesh.peers.filter(p => p.id === target || p.fingerprint === target || p.name === target || displayNickname(p.name, p.fingerprint, true) === target);
             if (peers.length !== 1) throw new Error('Use an unambiguous peer identity');
             await bitchatService.inviteGroup(group.id, peers[0].id);
           } else {
-            const matches = group.members.filter(m => m.fingerprint === target || m.nickname === target || displayNickname(m.nickname, m.fingerprint) === target);
+            const matches = group.members.filter(m => m.fingerprint === target || m.nickname === target || displayNickname(m.nickname, m.fingerprint, true) === target);
             if (matches.length !== 1) throw new Error('Use an unambiguous member identity');
             await bitchatService.removeGroupMember(group.id, matches[0].fingerprint);
           }
@@ -113,9 +117,9 @@ function GroupScreen() {
       {(members || group.status === 'invited') ? <FlatList style={{ flex: 1, minHeight: 0 }}
         data={group.members} keyExtractor={m => m.fingerprint} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: spacing.md }}
         ListFooterComponent={creator ? <View style={{ gap: spacing.sm }}><AppText variant="subtitle">{t('groups.invite')}</AppText>
-          {mesh.peers.filter(p => p.lastSeen > 0 && !!(p.capabilities! & 8) && !contacts.some(contact => contact.id === p.id && contact.blocked) && !group.members.some(m => m.fingerprint === p.fingerprint)).map(peer => <AppButton key={peer.id} label={displayNickname(peer.name, peer.fingerprint)} variant="secondary" disabled={busy || !mesh.active} onPress={() => void act(() => bitchatService.inviteGroup(group.id, peer.id))} />)}
+          {mesh.peers.filter(p => p.lastSeen > 0 && !!(p.capabilities! & 8) && !contacts.some(contact => contact.id === p.id && contact.blocked) && !group.members.some(m => m.fingerprint === p.fingerprint)).map(peer => <AppButton key={peer.id} label={displayNickname(peer.name, peer.fingerprint, nearbyDuplicates.has(nicknameKey(peer.name)))} variant="secondary" disabled={busy || !mesh.active} onPress={() => void act(() => bitchatService.inviteGroup(group.id, peer.id))} />)}
           <AppText tone="muted">{t('groups.invite_hint')}</AppText></View> : null}
-        renderItem={({ item }) => <View style={{ gap: spacing.xs }}><AppText>{displayNickname(item.nickname, item.fingerprint)}{item.fingerprint === group.creator ? ' · ' + t('groups.creator') : ''}</AppText>
+        renderItem={({ item }) => <View style={{ gap: spacing.xs }}><AppText>{displayNickname(item.nickname, item.fingerprint, duplicates.has(nicknameKey(item.nickname)))}{item.fingerprint === group.creator ? ' · ' + t('groups.creator') : ''}</AppText>
           <AppText variant="caption" tone="muted">{t(item.fingerprint === state.self ? 'groups.you' : live(item.fingerprint) ? 'mobile.mesh_online' : 'mobile.mesh_offline')}</AppText>
           <AppText variant="caption" tone="muted" selectable>{item.fingerprint}</AppText>
           {creator && item.fingerprint !== group.creator && <AppButton label={t('groups.remove')} variant="text" disabled={busy || !mesh.active} onPress={() => void act(async () => {
@@ -126,7 +130,7 @@ function GroupScreen() {
           renderItem={({ item }) => <View style={{ alignSelf: item.outgoing ? 'flex-end' : 'flex-start', maxWidth: uiDensity.messageBubbleMaxWidth,
             paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.xs, borderRadius: radius.xl,
             borderEndStartRadius: item.outgoing ? radius.xl : radius.xs, borderEndEndRadius: item.outgoing ? radius.xs : radius.xl,
-            backgroundColor: item.outgoing ? c.accentSoft : c.surfaceElevated }}><AppText variant="caption" tone="muted">{displayNickname(item.name, item.sender)}</AppText><AppText selectable>{item.content}</AppText></View>} />
+            backgroundColor: item.outgoing ? c.accentSoft : c.surfaceElevated }}><AppText variant="caption" tone="muted">{displayNickname(item.name, item.sender, duplicates.has(nicknameKey(item.name)))}</AppText><AppText selectable>{item.content}</AppText></View>} />
         <AppInput label={t('groups.message')} value={draft} multiline compactMultiline maxLength={65000} editable={!busy} onChangeText={setDraft} />
         <AppButton label={t('bitchat.send')} disabled={busy || !mesh.active || !draft.trim() || new TextEncoder().encode(draft).length > 65000} onPress={() => void act(submit)} />
         <AppText variant="caption" tone="muted">{t('groups.commands_hint')}</AppText>

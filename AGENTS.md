@@ -70,7 +70,8 @@ sync. Do not claim unlimited size or physical interoperability from codec tests.
 
 Read `docs/protocols/display-names.md` before changing nickname persistence,
 headers or mentions. Keep base nicknames on the existing wire formats and derive
-presentation suffixes from the appropriate public identity; never introduce a
+four-character presentation suffixes from the appropriate public identity only
+when distinct active participants share a normalized nickname; never introduce a
 stable cross-geohash discriminator. Settings edits the base only. All other
 normal headers show `@base` as the Settings shortcut. Do not restore duplicate
 setup name fields or couple Save to transport busy flags. Protect edits from

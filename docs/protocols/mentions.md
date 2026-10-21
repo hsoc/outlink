@@ -1,8 +1,8 @@
 # Mentions and local notifications
 
 In Public Mesh and public location channels, tap a received sender name to append
-a qualified mention such as `@Alice#7a2f91c0`. Names with spaces/punctuation use
-braces, for example `@{Alice Smith#7a2f91c0}`. Display suffixes come from the relevant
+a qualified mention such as `@Alice#7a2f`. Names with spaces/punctuation use
+braces, for example `@{Alice Smith#7a2f}`. Display suffixes come from the relevant
 public identity; see [nicknames](display-names.md). No incompatible wire field or
 remote service is added: mentions remain plain text to all clients.
 

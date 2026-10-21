@@ -17,8 +17,8 @@ import { channelKey, normalizeGeoRelays } from './geohash-protocol';
 import { encodeGeohash, normalizeGeohash } from './geohash';
 import { GeohashSession, type GeoMessage } from './geohash-session';
 export const DEFAULT_GEO_RELAYS = ['wss://relay.damus.io/', 'wss://nos.lol/'];
-type State = { active: boolean; busy: boolean; hash: string; connected: number; present: number; messages: GeoMessage[]; privateMessages: BitchatMessage[]; privatePeers: string[]; privateThreads: (GeoThread & { blocked: boolean; migrating: boolean })[]; publicIdentity: string; rotatesAt: number; privateActive: boolean; privateConnected: number; error: boolean };
-const empty: State = { active: false, busy: false, hash: '', connected: 0, present: 0, messages: [], privateMessages: [], privatePeers: [], privateThreads: [], publicIdentity: '', rotatesAt: 0, privateActive: false, privateConnected: 0, error: false };
+type State = { active: boolean; busy: boolean; hash: string; connected: number; present: number; participants: { name: string; identity: string }[]; messages: GeoMessage[]; privateMessages: BitchatMessage[]; privatePeers: string[]; privateThreads: (GeoThread & { blocked: boolean; migrating: boolean })[]; publicIdentity: string; rotatesAt: number; privateActive: boolean; privateConnected: number; error: boolean };
+const empty: State = { active: false, busy: false, hash: '', connected: 0, present: 0, participants: [], messages: [], privateMessages: [], privatePeers: [], privateThreads: [], publicIdentity: '', rotatesAt: 0, privateActive: false, privateConnected: 0, error: false };
 export const geohashStore = createStore<State>(() => empty);
 geohashStore.subscribe((state, previous) => {
   if (state.messages === previous.messages) return;
@@ -119,6 +119,7 @@ class GeohashService {
         },
         delivery: (id, delivery) => { if (current()) geohashStore.setState(state => ({ messages: state.messages.map(m => m.id === id ? { ...m, delivery } : m) })); },
         connection: connected => { if (current()) geohashStore.setState({ connected }); },
+        participants: participants => { if (current()) geohashStore.setState({ participants }); },
         presence: present => { if (current()) geohashStore.setState({ present }); },
         error: () => { if (current()) geohashStore.setState({ error: true }); },
       }, undefined, undefined, event => this.meshFallback?.(event, hash) ?? Promise.resolve(false));
@@ -251,7 +252,7 @@ class GeohashService {
     if (this.directoryTimer) clearInterval(this.directoryTimer); this.directoryTimer = undefined;
     ++this.revision;
     this.session?.stop(); this.session = undefined;
-    geohashStore.setState(state => ({ active: false, busy: false, connected: 0, present: 0, messages: state.messages.map(message => message.delivery === 'sending' ? { ...message, delivery: 'failed' as const } : message) }));
+    geohashStore.setState(state => ({ active: false, busy: false, connected: 0, present: 0, participants: [], messages: state.messages.map(message => message.delivery === 'sending' ? { ...message, delivery: 'failed' as const } : message) }));
   }
   async nearby(precision: number): Promise<{ hash: string; neighborhood: string }> {
     if (!Number.isInteger(precision) || precision < 1 || precision > 12) throw new Error('Invalid geohash precision');

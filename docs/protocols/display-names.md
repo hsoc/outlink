@@ -8,8 +8,9 @@ the top bar so long nicknames cannot overlap navigation/title controls. Names
 truncate visually on narrow screens. Nearby and location setup no longer repeat
 the name in their body. Identity erasure deliberately hides the old nickname.
 
-Other participants appear as `Alice#7a2f91c0`. The eight hexadecimal digits come
-from the first eight characters of the public identity relevant to that chat:
+Other participants normally appear as `Alice`. Only when distinct active users in
+the current mesh or channel share a nickname do labels show `Alice#7a2f`. The four hexadecimal digits come
+from the first four characters of the public identity relevant to that chat:
 mesh peer ID/full Noise fingerprint, location Nostr public key, bridge public
 key, or group member fingerprint. Short/full forms of one mesh identity yield
 the same suffix. Existing claimed hexadecimal suffixes are replaced for display,
@@ -23,8 +24,7 @@ additional stable cross-channel identifier or wire field is introduced. Other
 Bitchat applications retain their own display conventions. QR payloads and wire
 nickname fields still carry the base nickname and existing cryptographic identity.
 
-New profiles use the persisted base **Outlink**, displayed to others as
-`Outlink#<identity suffix>`. Retired generated defaults such as `Outlink1234`
+New profiles use the persisted base **Outlink**, displayed as **Outlink**, with an identity suffix only for active duplicates. Retired generated defaults such as `Outlink1234`
 migrate to Outlink. Custom names remain; explicitly saving a custom name in that
 old digit format records an encrypted migration exception. A trailing hexadecimal
 `#xxxx` through `#xxxxxxxx` is reserved for display suffixes and removed from the
@@ -61,8 +61,8 @@ new signed roster arrives; see [private groups](private-groups.md).
 
 ## Mentions and verification
 
-Tapping a public sender inserts their discriminated mention, such as
-`@Alice#7a2f91c0` or `@{Alice Smith#7a2f91c0}`. Qualified matching requires the local
+Tapping a public sender inserts the visible name, qualified only for active duplicates, such as
+`@Alice#7a2f` or `@{Alice Smith#7a2f}`. Qualified matching requires the local
 transport's exact suffix; a different suffix does not match the bare nickname.
 Legacy bare `@Alice` still works and can notify multiple identically named users.
 The saved nickname supplies the base for both highlighting and local alerts;
@@ -74,3 +74,17 @@ exceptions, qualified mention isolation, one-activation Settings save with pendi
 feedback, duplicate taps, delayed focus loads, independent preference loading,
 header navigation, persistence failures, wipe cancellation, and live session names.
 Physical/native touch behavior remains unverified; device testing was omitted.
+
+## Active duplicates
+
+Comparison ignores case, surrounding whitespace and Unicode normalization.
+Saved contacts, old messages and offline group roster members do not create
+collisions. The local active identity participates in duplicate detection; its
+header still always shows the base. Mesh names follow live peer announcements.
+Group names use active members of the selected roster. Location names come from
+validated recent chat and expire with the existing three-minute presence window;
+silent presence events do not advertise nicknames. Suffixes disappear again when
+the duplicate leaves or expires. Full fingerprints remain available in contacts.
+New qualified mentions use four hexadecimal characters; existing eight-character
+mentions remain recognized for the current identity. A four-character prefix can
+collide, so ambiguous group commands still require a full identity.

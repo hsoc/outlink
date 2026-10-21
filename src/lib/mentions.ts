@@ -1,5 +1,5 @@
 /** Nickname mentions stay plain text on both existing wire protocols. */
-const simpleName = /^[\p{L}\p{N}_-]+(?:#[0-9a-f]{8})?$/iu;
+const simpleName = /^[\p{L}\p{N}_-]+(?:#[0-9a-f]{4}(?:[0-9a-f]{4})?)?$/iu;
 export function mentionMatcher(nickname: string): (content: string) => boolean {
   const name = nickname.normalize('NFC').trim();
   if (!name) return () => false;

@@ -1,4 +1,4 @@
-import { displayNickname } from '@/lib/nicknames';
+import { nicknameMentionLabels } from '@/lib/nicknames';
 import english from '@/i18n/en.json';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { sha256 } from '@noble/hashes/sha2.js';
@@ -35,7 +35,7 @@ export const mentionService = {
     pending = pending.catch(() => {}).then(async () => {
       if (epoch !== sessionIntent() || version !== revision || Date.now() - lastAlert < 10000 || !await this.enabled()) return;
       const name = await ensureNickname();
-      if (epoch !== sessionIntent() || version !== revision || !([name, ...ownIdentities.map(id => displayNickname(name, id))].some(label => mentionMatcher(label)(message.content)))) return;
+      if (epoch !== sessionIntent() || version !== revision || !([name, ...ownIdentities.flatMap(id => nicknameMentionLabels(name, id))].some(label => mentionMatcher(label)(message.content)))) return;
       await platform.mentionNotifications.show({ id, title: 'Outlink', body: mode === 'mesh' ? copy.meshBody : copy.geoBody, channelName: copy.channelName }); lastAlert = Date.now();
     }).catch(() => { /* Notification failure must not reject or discard chat messages. */ }).finally(() => { --queued; });
   },

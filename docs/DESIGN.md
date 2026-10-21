@@ -68,8 +68,8 @@ pending feedback and accessible confirmation. Every other normal screen shows
 Settings. Pushed screens reserve an identity row under the title row to avoid
 navigation overlap. Root chrome keeps the quick-erase icon; pushed-page icons are
 decorative and never acquire that destructive gesture. Setup bodies do not repeat
-the nickname. New profiles use base `Outlink`; other users' labels add an eight-hex
-identity discriminator. Keep full fingerprints for trust and never add stable
+the nickname. New profiles use base `Outlink`; other users' labels add a four-hex
+identity discriminator only for duplicate active nicknames. Keep full fingerprints for trust and never add stable
 cross-channel identity metadata. Editing does not reconnect or replace keys,
 contacts or history. Long header labels truncate within the available width.
 

@@ -112,7 +112,7 @@ the serialized preference boundary. Chat/setup and mention highlighting observe
 it directly instead of maintaining another asynchronous screen copy. Identity
 erasure clears this transient store as well as the persisted preference.
 
-Nickname presentation adds identity-derived eight-hex discriminators without
+Nickname presentation adds identity-derived four-hex discriminators for active duplicate names without
 changing nickname wire fields. The common header owns the editable nickname
 shortcut except on Settings; setup bodies do not maintain duplicate name fields.
 Save/edit guards prevent delayed focus loads or transport startup from restoring

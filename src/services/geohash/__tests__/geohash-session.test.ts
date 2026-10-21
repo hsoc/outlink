@@ -3,7 +3,7 @@ import { GeohashSession, type GeoSocket } from '../geohash-session';
 import { createGeohashEvent } from '../geohash-protocol';
 function setup() {
   const sockets: (GeoSocket & { sent: unknown[][] })[] = [];
-  const callbacks = { message: jest.fn(), delivery: jest.fn(), connection: jest.fn(), presence: jest.fn(), error: jest.fn() };
+  const callbacks = { message: jest.fn(), delivery: jest.fn(), connection: jest.fn(), presence: jest.fn(), participants: jest.fn(), error: jest.fn() };
   const session = new GeohashSession('ezs42', new Uint8Array(32).fill(1), 'Alice', ['wss://one.example','wss://two.example'], callbacks, () => {
     const socket = { readyState: 1, onopen: null, onclose: null, onerror: null, onmessage: null,
       sent: [] as unknown[][], send(data: string) { this.sent.push(JSON.parse(data)); }, close: jest.fn() };
@@ -121,4 +121,15 @@ it('clears the signing key and pending sends even when a relay close throws', as
   expect((session as unknown as { key: Uint8Array }).key.every(byte => byte === 0)).toBe(true);
   expect(callbacks.connection).toHaveBeenLastCalledWith(0);
   expect(jest.getTimerCount()).toBe(0);
+});
+
+it('exposes only recent named participants and expires them independently of history', () => {
+  const { session, sockets, callbacks } = setup(); session.start(); sockets.forEach(s => s.onopen!());
+  const key = new Uint8Array(32).fill(2);
+  session.acceptEvent(createGeohashEvent(key, 'ezs42', 'Alice', 'hello'));
+  expect(callbacks.participants).toHaveBeenLastCalledWith([{ name: 'Alice', identity: expect.any(String) }]);
+  jest.advanceTimersByTime(240_000);
+  expect(callbacks.participants).toHaveBeenLastCalledWith([]);
+  expect(callbacks.message).toHaveBeenCalledTimes(1);
+  session.stop(); expect(callbacks.participants).toHaveBeenLastCalledWith([]);
 });

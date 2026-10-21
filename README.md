@@ -29,8 +29,8 @@ and channel selections survive restarts; Settings offers explicit local-history 
 Ephemeral Nostr events do not guarantee historical message retrieval.
 
 Tap **@Nickname** beside the app icon, or open **Settings → Nickname → Save**.
-Other participants display identity discriminators such as `Alice#7a2f91c0`. New
-profiles use `Outlink#<discriminator>`; retired random defaults are migrated. See
+Duplicate active nicknames display four-character discriminators such as `Alice#7a2f`. New
+profiles use `Outlink` (qualified only for active duplicates); retired random defaults are migrated. See
 [display names](docs/protocols/display-names.md) for identity and privacy details.
 
 For immediate erasure, tap the small Outlink icon at the top left of the main

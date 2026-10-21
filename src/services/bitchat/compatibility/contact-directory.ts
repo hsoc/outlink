@@ -21,5 +21,5 @@ export function contactDirectory(contacts: Contact[], peers: BitchatPeer[], mess
     add(id, message.outgoing ? id : message.name);
   }
   const search = query.trim().toLowerCase();
-  return [...found.values()].filter(entry => displayNickname(entry.name, entry.id).toLowerCase().includes(search) || entry.id.includes(search));
+  return [...found.values()].filter(entry => displayNickname(entry.name, entry.id, true).toLowerCase().includes(search) || entry.id.includes(search));
 }

@@ -220,7 +220,7 @@
     "change_name": "Change name in Settings",
     "name_saved": "Name saved for Nearby and location channels. New messages use this name; nearby peers receive it through discovery announcements.",
     "nickname_label": "Nickname",
-    "nickname_hint": "Used in Nearby, location chats, groups and contact codes. Other people see an identity suffix, such as Alice#7a2f91c0. Your header shows @Alice. Changing your nickname keeps your keys and conversations.",
+    "nickname_hint": "Used in Nearby, location chats, groups and contact codes. An identity suffix, such as Alice#7a2f, appears only when active nicknames are duplicated. Your header shows @Alice. Changing your nickname keeps your keys and conversations.",
     "edit_nickname": "@{{name}} — change nickname in Settings",
     "unknown_nickname": "Anonymous"
   },

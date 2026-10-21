@@ -1,4 +1,4 @@
-import { displayNickname } from '@/lib/nicknames';
+import { displayNickname, duplicateNicknames, nicknameKey, nicknameMentionLabels } from '@/lib/nicknames';
 import { groupCommand } from '@/services/bitchat/compatibility/group-commands';
 import { sessionIntent } from '@/services/history/lifecycle';
 import { isChatAtLatest } from '@/lib/chat-scroll';
@@ -48,9 +48,10 @@ export default function Chats() {
   const draft = workspace.drafts[draftKey] ?? '';
   const setDraft = (value: string) => workspaceStore.setState(state => ({ drafts: { ...state.drafts, [draftKey]: value } }));
   const name = useStore(nicknameStore, state => state.name);
+  const duplicates = useMemo(() => duplicateNicknames(mode === 'mesh' ? (mesh.active ? [{ name, identity: mesh.id }, ...mesh.peers.filter(p => p.lastSeen > 0).map(p => ({ name: p.name, identity: p.id }))] : []) : (geo.connected ? [{ name, identity: geo.publicIdentity }, ...geo.participants] : [])), [mode, mesh.active, mesh.id, mesh.peers, name, geo.connected, geo.publicIdentity, geo.participants]);
   const [ready, setReady] = useState(false);
   const ownIdentities = mode === 'mesh' ? [mesh.id, ...bitchatService.nicknameIdentities()].join(',') : geo.publicIdentity;
-  const mentioned = useMemo(() => { const matches = [mentionMatcher(name), ...ownIdentities.split(',').filter(Boolean).map(id => mentionMatcher(displayNickname(name, id)))]; return (content: string) => matches.some(match => match(content)); }, [name, ownIdentities]);
+  const mentioned = useMemo(() => { const matches = [mentionMatcher(name), ...ownIdentities.split(',').filter(Boolean).flatMap(id => nicknameMentionLabels(name, id).map(mentionMatcher))]; return (content: string) => matches.some(match => match(content)); }, [name, ownIdentities]);
   const [working, setWorking] = useState(false), [editingArea, setEditingArea] = useState(false);
   const [wiping, setWiping] = useState(false), [wipeStatus, setWipeStatus] = useState<'done' | 'failed' | null>(null);
   const wipingRef = useRef(false);
@@ -179,7 +180,7 @@ export default function Chats() {
       {isComposing && !(mode === 'geo' && editingArea) && <>
         {mode === 'mesh' ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
           <AppButton label={t('bitchat.public')} variant="secondary" fullWidth={false} selected={!recipient} onPress={() => setRecipient(undefined)} />
-          {recipient && <AppButton label={`${displayNickname(selectedName ?? t('mobile.unknown_nickname'), recipient ?? '')} · ${t(selectedOnline ? 'mobile.mesh_online' : 'mobile.mesh_offline')}`} labelNumberOfLines={1} variant="secondary" fullWidth={false} selected onPress={() => router.push('/contacts')} />}
+          {recipient && <AppButton label={`${displayNickname(selectedName ?? t('mobile.unknown_nickname'), recipient ?? '', duplicates.has(nicknameKey(selectedName ?? '')))} · ${t(selectedOnline ? 'mobile.mesh_online' : 'mobile.mesh_offline')}`} labelNumberOfLines={1} variant="secondary" fullWidth={false} selected onPress={() => router.push('/contacts')} />}
           <AppButton label={t('groups.title')} variant="text" fullWidth={false} onPress={() => router.push('/groups')} />
           <AppButton label={t('mobile.contacts')} variant="text" fullWidth={false} onPress={() => router.push('/contacts')} />
         </View> : <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, alignItems: 'center' }}><AppText variant="caption" tone="muted">#{geo.hash}</AppText><AppButton label={t('mobile.change_area')} variant="text" fullWidth={false} disabled={busy} onPress={() => setEditingArea(true)} /></View>}
@@ -233,7 +234,7 @@ export default function Chats() {
           renderItem={({ item }) => {
             const publicChat = mode === 'mesh' ? !recipient : !geoRecipient;
             const canMention = publicChat && !item.outgoing;
-            const displayName = displayNickname(item.name, 'pubkey' in item ? item.pubkey : item.bridge?.pubkey ?? item.peer);
+            const displayName = displayNickname(item.name, 'pubkey' in item ? item.pubkey : item.bridge?.pubkey ?? item.peer, duplicates.has(nicknameKey(item.name)));
             const mentionName = displayName;
             const isMentioned = canMention && mentioned(item.content);
             return <View style={{

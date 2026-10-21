@@ -12,7 +12,7 @@ export interface GeoSocket {
 }
 export type RelayMode = { subscription: string; filters(): Record<string, unknown>[]; event(value: unknown): void };
 type Callbacks = { message(message: GeoMessage): void; delivery(id: string, status: 'queued' | 'sent' | 'failed'): void;
-  connection(count: number): void; presence(count: number): void; error(): void };
+  connection(count: number): void; presence(count: number): void; participants?(participants: { name: string; identity: string }[]): void; error(): void };
 type Link = { socket?: GeoSocket; timeout?: ReturnType<typeof setTimeout>; retry?: ReturnType<typeof setTimeout>; opened: boolean; attempts: number;
   rateAt: number; rate: number };
 type Pending = { resolve(): void; reject(error: Error): void; timer: ReturnType<typeof setTimeout>; rejected: Set<GeoSocket>; total: number };
@@ -27,6 +27,7 @@ export class GeohashSession {
   private heartbeat?: ReturnType<typeof setInterval>;
   private readonly seen = new Set<string>();
   private readonly present = new Map<string, number>();
+  private readonly names = new Map<string, { name: string; at: number }>();
   private readonly pending = new Map<string, Pending>();
   constructor(hash: string, private key: Uint8Array, private name: string,
     private readonly relays: string[], private readonly callbacks: Callbacks,
@@ -90,6 +91,8 @@ export class GeohashSession {
     if (this.mode) return;
     const cutoff = Date.now() - 180_000;
     for (const [pubkey, at] of this.present) if (at < cutoff) this.present.delete(pubkey);
+    for (const key of this.names.keys()) if (!this.present.has(key)) this.names.delete(key);
+    this.callbacks.participants?.(this.links.some(link => link.opened) ? [...this.names].map(([identity, value]) => ({ identity, name: value.name })) : []);
     this.callbacks.presence(this.links.some(link => link.opened) ? this.present.size + 1 : 0);
   }
   private connections(): void {
@@ -151,6 +154,7 @@ export class GeohashSession {
       if (!this.present.has(event.pubkey) && this.present.size >= 256) this.present.delete(this.present.keys().next().value!);
       this.present.set(event.pubkey, Math.max(this.present.get(event.pubkey) ?? 0, activity));
     }
+    if (event.kind === 20000 && this.present.has(event.pubkey) && activity >= (this.names.get(event.pubkey)?.at ?? 0)) this.names.set(event.pubkey, { name: this.message(event, false).name, at: activity });
     this.reportPresence();
     if (event.kind === 20000) { const message = this.message(event, this.ownPublicKeys.has(event.pubkey)); message.delivery = 'sent'; this.callbacks.message(message); }
   }
@@ -215,7 +219,8 @@ export class GeohashSession {
       }
     }
     for (const pending of [...this.pending.values()]) pending.reject(new Error('Channel closed'));
-    this.links = []; this.key.fill(0); this.seen.clear(); this.present.clear();
+    this.links = []; this.key.fill(0); this.seen.clear(); this.present.clear(); this.names.clear();
+    this.callbacks.participants?.([]);
     this.callbacks.connection(0); this.callbacks.presence(0);
   }
 }
