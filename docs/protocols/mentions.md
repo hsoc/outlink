@@ -1,20 +1,20 @@
 # Mentions and local notifications
 
-In Public Mesh and public location channels, tap a received message's sender name
-to append a mention to the composer. Type `@Outlink1234` for a simple nickname;
-use `@{Alice Smith}` for a name containing spaces or punctuation. Tapping a name
-chooses the unambiguous form automatically and removes a bridge-generated
-display suffix while preserving the actual nickname. Send the message normally. Mentions
-remain plain text in both existing protocols; no incompatible wire fields or
-remote service are added.
+In Public Mesh and public location channels, tap a received sender name to append
+a qualified mention such as `@Alice#7a2f91c0`. Names with spaces/punctuation use
+braces, for example `@{Alice Smith#7a2f91c0}`. Display suffixes come from the relevant
+public identity; see [nicknames](display-names.md). No incompatible wire field or
+remote service is added: mentions remain plain text to all clients.
 
-Matching uses the saved shared nickname, Unicode NFC normalization and
-case-insensitive matching. Partial words and email addresses do not match.
-Braces distinguish a multiword name from another person's shorter name.
-Nicknames are not unique authenticated identities: matching names can notify
-multiple devices. A rename affects future alerts; queued text/history is not
-rewritten. Public received bubbles mentioning you have an accent outline and
-Mentioned you label, even with notifications disabled.
+Matching uses the saved base nickname, Unicode NFC normalization and
+case-insensitive matching. A qualified mention must match a local identity suffix;
+a different suffix does not trigger bare-name matching. Mesh candidates recognize
+the local mesh identity and current bridge identity; location candidates use the
+current channel identity. Legacy bare mentions still match the base and may notify
+multiple devices with that nickname. Identity rotation changes the suffix; use a
+recent sender label. Partial words and email addresses do not match. A rename
+affects future alerts, without rewriting history. Public received bubbles mentioning
+you have an accent outline and Mentioned you label even with notifications disabled.
 
 Enable **Settings → Notify when mentioned** and grant OS notification permission.
 It defaults off and applies to both public chat types. Private-message alerts

@@ -1,3 +1,4 @@
+import { displayNickname } from '@/lib/nicknames';
 import { groupCommand } from '@/services/bitchat/compatibility/group-commands';
 import { sessionIntent } from '@/services/history/lifecycle';
 import { isChatAtLatest } from '@/lib/chat-scroll';
@@ -23,7 +24,7 @@ import type { GeoMessage } from '@/services/geohash/geohash-session';
 import { bytes } from '@/services/bitchat/bitchat-wire';
 import { geohashService, geohashStore } from '@/services/geohash/geohash.service';
 import { MAX_GEO_CONTENT_BYTES } from '@/services/geohash/geohash-protocol';
-import { appendMention, mentionMatcher, mentionTargetName } from '@/lib/mentions';
+import { appendMention, mentionMatcher } from '@/lib/mentions';
 import { panicWipe } from '@/services/bitchat/panic';
 import { QuickEraseButton } from '@/components/bitchat/QuickEraseButton';
 import { normalizeGeohash } from '@/services/geohash/geohash';
@@ -48,7 +49,8 @@ export default function Chats() {
   const setDraft = (value: string) => workspaceStore.setState(state => ({ drafts: { ...state.drafts, [draftKey]: value } }));
   const name = useStore(nicknameStore, state => state.name);
   const [ready, setReady] = useState(false);
-  const mentioned = useMemo(() => mentionMatcher(name), [name]);
+  const ownIdentities = mode === 'mesh' ? [mesh.id, ...bitchatService.nicknameIdentities()].join(',') : geo.publicIdentity;
+  const mentioned = useMemo(() => { const matches = [mentionMatcher(name), ...ownIdentities.split(',').filter(Boolean).map(id => mentionMatcher(displayNickname(name, id)))]; return (content: string) => matches.some(match => match(content)); }, [name, ownIdentities]);
   const [working, setWorking] = useState(false), [editingArea, setEditingArea] = useState(false);
   const [wiping, setWiping] = useState(false), [wipeStatus, setWipeStatus] = useState<'done' | 'failed' | null>(null);
   const wipingRef = useRef(false);
@@ -158,11 +160,6 @@ export default function Chats() {
         <Radar size={uiDensity.iconButtonSize} color={c.textMuted} />
         <AppText variant="title">{t(mode === 'mesh' ? 'bitchat.title' : 'mobile.geo')}</AppText>
         <AppText tone="muted">{t(mode === 'mesh' ? 'mobile.mesh_privacy' : 'mobile.geo_privacy')}</AppText>
-        <View style={{ gap: spacing.xs }}>
-          <AppText variant="caption" tone="muted">{t('mobile.shared_public_name')}</AppText>
-          <AppText selectable>{name}</AppText>
-          <AppButton label={t('mobile.change_name')} variant="text" fullWidth={false} disabled={busy} onPress={() => router.push('/settings')} />
-        </View>
         {mode === 'geo' && <>
           <AppText variant="caption" tone="muted">{t('mobile.area_picker_title')}</AppText>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
@@ -182,7 +179,7 @@ export default function Chats() {
       {isComposing && !(mode === 'geo' && editingArea) && <>
         {mode === 'mesh' ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
           <AppButton label={t('bitchat.public')} variant="secondary" fullWidth={false} selected={!recipient} onPress={() => setRecipient(undefined)} />
-          {recipient && <AppButton label={`${selectedName} · ${t(selectedOnline ? 'mobile.mesh_online' : 'mobile.mesh_offline')}`} labelNumberOfLines={1} variant="secondary" fullWidth={false} selected onPress={() => router.push('/contacts')} />}
+          {recipient && <AppButton label={`${displayNickname(selectedName ?? t('mobile.unknown_nickname'), recipient ?? '')} · ${t(selectedOnline ? 'mobile.mesh_online' : 'mobile.mesh_offline')}`} labelNumberOfLines={1} variant="secondary" fullWidth={false} selected onPress={() => router.push('/contacts')} />}
           <AppButton label={t('groups.title')} variant="text" fullWidth={false} onPress={() => router.push('/groups')} />
           <AppButton label={t('mobile.contacts')} variant="text" fullWidth={false} onPress={() => router.push('/contacts')} />
         </View> : <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, alignItems: 'center' }}><AppText variant="caption" tone="muted">#{geo.hash}</AppText><AppButton label={t('mobile.change_area')} variant="text" fullWidth={false} disabled={busy} onPress={() => setEditingArea(true)} /></View>}
@@ -236,7 +233,8 @@ export default function Chats() {
           renderItem={({ item }) => {
             const publicChat = mode === 'mesh' ? !recipient : !geoRecipient;
             const canMention = publicChat && !item.outgoing;
-            const mentionName = mentionTargetName(item.name, 'bridge' in item ? item.bridge?.pubkey : undefined);
+            const displayName = displayNickname(item.name, 'pubkey' in item ? item.pubkey : item.bridge?.pubkey ?? item.peer);
+            const mentionName = displayName;
             const isMentioned = canMention && mentioned(item.content);
             return <View style={{
             alignSelf: item.outgoing ? 'flex-end' : 'flex-start', maxWidth: uiDensity.messageBubbleMaxWidth,
@@ -249,8 +247,8 @@ export default function Chats() {
           }}>
             <AppText variant="caption" tone={canMention ? 'accent' : 'muted'} selectable={!canMention}
               accessibilityRole={canMention ? 'button' : undefined}
-              accessibilityLabel={(canMention ? t('mobile.mention_name', { name: mentionName }) : item.name) + ('pubkey' in item ? ' · ' + item.pubkey : '')}
-              onPress={canMention ? () => setDraft(appendMention(draft, mentionName)) : undefined}>{item.name}{'pubkey' in item ? ' · ' + item.pubkey.slice(0, 8) : ''}</AppText>
+              accessibilityLabel={(canMention ? t('mobile.mention_name', { name: mentionName }) : displayName) + ('pubkey' in item ? ' · ' + item.pubkey : '')}
+              onPress={canMention ? () => setDraft(appendMention(draft, mentionName)) : undefined}>{displayName}</AppText>
             {isMentioned && <AppText variant="caption" tone="accent">{t('mobile.mentioned_you')}</AppText>}
             <AppText selectable>{item.content}</AppText>
             {'bridge' in item && item.bridge && <AppText variant="caption" tone="muted">{t('mobile.via_bridge')}</AppText>}
@@ -272,6 +270,6 @@ export default function Chats() {
       {!actionError && workspace.error && <AppText variant="caption" tone="danger">{t('mobile.storage_failed')}</AppText>}
       {wipeStatus === 'done' && <AppText variant="caption" tone="muted" accessibilityLiveRegion="polite">{t('mobile.wipe_done')}</AppText>}
     </KeyboardAvoidingView>}
-    <ScreenHeader title="Outlink" back={false} left={<View><QuickEraseButton onErase={quickErase} busy={wiping} /></View>} right={<AppButton label={t('mobile.settings')} variant="text" disabled={wiping} onPress={() => router.push('/settings')} />} />
+    <ScreenHeader back={false} left={<View><QuickEraseButton onErase={quickErase} busy={wiping} /></View>} right={<AppButton label={t('mobile.settings')} variant="text" disabled={wiping} onPress={() => router.push('/settings')} />} />
   </AppScreen>;
 }

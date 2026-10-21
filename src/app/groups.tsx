@@ -1,3 +1,4 @@
+import { displayNickname } from '@/lib/nicknames';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
@@ -73,11 +74,11 @@ function GroupScreen() {
         if (command.action === 'invite' || command.action === 'remove') {
           const target = command.argument.replace(/^@/, '');
           if (command.action === 'invite') {
-            const peers = mesh.peers.filter(p => p.id === target || p.fingerprint === target || p.name === target);
+            const peers = mesh.peers.filter(p => p.id === target || p.fingerprint === target || p.name === target || displayNickname(p.name, p.fingerprint) === target);
             if (peers.length !== 1) throw new Error('Use an unambiguous peer identity');
             await bitchatService.inviteGroup(group.id, peers[0].id);
           } else {
-            const matches = group.members.filter(m => m.fingerprint === target || m.nickname === target);
+            const matches = group.members.filter(m => m.fingerprint === target || m.nickname === target || displayNickname(m.nickname, m.fingerprint) === target);
             if (matches.length !== 1) throw new Error('Use an unambiguous member identity');
             await bitchatService.removeGroupMember(group.id, matches[0].fingerprint);
           }
@@ -112,9 +113,9 @@ function GroupScreen() {
       {(members || group.status === 'invited') ? <FlatList style={{ flex: 1, minHeight: 0 }}
         data={group.members} keyExtractor={m => m.fingerprint} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: spacing.md }}
         ListFooterComponent={creator ? <View style={{ gap: spacing.sm }}><AppText variant="subtitle">{t('groups.invite')}</AppText>
-          {mesh.peers.filter(p => p.lastSeen > 0 && !!(p.capabilities! & 8) && !contacts.some(contact => contact.id === p.id && contact.blocked) && !group.members.some(m => m.fingerprint === p.fingerprint)).map(peer => <AppButton key={peer.id} label={`${peer.name} · ${peer.id}`} variant="secondary" disabled={busy || !mesh.active} onPress={() => void act(() => bitchatService.inviteGroup(group.id, peer.id))} />)}
+          {mesh.peers.filter(p => p.lastSeen > 0 && !!(p.capabilities! & 8) && !contacts.some(contact => contact.id === p.id && contact.blocked) && !group.members.some(m => m.fingerprint === p.fingerprint)).map(peer => <AppButton key={peer.id} label={displayNickname(peer.name, peer.fingerprint)} variant="secondary" disabled={busy || !mesh.active} onPress={() => void act(() => bitchatService.inviteGroup(group.id, peer.id))} />)}
           <AppText tone="muted">{t('groups.invite_hint')}</AppText></View> : null}
-        renderItem={({ item }) => <View style={{ gap: spacing.xs }}><AppText>{item.nickname}{item.fingerprint === group.creator ? ' · ' + t('groups.creator') : ''}</AppText>
+        renderItem={({ item }) => <View style={{ gap: spacing.xs }}><AppText>{displayNickname(item.nickname, item.fingerprint)}{item.fingerprint === group.creator ? ' · ' + t('groups.creator') : ''}</AppText>
           <AppText variant="caption" tone="muted">{t(item.fingerprint === state.self ? 'groups.you' : live(item.fingerprint) ? 'mobile.mesh_online' : 'mobile.mesh_offline')}</AppText>
           <AppText variant="caption" tone="muted" selectable>{item.fingerprint}</AppText>
           {creator && item.fingerprint !== group.creator && <AppButton label={t('groups.remove')} variant="text" disabled={busy || !mesh.active} onPress={() => void act(async () => {
@@ -125,7 +126,7 @@ function GroupScreen() {
           renderItem={({ item }) => <View style={{ alignSelf: item.outgoing ? 'flex-end' : 'flex-start', maxWidth: uiDensity.messageBubbleMaxWidth,
             paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.xs, borderRadius: radius.xl,
             borderEndStartRadius: item.outgoing ? radius.xl : radius.xs, borderEndEndRadius: item.outgoing ? radius.xs : radius.xl,
-            backgroundColor: item.outgoing ? c.accentSoft : c.surfaceElevated }}><AppText variant="caption" tone="muted">{item.name}</AppText><AppText selectable>{item.content}</AppText></View>} />
+            backgroundColor: item.outgoing ? c.accentSoft : c.surfaceElevated }}><AppText variant="caption" tone="muted">{displayNickname(item.name, item.sender)}</AppText><AppText selectable>{item.content}</AppText></View>} />
         <AppInput label={t('groups.message')} value={draft} multiline compactMultiline maxLength={65000} editable={!busy} onChangeText={setDraft} />
         <AppButton label={t('bitchat.send')} disabled={busy || !mesh.active || !draft.trim() || new TextEncoder().encode(draft).length > 65000} onPress={() => void act(submit)} />
         <AppText variant="caption" tone="muted">{t('groups.commands_hint')}</AppText>

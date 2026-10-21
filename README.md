@@ -28,8 +28,9 @@ See [background connectivity](docs/protocols/background-connectivity.md). Messag
 and channel selections survive restarts; Settings offers explicit local-history deletion.
 Ephemeral Nostr events do not guarantee historical message retrieval.
 
-Change your display name in **Settings → Public name / nickname → Save**. New profiles start
-with a saved random name such as `Outlink4827`; existing names are kept. See
+Tap **@Nickname** beside the app icon, or open **Settings → Nickname → Save**.
+Other participants display identity discriminators such as `Alice#7a2f91c0`. New
+profiles use `Outlink#<discriminator>`; retired random defaults are migrated. See
 [display names](docs/protocols/display-names.md) for identity and privacy details.
 
 For immediate erasure, tap the small Outlink icon at the top left of the main

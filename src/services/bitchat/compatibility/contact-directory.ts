@@ -1,3 +1,4 @@
+import { displayNickname } from '@/lib/nicknames';
 import type { BitchatMessage, BitchatPeer } from '../bitchat-session';
 import { contactAvailable, isSavedContact, type Contact } from './contacts';
 export type ContactDirectoryEntry = { id: string; name: string; online: boolean; contact?: Contact };
@@ -20,5 +21,5 @@ export function contactDirectory(contacts: Contact[], peers: BitchatPeer[], mess
     add(id, message.outgoing ? id : message.name);
   }
   const search = query.trim().toLowerCase();
-  return [...found.values()].filter(entry => entry.name.toLowerCase().includes(search) || entry.id.includes(search));
+  return [...found.values()].filter(entry => displayNickname(entry.name, entry.id).toLowerCase().includes(search) || entry.id.includes(search));
 }

@@ -62,18 +62,21 @@ The mesh composer shows only Public Mesh and its selected private conversation;
 a searchable Contacts menu separates live mesh presence, saved identities, and
 recent history. Discovery alone must not imply an explicit permanent save.
 
-Settings is the only nickname editor: **Public name / nickname**, with an explicit
-Save action. Mesh and location setup show this same saved name with a Settings
-link; joining never writes a second nickname value. New profiles receive
-`Outlink` followed by four random digits (including leading zeros); the generated
-name is persisted before use. Existing names are preserved. Editing the name does
-not reconnect or replace communication identities, contacts, or history. Use the
-shared input, secondary button, and an accessible save confirmation.
+Settings is the only nickname editor: **Nickname**, with an explicit Save action,
+pending feedback and accessible confirmation. Every other normal screen shows
+`@` plus the saved base beside the app icon in its top bar; tapping the name opens
+Settings. Pushed screens reserve an identity row under the title row to avoid
+navigation overlap. Root chrome keeps the quick-erase icon; pushed-page icons are
+decorative and never acquire that destructive gesture. Setup bodies do not repeat
+the nickname. New profiles use base `Outlink`; other users' labels add an eight-hex
+identity discriminator. Keep full fingerprints for trust and never add stable
+cross-channel identity metadata. Editing does not reconnect or replace keys,
+contacts or history. Long header labels truncate within the available width.
 
 Location-area presets fill the editable code directly on tap; no separate location
 button is needed. Explain the permission request before the presets are used.
-Custom codes submit through Join or the keyboard, with inline validation. Public
-name uses the same persisted random default as Nearby, never a fixed fallback.
+Custom codes submit through Join or the keyboard, with inline validation. The
+shared top-bar nickname replaces duplicate name fields in both setup modes.
 
 The main header offers a small Outlink app icon as a quick-erase control. Three
 activations within 1.5 seconds invoke the same full-data wipe immediately, without

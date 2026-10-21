@@ -11,7 +11,7 @@ import { areaRelays } from '../relay-directory';
 import type { GeoSocket } from '../geohash-session';
 jest.mock('@/services/mentions/mentions', () => ({ mentionService: { received: jest.fn() } }));
 jest.mock('@/platform', () => { const secrets = new Map([['outlink.mobile.identity', 'aa'.repeat(32)]]); return { platform: {
-  preferences: { getItem: jest.fn(async (key: string) => key === 'mobile.nickname' ? 'Outlink1234' : JSON.stringify({ autoAreaRelays: false, internet: false })), setItem: jest.fn(async () => {}) },
+  preferences: { getItem: jest.fn(async (key: string) => key === 'mobile.nickname' ? 'Alice' : JSON.stringify({ autoAreaRelays: false, internet: false })), setItem: jest.fn(async () => {}) },
   secureStorage: { getItem: jest.fn(async (key: string) => secrets.get(key) ?? null), setItem: jest.fn(async (key: string, value: string) => { secrets.set(key, value); }), deleteItem: jest.fn(async (key: string) => { secrets.delete(key); }) },
   location: { currentCoordinates: jest.fn(async () => ({ latitude: 57.64911, longitude: 10.40744 })) },
   history: { load: async () => [], save: async () => {} }, records: { list: async () => [] },
@@ -20,7 +20,7 @@ jest.mock('../relay-refresh', () => ({ refreshAreaRelays: jest.fn(async () => {}
 const sockets: (GeoSocket & { url: string })[] = [];
 beforeEach(() => {
   jest.clearAllMocks(); sockets.length = 0;
-  let name = 'Outlink1234';
+  let name = 'Alice';
   jest.mocked(platform.preferences.getItem).mockImplementation(async key => key === 'mobile.nickname' ? name : JSON.stringify({ autoAreaRelays: false, internet: false }));
   jest.mocked(platform.preferences.setItem).mockImplementation(async (key, value) => { if (key === 'mobile.nickname') name = value; });
   global.WebSocket = jest.fn().mockImplementation((url: string) => {
@@ -89,7 +89,7 @@ it('drains a delayed secure-key write before identity erasure and prevents a lat
 it('posts the saved shared name after join, edits, and restart instead of a stale caller name', async () => {
   await geohashService.join('ezs42', 'Stale setup name', ['wss://one.example']);
   sockets.forEach(s => s.onopen?.());
-  expect(geohashService.connection?.name).toBe('Outlink1234');
+  expect(geohashService.connection?.name).toBe('Alice');
   async function post(content: string, expected: string) {
     const socket = sockets.at(-1)!;
     const sent = geohashService.send(content);
@@ -105,7 +105,7 @@ it('posts the saved shared name after join, edits, and restart instead of a stal
     socket.onmessage?.({ data: JSON.stringify(['OK', event.id, true, '']) }); await sent;
     expect(geohashStore.getState().messages.find(m => m.id === posted.id)?.name).toBe(expected);
   }
-  await post('before settings edit', 'Outlink1234');
+  await post('before settings edit', 'Alice');
   await saveNickname('Shared updated name');
   // Deliberately omit a direct session rename: persistence must remain authoritative.
   await post('after settings edit', 'Shared updated name');
@@ -140,10 +140,10 @@ it('validates precision before requesting coordinates', async () => {
 });
 
 it('passes a received public location mention to notification handling only once', async () => {
-  await geohashService.join('u4pruy', 'Outlink1234', ['wss://one.example']); sockets.forEach(s => s.onopen?.());
-  const event = createGeohashEvent(new Uint8Array(32).fill(2), 'u4pruy', 'Bob', '@Outlink1234 hello');
+  await geohashService.join('u4pruy', 'Alice', ['wss://one.example']); sockets.forEach(s => s.onopen?.());
+  const event = createGeohashEvent(new Uint8Array(32).fill(2), 'u4pruy', 'Bob', '@Alice hello');
   const frame = { data: JSON.stringify(['EVENT', 'geohash', event]) };
   sockets[0].onmessage?.(frame); sockets[0].onmessage?.(frame);
   expect(mentionService.received).toHaveBeenCalledTimes(1);
-  expect(mentionService.received).toHaveBeenCalledWith(expect.objectContaining({ content: '@Outlink1234 hello', outgoing: false }), 'geo', 'u4pruy');
+  expect(mentionService.received).toHaveBeenCalledWith(expect.objectContaining({ content: '@Alice hello', outgoing: false }), 'geo', 'u4pruy', event.id, [expect.any(String)]);
 });

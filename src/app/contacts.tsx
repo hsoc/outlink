@@ -1,3 +1,4 @@
+import { displayNickname } from '@/lib/nicknames';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, View } from 'react-native';
 import { useFocusEffect, router } from 'expo-router';
@@ -21,7 +22,7 @@ type RowProps = { entry: ContactDirectoryEntry; busy: boolean; onAction(id: stri
 const ContactRow = memo(function ContactRow({ entry, busy, onAction }: RowProps) {
   const { t } = useTranslation(), c = useThemeColors(), contact = entry.contact;
   return <View style={{ padding: spacing.md, gap: spacing.sm, backgroundColor: c.surface, borderRadius: radius.lg }}>
-    <AppText variant="subtitle" numberOfLines={1}>{entry.name}</AppText>
+    <AppText variant="subtitle" numberOfLines={1}>{displayNickname(entry.name, entry.id)}</AppText>
     <AppText variant="caption" tone="muted">{t(entry.online ? 'mobile.mesh_online' : 'mobile.mesh_offline')}
       {contact?.blocked ? ` · ${t('mobile.contact_blocked')}` : contact && isSavedContact(contact) ? ` · ${t('mobile.saved_contact_status')}` : ''}</AppText>
     {contact && <AppText variant="caption" tone="muted">{t(contact.verified ? 'mobile.verified' : 'mobile.unverified')}</AppText>}
@@ -66,7 +67,7 @@ export default function Contacts() {
       if (action === 'block') await contactsService.upsert(id, current => ({ ...(current ?? contact), blocked: !contact.blocked }));
       if (action === 'ping') {
         const result = await bitchatService.ping(id);
-        if (mounted.current) setDiagnostic({ name: contact.name, ms: result.rttMs, hops: result.hops });
+        if (mounted.current) setDiagnostic({ name: displayNickname(contact.name, contact.fingerprint), ms: result.rttMs, hops: result.hops });
       }
     })().catch(() => { if (mounted.current) setFailed(true); }).finally(() => {
       working.current = false; if (mounted.current) setBusy(false);

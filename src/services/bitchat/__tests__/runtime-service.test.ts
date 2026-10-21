@@ -122,7 +122,7 @@ it('persists mesh-favorite internet receipts across a failed relay write and sen
 
 it('uses the saved nickname for mesh posts even when setup or resume provides an older name', async () => {
   await bitchatService.start(root, 'Stale setup name');
-  expect(bitchatService.connection?.name).toBe('Outlink1234');
+  expect(bitchatService.connection?.name).toBe('Outlink');
   await saveNickname('Shared updated name');
   await bitchatService.send('public content');
   const active = jest.mocked(BitchatSession).mock.results.at(-1)!.value;
@@ -139,7 +139,7 @@ it('passes newly received public mesh messages to mention handling', async () =>
   const incoming = { id: 'mention-live', peer: carrierId, name: 'Carrier', content: '@Outlink1234 hello', timestamp: Date.now(), outgoing: false, delivery: 'sent' };
   active.callbacks.message(incoming); active.callbacks.message(incoming);
   expect(mentionService.received).toHaveBeenCalledTimes(1);
-  expect(mentionService.received).toHaveBeenCalledWith(incoming, 'mesh', 'public', expect.any(String));
+  expect(mentionService.received).toHaveBeenCalledWith(incoming, 'mesh', 'public', expect.any(String), expect.any(Array));
 });
 
 it('isolates group history and drafts from public chats and clears group memory with history', async () => {

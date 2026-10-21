@@ -25,7 +25,7 @@
     "default_name": "Outlink",
     "description": "Chat with nearby Bitchat users over Bluetooth, without an internet connection.",
     "privacy": "Nearby public messages are readable by mesh participants. Private messages are encrypted in transit. Chat history is saved on this device.",
-    "name": "Your public name",
+    "name": "Nickname",
     "join": "Join",
     "public": "Public Mesh",
     "public_notice": "Everyone in the nearby mesh can read public messages.",
@@ -217,10 +217,12 @@
     "unsave_contact": "Remove from saved",
     "saved_contact_status": "Saved",
     "your_name": "Your name",
-    "shared_public_name": "Public name / nickname",
     "change_name": "Change name in Settings",
-    "name_hint": "Shown in Nearby, public location messages, and contact codes. Changing your name keeps your identity and conversations. New profiles start with Outlink followed by four random digits.",
-    "name_saved": "Name saved for Nearby and location channels. New messages use this name; nearby peers receive it through discovery announcements."
+    "name_saved": "Name saved for Nearby and location channels. New messages use this name; nearby peers receive it through discovery announcements.",
+    "nickname_label": "Nickname",
+    "nickname_hint": "Used in Nearby, location chats, groups and contact codes. Other people see an identity suffix, such as Alice#7a2f91c0. Your header shows @Alice. Changing your nickname keeps your keys and conversations.",
+    "edit_nickname": "@{{name}} — change nickname in Settings",
+    "unknown_nickname": "Anonymous"
   },
   "groups": {
     "title": "Private groups",

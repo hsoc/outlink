@@ -37,5 +37,5 @@ codes require no location permission. Input accepts an optional leading #,
 case-insensitive geohash base32, and 1–12 characters after normalization. Invalid
 codes show an inline error and cannot join. Editing clears the preset selection.
 Selecting a preset fills the code but does not join or switch a live channel.
-Public name shares the saved default and editing behavior documented in
+The header nickname shares the saved default and editing behavior documented in
 [display names](display-names.md).

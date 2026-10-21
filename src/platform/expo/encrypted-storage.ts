@@ -5,7 +5,7 @@ import type { PreferencesPort } from '../ports/mobile';
 import type { SecureStoragePort } from '../ports/secure-storage';
 import { localCipher, newLocalStorageKey } from '@/lib/local-cipher';
 const KEY = 'outlink.local-storage.key.v1';
-const sensitive = new Set(['mobile.workspace', 'mobile.nickname']);
+const sensitive = new Set(['mobile.workspace', 'mobile.nickname', 'mobile.nickname.custom-digits']);
 type Row = { sequence: number; room: string; id: string; value: string };
 /** One database/key owner for history and private preferences, including resumable upgrades. */
 export function createEncryptedStorage(

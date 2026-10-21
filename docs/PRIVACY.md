@@ -114,3 +114,10 @@ rosters, invitation decisions, histories and drafts are encrypted locally and
 removed by full wipe; removal/leave cannot erase other members' saved copies.
 See [private groups](protocols/private-groups.md) for consent, rotation, local leave,
 retention, protocol limits and official-client differences.
+
+Displayed nickname discriminators are prefixes of already-visible public identities,
+not new stable wire metadata. Mesh and location identities can therefore have
+different suffixes; location rotation changes its discriminator. Short suffixes
+can collide or be imitated and do not establish trust. Your own header hides the
+suffix for compactness; other participants' labels include it. Legacy plain-name
+mentions may still alert multiple identically named users. See [nicknames](protocols/display-names.md).

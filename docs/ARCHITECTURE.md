@@ -111,3 +111,10 @@ The persisted nickname store publishes only completed storage reads/writes from
 the serialized preference boundary. Chat/setup and mention highlighting observe
 it directly instead of maintaining another asynchronous screen copy. Identity
 erasure clears this transient store as well as the persisted preference.
+
+Nickname presentation adds identity-derived eight-hex discriminators without
+changing nickname wire fields. The common header owns the editable nickname
+shortcut except on Settings; setup bodies do not maintain duplicate name fields.
+Save/edit guards prevent delayed focus loads or transport startup from restoring
+stale values. Qualified mentions bind display suffixes to the relevant current
+public identity; base-only legacy mentions remain explicitly ambiguous.

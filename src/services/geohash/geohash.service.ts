@@ -1,5 +1,5 @@
 import { mentionService } from '@/services/mentions/mentions';
-import { ensureNickname, validateNickname } from '@/services/preferences/nickname';
+import { ensureNickname, nicknameStore, validateNickname } from '@/services/preferences/nickname';
 import { ChannelIdentities, clearIdentitySet, type ChannelIdentitySet } from './channel-identities';
 import { GeoPrivateSession, type GeoThread } from './private-session';
 import type { BitchatMessage } from '@/services/bitchat/bitchat-session';
@@ -111,7 +111,7 @@ class GeohashService {
       this.session = new GeohashSession(hash, key, name, relays, {
         message: message => {
           if (!current() || geohashStore.getState().messages.some(m => m.id === message.id)) return;
-          mentionService.received(message, 'geo', hash);
+          mentionService.received(message, 'geo', hash, message.id, [geohashStore.getState().publicIdentity]);
           geohashStore.setState(state => {
             const messages = [...state.messages, message].sort((a, b) => a.timestamp - b.timestamp || a.id.localeCompare(b.id)).slice(-500);
             return { messages };
@@ -123,6 +123,7 @@ class GeohashService {
         error: () => { if (current()) geohashStore.setState({ error: true }); },
       }, undefined, undefined, event => this.meshFallback?.(event, hash) ?? Promise.resolve(false));
       this.connection = { hash, name, relays };
+      this.rename(nicknameStore.getState().name || name);
       this.session.start();
       this.session.replaceIdentity(keys.current.key.slice(), keys.retired.map(e => e.pubkey));
       this.identityTimer = setInterval(() => { void this.checkIdentity().catch(() => geohashStore.setState({ error: true })); }, 60000);

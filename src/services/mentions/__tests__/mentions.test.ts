@@ -4,10 +4,10 @@ import { platform } from '@/platform';
 import { invalidateSessionIntent } from '@/services/history/lifecycle';
 jest.mock('@/platform', () => ({ platform: { preferences: { getItem: jest.fn(), setItem: jest.fn() }, mentionNotifications: { requestPermission: jest.fn(async () => true), show: jest.fn(async () => {}), clear: jest.fn(async () => {}) } } }));
 const prefs = new Map<string, string>();
-const message = (id = 'one') => ({ id, content: 'hi @Outlink1234', timestamp: Date.now(), outgoing: false });
+const message = (id = 'one') => ({ id, content: 'hi @Alice', timestamp: Date.now(), outgoing: false });
 beforeEach(async () => {
   await mentionService.clear(); jest.clearAllMocks(); prefs.clear();
-  prefs.set('mobile.nickname', 'Outlink1234'); prefs.set(MENTION_PREFERENCE, 'true');
+  prefs.set('mobile.nickname', 'Alice'); prefs.set(MENTION_PREFERENCE, 'true');
   jest.mocked(platform.preferences.getItem).mockImplementation(async key => prefs.get(key) ?? null);
   jest.mocked(platform.preferences.setItem).mockImplementation(async (key, value) => { prefs.set(key, value); });
   jest.mocked(platform.mentionNotifications.requestPermission).mockResolvedValue(true);
@@ -19,7 +19,7 @@ it('alerts once for a mesh mention and for a subsequent location mention', async
     expect(platform.mentionNotifications.show).toHaveBeenCalledTimes(1);
     const preview = jest.mocked(platform.mentionNotifications.show).mock.calls[0][0];
     expect(preview.body).toBe('Someone mentioned you in Public Mesh.');
-    expect(JSON.stringify(preview)).not.toContain('Outlink1234');
+    expect(JSON.stringify(preview)).not.toContain('Alice');
     now += 10001; mentionService.received(message('two'), 'geo', 'u4pruy'); await mentionService.idle();
     expect(platform.mentionNotifications.show).toHaveBeenCalledTimes(2);
     expect(jest.mocked(platform.mentionNotifications.show).mock.calls[0][0].id).not.toBe(jest.mocked(platform.mentionNotifications.show).mock.calls[1][0].id);
@@ -34,7 +34,7 @@ it('ignores self messages, private messages, old history and nickname substrings
   mentionService.received({ ...message(), outgoing: true }, 'mesh', 'public');
   mentionService.received({ ...message('private'), recipient: 'bob' }, 'mesh', 'public');
   mentionService.received({ ...message('old'), timestamp: Date.now() - 120000 }, 'geo', 'u4pruy');
-  mentionService.received({ ...message('substring'), content: '@Outlink12345' }, 'geo', 'u4pruy');
+  mentionService.received({ ...message('substring'), content: '@Alice5' }, 'geo', 'u4pruy');
   await mentionService.idle(); expect(platform.mentionNotifications.show).not.toHaveBeenCalled();
 });
 it('requires explicit permission and keeps the option off on denial', async () => {
@@ -81,4 +81,17 @@ it('keeps the option disabled even when native notification cleanup fails', asyn
   jest.mocked(platform.mentionNotifications.clear).mockRejectedValueOnce(new Error('OS cleanup unavailable'));
   await expect(mentionService.configure(false)).resolves.toBe(true);
   expect(await mentionService.enabled()).toBe(false);
+});
+
+it('matches a qualified nickname only for the supplied local transport identity', async () => {
+  const incoming = { ...message(), content: 'hello @Alice#12345678' };
+  mentionService.received(incoming, 'mesh', 'public', incoming.id, ['87654321abcdef00']); await mentionService.idle();
+  expect(platform.mentionNotifications.show).not.toHaveBeenCalled();
+  mentionService.received({ ...incoming, id: 'correct' }, 'mesh', 'public', 'correct', ['12345678abcdef00']); await mentionService.idle();
+  expect(platform.mentionNotifications.show).toHaveBeenCalledTimes(1);
+});
+it('can recognize the local bridge alias without accepting another users discriminator', async () => {
+  const incoming = { ...message(), content: 'hello @Alice#abcdef01' };
+  mentionService.received(incoming, 'mesh', 'public', incoming.id, ['12345678abcdef00', 'abcdef01' + '0'.repeat(56)]); await mentionService.idle();
+  expect(platform.mentionNotifications.show).toHaveBeenCalledTimes(1);
 });

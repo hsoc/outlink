@@ -65,3 +65,13 @@ The 16-member upstream product policy is deliberately removed; the one-byte
 wire count and anti-abuse/resource bounds remain. Keep capability advertisement,
 receive/send lifecycle, encrypted persistence, gossip, wipe and documentation in
 sync. Do not claim unlimited size or physical interoperability from codec tests.
+
+# Nickname presentation
+
+Read `docs/protocols/display-names.md` before changing nickname persistence,
+headers or mentions. Keep base nicknames on the existing wire formats and derive
+presentation suffixes from the appropriate public identity; never introduce a
+stable cross-geohash discriminator. Settings edits the base only. All other
+normal headers show `@base` as the Settings shortcut. Do not restore duplicate
+setup name fields or couple Save to transport busy flags. Protect edits from
+late focus loads, publish after persistence, and invalidate work on full wipe.

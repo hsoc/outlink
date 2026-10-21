@@ -1,3 +1,5 @@
+import { usePathname } from 'expo-router';
+import { HeaderIdentity } from './HeaderIdentity';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -45,9 +47,11 @@ type Props = {
   topOffset?: number;
 };
 
-/** Total content clearance for the status area, title row, and optional lower chrome. */
+/** Match the shared title/identity rows and any additional lower chrome. */
 export function useScreenHeaderClearance(belowHeight = 0) {
-  return headerHeight + useSafeAreaInsets().top + belowHeight;
+  const path = usePathname();
+  const identityHeight = path !== '/' && path !== '/settings' ? uiDensity.headerActionSize : 0;
+  return headerHeight + useSafeAreaInsets().top + belowHeight + identityHeight;
 }
 
 /**
@@ -72,6 +76,9 @@ export function ScreenHeader({
   overMedia = false,
   topOffset = 0,
 }: Props) {
+  const path = usePathname();
+  const showIdentity = path !== '/settings';
+  const identityHeight = showIdentity && back ? uiDensity.headerActionSize : 0;
   const c = useThemeColors();
   const directionalIconStyle = useDirectionalIconStyle();
   const insets = useSafeAreaInsets();
@@ -79,7 +86,7 @@ export function ScreenHeader({
   return (
     <View
       style={{
-        height: headerHeight + topInset + belowHeight,
+        height: headerHeight + topInset + belowHeight + identityHeight,
         position: 'absolute',
         top: topOffset,
         start: 0,
@@ -174,7 +181,7 @@ export function ScreenHeader({
           ) : (
             // Tab root: an optional leading accessory (e.g. Nearby),
             // else an empty slot so `space-between` still parks `right` on the right.
-            left ?? <View />
+            showIdentity ? <HeaderIdentity icon={left} /> : left ?? <View />
           )}
           {/* Like the Back control, keep content-hugging AppButtons inside a
               plain wrapper. Their `alignSelf: flex-start` then controls width in
@@ -186,11 +193,12 @@ export function ScreenHeader({
           ) : null}
         </View>
       </View>
+      {identityHeight > 0 && <View style={{ position: 'absolute', top: topInset + headerHeight, start: spacing.lg, end: spacing.lg, height: identityHeight, justifyContent: 'center' }}><HeaderIdentity /></View>}
       {below && belowHeight > 0 ? (
         <View
           style={{
             position: 'absolute',
-            top: topInset + headerHeight,
+            top: topInset + headerHeight + identityHeight,
             start: 0,
             end: 0,
             height: belowHeight,

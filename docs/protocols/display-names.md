@@ -1,62 +1,76 @@
-# Display names
+# Nicknames and discriminators
 
-Open **Settings → Public name / nickname**, edit the name, and tap **Save**.
-Save works with the keyboard open; the keyboard’s Done action also saves.
-A successful save dismisses the keyboard and displays confirmation.
-This is the only name editor for both mesh and location channels. Setup shows
-the saved name and a Settings link; joining never saves a second form value.
-Names are trimmed,
-nonempty, and limited to 64 UTF-8 bytes; the settings input also limits entry to
-32 characters. New profiles default to `OutlinkXXXX`, where each X is a random
-digit. Leading zeros are kept. The suffix uses rejection sampling over secure
-random bytes to avoid bias. It reduces confusion but does not guarantee uniqueness.
-No registration or server lookup is involved.
+Tap **@Nickname** in the top bar to open **Settings → Nickname**, edit, and tap
+**Save** (or the keyboard's Done action). This is the only nickname editor. Your
+own header omits the discriminator and sits beside the app icon on every normal
+screen except Settings. Pushed screens reserve an additional identity row inside
+the top bar so long nicknames cannot overlap navigation/title controls. Names
+truncate visually on narrow screens. Nearby and location setup no longer repeat
+the name in their body. Identity erasure deliberately hides the old nickname.
 
-The preference `mobile.nickname` is saved before the default is used and reused
-on subsequent launches. Existing names are preserved. Generation and edits share
-the history operation queue with full-data erasure; lifecycle epoch checks cancel
-operations overtaken by a wipe. Erasing all data removes the old preference;
-Settings then generates a fresh default without creating a communication identity.
-Storage failures surface an error instead of using an unsaved default.
+Other participants appear as `Alice#7a2f91c0`. The eight hexadecimal digits come
+from the first eight characters of the public identity relevant to that chat:
+mesh peer ID/full Noise fingerprint, location Nostr public key, bridge public
+key, or group member fingerprint. Short/full forms of one mesh identity yield
+the same suffix. Existing claimed hexadecimal suffixes are replaced for display,
+not trusted as identities. Contact search and group invite/remove commands accept
+the displayed discriminated name. Duplicate or ambiguous matches fail locally.
 
-Saving updates the active mesh session and emits its existing signed discovery
-announcement when connected. Other peers learn the new name through discovery;
-a temporarily disconnected peer can retain the previous label until rediscovery.
-Noise sessions and device fingerprints are preserved. Location-channel messages
-created after the edit use the new name without replacing keys or relay sockets.
-Session startup, foreground restoration, and each new public post read the
-current preference, so stale UI or resume snapshots cannot override it. If name
-storage fails, the post fails before emitting a message. A changed transport
-during the read cancels that post rather than sending into a different session. QR contact sharing
-also uses the saved name.
+The suffix is a display hint, not a globally unique username, proof of identity
+or replacement for full fingerprint verification. Different identities can share
+a short prefix. Location suffixes change with channel/identity rotation; no
+additional stable cross-channel identifier or wire field is introduced. Other
+Bitchat applications retain their own display conventions. QR payloads and wire
+nickname fields still carry the base nickname and existing cryptographic identity.
 
-The name is public metadata. Renaming does not provide anonymity, rotate an
-identity, rewrite old messages or already queued payloads, or overwrite a name
-another user has saved locally. Fingerprints remain the identity check.
+New profiles use the persisted base **Outlink**, displayed to others as
+`Outlink#<identity suffix>`. Retired generated defaults such as `Outlink1234`
+migrate to Outlink. Custom names remain; explicitly saving a custom name in that
+old digit format records an encrypted migration exception. A trailing hexadecimal
+`#xxxx` through `#xxxxxxxx` is reserved for display suffixes and removed from the
+editable base. Names are trimmed, nonempty and at most 64 UTF-8 bytes; the Settings
+input also limits entry to 32 characters. There is no registration or name server.
 
-Automated tests cover random sampling, concurrent initialization, persistence
-failure, validation, wipe cancellation, signed mesh rename propagation with an
-existing encrypted conversation, and location-event names with unchanged keys
-and connections. Physical-device testing was intentionally omitted.
+## Save behavior
 
-Location-channel setup displays Public name from this same saved preference,
-including the `OutlinkXXXX` default on a new profile. It does not generate a new
-name on each channel visit or silently replace a chosen name.
+Nickname saving is independent of connection/reconnection and other network
+settings activity. It does not wait for notification preferences to load. A ref
+guard coalesces duplicate activations, the latest input/native Done value is used,
+and a spinner indicates the single pending save. Edits invalidate delayed focus
+loads so an older snapshot cannot replace newly typed or saved text. Save is
+available with the keyboard open; success displays confirmation.
 
-Location private messages use the shared nickname for their outgoing local label
-instead of a public-key prefix. The existing private wire format does not carry
-a nickname, so the recipient still identifies an unknown correspondent by their
-authenticated key. No nickname field is added to that protocol. Existing history
-and queued messages keep the label captured when they were created.
+The serialized preference operation publishes the completed write to the shared
+reactive nickname store. Header labels, chat setup and mention highlighting
+update immediately, without Join. Failed writes preserve the previous saved
+name; identity epoch checks prevent writes overtaken by a wipe from republishing
+old data. Full wipe clears the preference, migration exception and transient
+store. Initial loads do not publish an unsaved default.
 
-Regression tests exercise saved-name startup, posting after a persisted edit
-without a direct rename callback, restart with a stale name snapshot, the signed
-location event nickname tag and displayed local echo, and the local private label.
+Active mesh sessions use the saved name in signed announcements. Existing keys,
+Noise sessions, contacts, history and relay sockets remain. Other peers learn a
+rename through discovery. Startup reapplies the latest reactive name after
+asynchronous connection setup so an in-progress Join cannot restore a stale label.
+New messages and QR sharing read the saved preference. Existing messages and
+queued payloads retain their captured base labels; presentation adds their identity
+suffix. Private location envelopes do not gain a new nickname wire field.
 
-The main chat/setup screen subscribes to the persisted nickname store. Save updates
-its displayed name and mention matching immediately, without Join, reconnection,
-or a focus refresh. Preference loads publish inside the serialized storage
-operation so an older asynchronous screen callback cannot overwrite a newer
-saved display name. Failed writes do not publish an unsaved value; full identity
-wipe clears this reactive state. Existing message history retains its original
-sender labels.
+Group incoming labels use the creator-signed roster base plus member fingerprint
+suffix. That roster snapshot can lag a participant's current nickname until a
+new signed roster arrives; see [private groups](private-groups.md).
+
+## Mentions and verification
+
+Tapping a public sender inserts their discriminated mention, such as
+`@Alice#7a2f91c0` or `@{Alice Smith#7a2f91c0}`. Qualified matching requires the local
+transport's exact suffix; a different suffix does not match the bare nickname.
+Legacy bare `@Alice` still works and can notify multiple identically named users.
+The saved nickname supplies the base for both highlighting and local alerts;
+mesh alerts also recognize the device's current bridge alias. Suffixes remain
+plain text to other clients. See [mentions](mentions.md) for notification limits.
+
+Automated checks cover identity formatting, legacy default migration/custom
+exceptions, qualified mention isolation, one-activation Settings save with pending
+feedback, duplicate taps, delayed focus loads, independent preference loading,
+header navigation, persistence failures, wipe cancellation, and live session names.
+Physical/native touch behavior remains unverified; device testing was omitted.

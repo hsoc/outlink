@@ -18,7 +18,7 @@ The shared wipe invalidates pending resume intent, disables background
 connectivity, stops mesh and relay services, drains tracked work, erases the
 local encrypted store and identity keys, and clears contacts, messages, drafts,
 and connection selections. The main screen also clears its private selection
-and area-edit state. As with Settings, a fresh random nickname is then persisted;
+and area-edit state. As with Settings, the default Outlink base is then persisted, with suffixes derived from fresh chat identities;
 no communication identity or connection is recreated until an explicit join.
 Queued location-picker results are invalidated before the wipe starts.
 

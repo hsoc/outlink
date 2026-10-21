@@ -43,7 +43,7 @@ Buttons provide the same actions without requiring command syntax.
 | `/group leave` | Leave the selected group, with confirmation |
 
 Create/list also work from the Nearby composer; the other commands require an
-open group conversation. Full fingerprints resolve duplicate nicknames; invitation
+open group conversation. Displayed discriminated nicknames or full fingerprints resolve duplicate base nicknames; invitation
 commands also accept a peer ID. `/join` and `/part` are not group commands: private
 membership requires an authenticated invitation. A malformed `/group` command
 fails locally and is never transmitted as chat text.

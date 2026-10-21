@@ -2,7 +2,7 @@
 import { platform } from '@/platform';
 import { historyOperation } from '@/services/history/history';
 import { invalidateSessionIntent } from '@/services/history/lifecycle';
-import { ensureNickname, NICKNAME_KEY, nicknameStore, randomNickname, resetNickname, saveNickname } from '../nickname';
+import { ensureNickname, NICKNAME_KEY, nicknameStore, defaultNickname, resetNickname, saveNickname } from '../nickname';
 jest.mock('@/platform', () => ({ platform: { preferences: { getItem: jest.fn(), setItem: jest.fn() } } }));
 const values = new Map<string, string>();
 beforeEach(async () => {
@@ -10,13 +10,10 @@ beforeEach(async () => {
   (platform.preferences.getItem as jest.Mock).mockImplementation(async (key: string) => values.get(key) ?? null);
   (platform.preferences.setItem as jest.Mock).mockImplementation(async (key: string, value: string) => { values.set(key, value); });
 });
-it('preserves leading zeros and rejects biased random samples', () => {
-  const entropy = jest.fn().mockReturnValueOnce(new Uint8Array([255,255])).mockReturnValueOnce(new Uint8Array([0,7]));
-  expect(randomNickname(entropy)).toBe('Outlink0007'); expect(entropy).toHaveBeenCalledTimes(2);
-});
+it('uses Outlink as the default base, with identity discriminators added by presentation', () => { expect(defaultNickname()).toBe('Outlink'); });
 it('persists one default across concurrent loads and later visits', async () => {
   const names = await Promise.all([ensureNickname(), ensureNickname()]);
-  expect(names[0]).toMatch(/^Outlink\d{4}$/); expect(names[1]).toBe(names[0]);
+  expect(names[0]).toBe('Outlink'); expect(names[1]).toBe(names[0]);
   expect(await ensureNickname()).toBe(names[0]); expect(platform.preferences.setItem).toHaveBeenCalledTimes(1);
 });
 it('preserves existing names and validates edits in UTF-8 bytes', async () => {
@@ -29,7 +26,7 @@ it('preserves existing names and validates edits in UTF-8 bytes', async () => {
 it('does not return an unsaved name when persistence fails', async () => {
   (platform.preferences.setItem as jest.Mock).mockRejectedValueOnce(new Error('storage unavailable'));
   await expect(ensureNickname()).rejects.toThrow('storage unavailable');
-  expect(await ensureNickname()).toMatch(/^Outlink\d{4}$/);
+  expect(await ensureNickname()).toBe('Outlink');
 });
 it('cancels an initial load overtaken by identity erasure', async () => {
   let release!: (value: null) => void;
@@ -74,4 +71,15 @@ it('does not republish a name when identity erasure overtakes its storage write'
   await Promise.resolve(); await Promise.resolve();
   invalidateSessionIntent(); resetNickname(); release(); await rejected;
   expect(nicknameStore.getState().name).toBe('');
+});
+
+it('migrates old generated defaults once and keeps custom nicknames', async () => {
+  values.set(NICKNAME_KEY, 'Outlink1234'); expect(await ensureNickname()).toBe('Outlink');
+  expect(values.get(NICKNAME_KEY)).toBe('Outlink'); expect(await ensureNickname()).toBe('Outlink');
+  expect(platform.preferences.setItem).toHaveBeenCalledTimes(1);
+  expect(await saveNickname('Alice#1234abcd')).toBe('Alice');
+});
+
+it('preserves an explicitly chosen custom nickname that resembles a retired default', async () => {
+  await saveNickname('Outlink1234'); expect(await ensureNickname()).toBe('Outlink1234');
 });

@@ -1,6 +1,6 @@
 import { GroupRuntime, type GroupInfo, type GroupMessage } from './compatibility/group-runtime';
 import { mentionService } from '@/services/mentions/mentions';
-import { ensureNickname, validateNickname } from '@/services/preferences/nickname';
+import { ensureNickname, nicknameStore, validateNickname } from '@/services/preferences/nickname';
 import { refreshAreaRelays } from '@/services/geohash/relay-refresh';
 import type { Event } from 'nostr-tools/pure';
 import { base64 } from '@scure/base';
@@ -60,6 +60,8 @@ function contactsStoreLookup(sender: string) {
 export const meshGroupsStore = createStore<{ groups: GroupInfo[]; messages: GroupMessage[]; self: string; historyEpoch: number }>(() => ({ groups: [], messages: [], self: '', historyEpoch: 0 }));
 class BitchatService {
   private groups?: GroupRuntime;
+  private bridgeIdentity = '';
+  nicknameIdentities(): string[] { return [this.session?.id ?? '', this.bridgeIdentity].filter(Boolean); }
   connection?: { account: string; name: string };
   private prekeys?: PrekeyRuntime;
   private couriers?: CourierRuntime;
@@ -84,7 +86,7 @@ class BitchatService {
   }, message => this.mergeMessage(message));
   private mergeMessage(message: BitchatMessage) {
     const known = bitchatSessionStore.getState().messages.some(m => m.id === message.id && m.peer === message.peer);
-    if (!known) mentionService.received(message, 'mesh', 'public', message.bridge?.radioHint ?? meshStableId(message.peer, message.timestamp, message.content));
+    if (!known) mentionService.received(message, 'mesh', 'public', message.bridge?.radioHint ?? meshStableId(message.peer, message.timestamp, message.content), [this.session?.id ?? '', this.bridgeIdentity]);
     bitchatSessionStore.setState(state => {
       const previous = state.messages.find(m => m.id === message.id && m.peer === message.peer);
       if (previous?.delivery === 'read' || previous?.delivery === 'delivered' && !['read', 'delivered'].includes(message.delivery)) return state;
@@ -276,7 +278,7 @@ class BitchatService {
   }
   async refreshNetwork() {
     const epoch = ++this.networkEpoch, session = this.session, previous = this.network;
-    previous?.stop(); await previous?.idle(); this.network = undefined;
+    previous?.stop(); await previous?.idle(); this.network = undefined; this.bridgeIdentity = '';
     bitchatSessionStore.setState({ bridgeRelays: 0 });
     if (!session || !this.identity || !this.connection) return;
     await historyOperation(async () => {});
@@ -287,6 +289,7 @@ class BitchatService {
     if (epoch !== this.networkEpoch || session !== this.session || !this.connection) return;
     const key = await privateNostrKey(`bridge/${options.cell}`);
     if (epoch !== this.networkEpoch || session !== this.session) { key.fill(0); return; }
+    this.bridgeIdentity = getPublicKey(key);
     this.network = new NetworkRuntime(options, key, {
       ownKey: this.identity.noisePublicKey,
       peers: () => bitchatSessionStore.getState().peers.filter(peer => peer.noisePublicKey && peer.lastSeen > 0 && Date.now() - peer.lastSeen < 60000 && !contactsService.get(peer.id)?.blocked).map(peer => ({ id: peer.id, key: hexToBytes(peer.noisePublicKey!), capabilities: peer.capabilities ?? 0, authenticated: session.authenticatedDirect(peer.id), verified: !!peer.signingPublicKey })),
@@ -432,6 +435,7 @@ class BitchatService {
         await this.replayGroups();
         this.session.setCapabilities(9);
         await this.session.start();
+        this.rename(nicknameStore.getState().name || name);
         this.connection = { account, name: this.session.nickname ?? name };
         bitchatSessionStore.setState({ active: true, busy: false, id: this.session.id, account });
         const workspace = await platform.preferences.getItem('mobile.workspace');
