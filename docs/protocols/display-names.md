@@ -61,7 +61,7 @@ new signed roster arrives; see [private groups](private-groups.md).
 
 ## Mentions and verification
 
-Tapping a public sender inserts the visible name, qualified only for active duplicates, such as
+Tapping received message text (or a public sender label) inserts the visible name, qualified only for active duplicates, such as
 `@Alice#7a2f` or `@{Alice Smith#7a2f}`. Qualified matching requires the local
 transport's exact suffix; a different suffix does not match the bare nickname.
 Legacy bare `@Alice` still works and can notify multiple identically named users.

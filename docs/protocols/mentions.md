@@ -60,3 +60,13 @@ Automated checks cover matching boundaries/Unicode, both live receive paths,
 permission denial, opt-out, deduplication, rate limits, stale/history exclusions,
 wipe races, local Android/iOS scheduling, cleanup isolation, and generated native
 configuration. Physical-device/native notification behavior remains unverified.
+
+## Tap a message to mention its sender
+
+Tap received message text in Public Mesh, location channels, private conversations
+or private Bluetooth groups to append the sender mention to the current draft and
+focus the message box. Existing draft text is preserved; tapping does not send.
+The mention uses the visible nickname, including its four-character discriminator
+only for active duplicates. Long-press remains available for text selection.
+Tapping your own messages does not insert a mention. Public sender labels retain
+their existing shortcut. This does not enable private/group mention notifications.

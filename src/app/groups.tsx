@@ -1,6 +1,6 @@
 import { displayNickname, duplicateNicknames, nicknameKey } from '@/lib/nicknames';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, View } from 'react-native';
+import { FlatList, View, type TextInput } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useLocalSearchParams } from 'expo-router';
 import { useStore } from 'zustand';
@@ -17,6 +17,7 @@ import { groupCommand } from '@/services/bitchat/compatibility/group-commands';
 import { contactsStore } from '@/services/bitchat/compatibility/contacts';
 import { workspaceStore } from '@/services/history/workspace';
 import { nicknameStore } from '@/services/preferences/nickname';
+import { appendMention } from '@/lib/mentions';
 import { platform } from '@/platform';
 import { radius, spacing, uiDensity, useThemeColors } from '@/theme';
 
@@ -39,6 +40,7 @@ function GroupScreen() {
   const [older, setOlder] = useState<GroupMessage[]>([]), [before, setBefore] = useState<number>();
   const [loadedFor, setLoadedFor] = useState('');
   const historyKey = `${selected}:${state.self}:${state.historyEpoch}`;
+  const composerRef = useRef<TextInput>(null);
   const working = useRef(false), revision = useRef(0);
   const group = state.groups.find(g => g.id === selected), creator = group?.creator === state.self;
   const duplicates = useMemo(() => duplicateNicknames(mesh.active ? (group?.members ?? []).filter(m => m.fingerprint === state.self || mesh.peers.some(p => p.fingerprint === m.fingerprint && p.lastSeen > 0)).map(m => ({ name: m.nickname, identity: m.fingerprint })) : []), [mesh.active, mesh.peers, group, state.self]);
@@ -130,8 +132,9 @@ function GroupScreen() {
           renderItem={({ item }) => <View style={{ alignSelf: item.outgoing ? 'flex-end' : 'flex-start', maxWidth: uiDensity.messageBubbleMaxWidth,
             paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.xs, borderRadius: radius.xl,
             borderEndStartRadius: item.outgoing ? radius.xl : radius.xs, borderEndEndRadius: item.outgoing ? radius.xs : radius.xl,
-            backgroundColor: item.outgoing ? c.accentSoft : c.surfaceElevated }}><AppText variant="caption" tone="muted">{displayNickname(item.name, item.sender, duplicates.has(nicknameKey(item.name)))}</AppText><AppText selectable>{item.content}</AppText></View>} />
-        <AppInput label={t('groups.message')} value={draft} multiline compactMultiline maxLength={65000} editable={!busy} onChangeText={setDraft} />
+            backgroundColor: item.outgoing ? c.accentSoft : c.surfaceElevated }}><AppText variant="caption" tone="muted">{displayNickname(item.name, item.sender, duplicates.has(nicknameKey(item.name)))}</AppText><AppText selectable accessibilityHint={!item.outgoing ? t('mobile.mention_name', { name: displayNickname(item.name, item.sender, duplicates.has(nicknameKey(item.name))) }) : undefined}
+              onPress={!item.outgoing ? () => { setDraft(appendMention(workspaceStore.getState().drafts[draftKey] ?? '', displayNickname(item.name, item.sender, duplicates.has(nicknameKey(item.name))))); composerRef.current?.focus(); } : undefined}>{item.content}</AppText></View>} />
+        <AppInput ref={composerRef} label={t('groups.message')} value={draft} multiline compactMultiline maxLength={65000} editable={!busy} onChangeText={setDraft} />
         <AppButton label={t('bitchat.send')} disabled={busy || !mesh.active || !draft.trim() || new TextEncoder().encode(draft).length > 65000} onPress={() => void act(submit)} />
         <AppText variant="caption" tone="muted">{t('groups.commands_hint')}</AppText>
       </>}

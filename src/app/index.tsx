@@ -6,7 +6,7 @@ import { areaRelays } from '@/services/geohash/relay-directory';
 import { contactsStore, contactsService, contactAvailable } from '@/services/bitchat/compatibility/contacts';
 import { workspaceStore, restoreWorkspace } from '@/services/history/workspace';
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
-import { FlatList, ScrollView, View } from 'react-native';
+import { FlatList, ScrollView, View, type TextInput } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useTranslation } from 'react-i18next';
 import { useStore } from 'zustand';
@@ -49,6 +49,7 @@ export default function Chats() {
   const setDraft = (value: string) => workspaceStore.setState(state => ({ drafts: { ...state.drafts, [draftKey]: value } }));
   const name = useStore(nicknameStore, state => state.name);
   const duplicates = useMemo(() => duplicateNicknames(mode === 'mesh' ? (mesh.active ? [{ name, identity: mesh.id }, ...mesh.peers.filter(p => p.lastSeen > 0).map(p => ({ name: p.name, identity: p.id }))] : []) : (geo.connected ? [{ name, identity: geo.publicIdentity }, ...geo.participants] : [])), [mode, mesh.active, mesh.id, mesh.peers, name, geo.connected, geo.publicIdentity, geo.participants]);
+  const composerRef = useRef<TextInput>(null);
   const [ready, setReady] = useState(false);
   const ownIdentities = mode === 'mesh' ? [mesh.id, ...bitchatService.nicknameIdentities()].join(',') : geo.publicIdentity;
   const mentioned = useMemo(() => { const matches = [mentionMatcher(name), ...ownIdentities.split(',').filter(Boolean).flatMap(id => nicknameMentionLabels(name, id).map(mentionMatcher))]; return (content: string) => matches.some(match => match(content)); }, [name, ownIdentities]);
@@ -233,10 +234,11 @@ export default function Chats() {
           </View> : null}
           renderItem={({ item }) => {
             const publicChat = mode === 'mesh' ? !recipient : !geoRecipient;
-            const canMention = publicChat && !item.outgoing;
+            const canMention = !item.outgoing;
             const displayName = displayNickname(item.name, 'pubkey' in item ? item.pubkey : item.bridge?.pubkey ?? item.peer, duplicates.has(nicknameKey(item.name)));
             const mentionName = displayName;
-            const isMentioned = canMention && mentioned(item.content);
+            const isMentioned = publicChat && canMention && mentioned(item.content);
+            const insertMention = () => { setDraft(appendMention(workspaceStore.getState().drafts[draftKey] ?? '', mentionName)); composerRef.current?.focus(); };
             return <View style={{
             alignSelf: item.outgoing ? 'flex-end' : 'flex-start', maxWidth: uiDensity.messageBubbleMaxWidth,
             paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.xs,
@@ -249,9 +251,10 @@ export default function Chats() {
             <AppText variant="caption" tone={canMention ? 'accent' : 'muted'} selectable={!canMention}
               accessibilityRole={canMention ? 'button' : undefined}
               accessibilityLabel={(canMention ? t('mobile.mention_name', { name: mentionName }) : displayName) + ('pubkey' in item ? ' · ' + item.pubkey : '')}
-              onPress={canMention ? () => setDraft(appendMention(draft, mentionName)) : undefined}>{displayName}</AppText>
+              onPress={canMention ? insertMention : undefined}>{displayName}</AppText>
             {isMentioned && <AppText variant="caption" tone="accent">{t('mobile.mentioned_you')}</AppText>}
-            <AppText selectable>{item.content}</AppText>
+            <AppText selectable onPress={canMention ? insertMention : undefined}
+              accessibilityHint={canMention ? t('mobile.mention_name', { name: mentionName }) : undefined}>{item.content}</AppText>
             {'bridge' in item && item.bridge && <AppText variant="caption" tone="muted">{t('mobile.via_bridge')}</AppText>}
             {mode === 'geo' && !geoRecipient && 'pubkey' in item && !item.outgoing && <AppButton label={t('mobile.private_message')} variant="text" fullWidth={false} disabled={busy || !geo.privateActive} onPress={() => setPrivateTarget({ hash: geo.hash, pubkey: item.pubkey })} />}
             {item.outgoing && <AppText variant="caption" tone="muted" align="end">{t(mode === 'geo' && item.delivery === 'sent' ? 'mobile.relay_accepted' : `bitchat.${item.delivery}`)}</AppText>}
@@ -261,7 +264,7 @@ export default function Chats() {
             <AppText tone="muted">{t(mode === 'geo' ? 'mobile.geo_empty_hint' : 'bitchat.empty_hint')}</AppText>
           </View>} />
         {mode === 'mesh' && !recipient && workspace.bridge && <AppButton label={t('mobile.nearby_only')} variant="secondary" selected={workspace.nearbyOnly} disabled={busy} onPress={() => workspaceStore.setState({ nearbyOnly: !workspace.nearbyOnly })} />}
-        <AppInput label={t('bitchat.message')} value={draft} onChangeText={setDraft} multiline compactMultiline scrollEnabled maxLength={mode === 'mesh' ? 255 : geoRecipient ? 4096 : MAX_GEO_CONTENT_BYTES} />
+        <AppInput ref={composerRef} label={t('bitchat.message')} value={draft} onChangeText={setDraft} multiline compactMultiline scrollEnabled maxLength={mode === 'mesh' ? 255 : geoRecipient ? 4096 : MAX_GEO_CONTENT_BYTES} />
         <AppButton label={t(mode === 'mesh' && !recipient && !canSendPublicMesh ? 'mobile.nobody_around' : 'bitchat.send')} loading={working} disabled={(mode === 'mesh' && !!recipient && (!contactsService.get(recipient) || !!savedContact?.blocked)) || (!active && !(mode === 'mesh' && recipient && contactsService.get(recipient))) || (mode === 'mesh' && !recipient && !canSendPublicMesh) || busy || !draft.trim() || bytes(draft).length > (mode === 'mesh' ? 255 : geoRecipient ? 4096 : MAX_GEO_CONTENT_BYTES) || (mode === 'geo' && (geoRecipient ? !geo.privateActive || geoThread?.blocked : !geo.connected && !bitchatService.hasGateway()))}
           onPress={() => void operate(send, 'send')} />
       </>}

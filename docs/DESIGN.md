@@ -101,7 +101,9 @@ Joined location channels show an explicit Active recently count and explain its
 three-minute window, inclusion of self, and identity-based estimate. Disconnected
 relays show unavailable rather than implying zero users or live presence.
 
-Public chat sender names can insert a plain-text nickname mention. Mentions of
+Tapping received message text inserts a plain-text sender mention into the current
+draft and focuses the composer, without sending. Preserve long-press text selection.
+Public chat sender names provide the same shortcut. Mentions of
 the saved shared nickname receive an accent bubble outline and a text label,
 independent of OS permissions. Local mention notifications are explicitly opt-in
 in Settings and use generic previews without names, text or area codes. Explain
