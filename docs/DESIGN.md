@@ -135,3 +135,8 @@ Contact cards keep per-person conversation management alongside contact actions.
 Delete conversation is a distinct destructive action at the end, with a
 confirmation describing local deletion, draft clearing and queued-send cancellation.
 It preserves contact identity/trust settings and does not imply remote deletion.
+
+Location conversations use one Public channel button labeled with the current
+area code. Tapping it opens the area controls; omit the separate area label and
+Change area button. Retain the public-channel wording to distinguish public
+broadcasts from private threads.

@@ -29,7 +29,7 @@ previous codes and selection unchanged. Only the resulting area codes are
 persisted; coordinates are not sent to relays. An outstanding result is discarded
 after identity erasure or screen unmount.
 
-Use Change area from an existing channel to reopen these controls; Cancel keeps
+Tap **Public channel · #area** in an existing conversation to reopen these controls; Cancel keeps
 the current conversation visible. Joining applies the new code.
 
 Alternatively, edit Area code and tap Join or the keyboard submit action. Custom

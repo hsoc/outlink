@@ -257,12 +257,12 @@ export default function Chats() {
         {mode === 'geo' && editingArea && isComposing && <AppButton label={t('common.cancel')} variant="text" disabled={busy} onPress={() => { workspaceStore.setState(state => ({ hash: geo.hash, precision: state.hash === geo.hash ? state.precision : 0 })); setEditingArea(false); }} />}
       </ScrollView> : null}
       {isComposing && !(mode === 'geo' && editingArea) && <>
-        {mode === 'mesh' ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+        {mode === 'mesh' && <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
           <AppButton label={t('bitchat.public')} variant="secondary" fullWidth={false} selected={!recipient} onPress={() => setRecipient(undefined)} />
           {recipient && <AppButton label={`${displayNickname(selectedName ?? t('mobile.unknown_nickname'), recipient ?? '', duplicates.has(nicknameKey(selectedName ?? '')))} · ${t(selectedOnline ? 'mobile.mesh_online' : 'mobile.mesh_offline')}`} labelNumberOfLines={1} variant="secondary" fullWidth={false} selected onPress={() => router.push('/contacts')} />}
           <AppButton label={t('groups.title')} variant="text" fullWidth={false} onPress={() => router.push('/groups')} />
           <AppButton label={t('mobile.contacts')} variant="text" fullWidth={false} onPress={() => router.push('/contacts')} />
-        </View> : <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, alignItems: 'center' }}><AppText variant="caption" tone="muted">#{geo.hash}</AppText><AppButton label={t('mobile.change_area')} variant="text" fullWidth={false} disabled={busy} onPress={() => setEditingArea(true)} /></View>}
+        </View>}
         {mode === 'geo' && <View style={{ gap: spacing.xs }}>
           <AppText variant="caption" weight="semibold" tone={geo.connected > 0 ? 'accent' : 'muted'}>
             {t(geo.connected > 0 ? 'mobile.geo_active_count' : 'mobile.geo_active_unavailable', { count: geo.present })}
@@ -271,7 +271,7 @@ export default function Chats() {
         </View>}
         {mode === 'mesh' && recipient && !selectedOnline && <AppText variant="caption" tone="muted">{t(savedContact?.blocked ? 'mobile.contact_blocked' : savedContact ? 'mobile.mesh_offline_hint' : 'mobile.contact_reconnect_hint')}</AppText>}
         {mode === 'geo' && <FlatList horizontal data={geo.privatePeers} keyExtractor={key => key} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm }}
-          ListHeaderComponent={<AppButton label={t('mobile.public_channel')} variant="secondary" fullWidth={false} selected={!geoRecipient} onPress={() => setPrivateTarget(undefined)} />}
+          ListHeaderComponent={<AppButton label={`${t('mobile.public_channel')} · #${geo.hash}`} labelNumberOfLines={1} accessibilityHint={t('mobile.change_area')} variant="secondary" fullWidth={false} selected={!geoRecipient} disabled={busy} onPress={() => { setPrivateTarget(undefined); setEditingArea(true); }} />}
           renderItem={({ item: key }) => <AppButton label={geoUnread.has(key) ? t('mobile.unread_private_sender', { name: key.slice(0, 8), count: geoUnread.get(key)!.count }) : key.slice(0, 8)} variant="secondary" fullWidth={false} selected={geoRecipient === key} onPress={() => setPrivateTarget({ hash: geo.hash, pubkey: key })} />} />}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
           <AppText variant="caption" tone="muted">{transportHint}</AppText>
