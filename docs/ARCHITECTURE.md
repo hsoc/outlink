@@ -98,7 +98,7 @@ virtualized rows and bounded loaded-history data; see [contact retention](protoc
 plain-text messages. New-message callbacks feed a bounded notification service;
 history hydration does not. The notification port isolates OS permission and
 local scheduling from protocol code. Wipe invalidates/drains alert work and
-attempts to clear only mention notifications before deleting local data.
+attempts to clear mention and Nearby private-message notifications before deleting local data.
 
 [Private Bluetooth groups](protocols/private-groups.md) reuse the BLE bearer,
 Noise control sessions, authenticated protected storage and opaque gossip cache.
@@ -118,3 +118,9 @@ shortcut except on Settings; setup bodies do not maintain duplicate name fields.
 Save/edit guards prevent delayed focus loads or transport startup from restoring
 stale values. Qualified mentions bind display suffixes to the relevant current
 public identity; base-only legacy mentions remain explicitly ambiguous.
+
+Nearby private-message arrival callbacks feed a separate bounded local-alert queue
+and preference. Both alert categories share the native local-notification port,
+with separate Android channels and selective cleanup. History hydration never
+feeds arrival alerts. Unread UI derives from received delivery/read status in the
+bounded loaded window; marking read requires a focused foreground thread.

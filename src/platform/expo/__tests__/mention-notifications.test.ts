@@ -41,3 +41,12 @@ it('clears only mention notifications and preserves the connectivity notificatio
   await mentionNotificationsAdapter.clear(); expect(cancelScheduledNotificationAsync).toHaveBeenCalledTimes(1); expect(cancelScheduledNotificationAsync).toHaveBeenCalledWith('pending');
   expect(dismissNotificationAsync).toHaveBeenCalledTimes(1); expect(dismissNotificationAsync).toHaveBeenCalledWith('mention');
 });
+it('keeps private DM alerts on their own local channel and clears them independently', async () => {
+  await mentionNotificationsAdapter.requestPermission('Private messages', 'private');
+  expect(setNotificationChannelAsync).toHaveBeenCalledWith('outlink-private-messages', expect.objectContaining({ name: 'Private messages' }));
+  await mentionNotificationsAdapter.show({ ...alert, kind: 'private' });
+  expect(scheduleNotificationAsync).toHaveBeenCalledWith(expect.objectContaining({ content: expect.objectContaining({ data: { outlinkPrivateMessage: true } }), trigger: { channelId: 'outlink-private-messages' } }));
+  jest.mocked(getPresentedNotificationsAsync).mockResolvedValueOnce([{ request: { identifier: 'dm', content: { data: { outlinkPrivateMessage: true } } } }, { request: { identifier: 'mention', content: { data: { outlinkMention: true } } } }] as never);
+  await mentionNotificationsAdapter.clear('private');
+  expect(dismissNotificationAsync).toHaveBeenCalledWith('dm'); expect(dismissNotificationAsync).not.toHaveBeenCalledWith('mention');
+});

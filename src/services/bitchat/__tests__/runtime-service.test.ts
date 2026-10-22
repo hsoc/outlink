@@ -1,3 +1,4 @@
+import { privateMessageAlerts } from '@/services/mentions/private-messages';
 import { mentionService } from '@/services/mentions/mentions';
 /** @jest-environment node */
 import { ed25519, x25519 } from '@noble/curves/ed25519.js';
@@ -18,6 +19,7 @@ import { getPublicKey } from 'nostr-tools/pure';
 import { historyOperation } from '@/services/history/history';
 const root = 'aa'.repeat(32), recipientSeed = new Uint8Array(32).fill(2), recipientKey = x25519.getPublicKey(recipientSeed);
 const carrierSeed = new Uint8Array(32).fill(3), carrierKey = x25519.getPublicKey(carrierSeed), carrierId = peerId(carrierKey);
+jest.mock('@/services/mentions/private-messages', () => ({ privateMessageAlerts: { received: jest.fn() } }));
 jest.mock('@/services/mentions/mentions', () => ({ mentionService: { received: jest.fn() } }));
 jest.mock('@/services/geohash/geohash.service', () => ({ geohashService: { acceptCarrier: jest.fn() } }));
 jest.mock('@/platform', () => ({ platform: { proximityTransport: {}, records: { get: jest.fn(), set: jest.fn(), remove: jest.fn(), list: jest.fn() },
@@ -96,6 +98,7 @@ it('opens courier mail durably, deduplicates copies, queues a receipt, and rejec
   expect(await session().callbacks.extension(packet, context)).toBe(true);
   expect(await session().callbacks.extension(packet, context)).toBe(true);
   expect(bitchatSessionStore.getState().messages.filter(message => message.id === 'incoming')).toHaveLength(1);
+  expect(privateMessageAlerts.received).toHaveBeenCalledWith(expect.objectContaining({ id: 'incoming', outgoing: false, recipient: session().id }));
   expect(await records.get('acks:' + peerId(recipientKey), 'incoming')).toMatchObject({ status: 'delivered' });
   const otherEnvelope = { ...envelope, tag: courierTags(recipientKey)[1] };
   const deposit = signPacket({ ...packet, payload: encodeCourier(otherEnvelope) }, new Uint8Array(32).fill(13));
@@ -110,6 +113,7 @@ it('persists mesh-favorite internet receipts across a failed relay write and sen
   const mailbox = jest.mocked(PrivateMailbox).mock.results.at(-1)!.value as { callbacks: { message(sender: string, payload: InternetPayload): Promise<void> }; send: jest.Mock };
   mailbox.send.mockRejectedValueOnce(new Error('relay rejected'));
   await mailbox.callbacks.message(npubKey, { kind: 'message', id: 'internet-incoming', content: 'offline hello', senderId: peer, recipientId: bitchatSessionStore.getState().id, timestamp: Date.now() });
+  expect(privateMessageAlerts.received).toHaveBeenCalledWith(expect.objectContaining({ id: 'internet-incoming', outgoing: false }));
   expect(JSON.parse(history.get('mesh:internet-incoming' + peer)!)).toMatchObject({ content: 'offline hello' });
   expect(await records.get('acks:' + peer, 'internet-incoming')).toMatchObject({ status: 'delivered' });
   await bitchatService.read(peer, 'internet-incoming');

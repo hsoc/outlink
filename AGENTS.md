@@ -76,3 +76,11 @@ stable cross-geohash discriminator. Settings edits the base only. All other
 normal headers show `@base` as the Settings shortcut. Do not restore duplicate
 setup name fields or couple Save to transport busy flags. Protect edits from
 late focus loads, publish after persistence, and invalidate work on full wipe.
+
+# Nearby DM visibility
+
+Keep unread Nearby sender shortcuts independent of OS permission. Derive counts
+from the bounded loaded message window and mark read only in a focused foreground
+private thread. Feed optional DM alerts only from newly accepted arrival callbacks,
+never history hydration. Preserve separate mention/DM preferences and native
+cleanup categories; full identity erasure invalidates and drains both queues.

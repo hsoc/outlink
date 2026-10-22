@@ -70,3 +70,31 @@ The mention uses the visible nickname, including its four-character discriminato
 only for active duplicates. Long-press remains available for text selection.
 Tapping your own messages does not insert a mention. Public sender labels retain
 their existing shortcut. This does not enable private/group mention notifications.
+
+## Nearby private messages
+
+Incoming Nearby DMs now surface in an **Unread Nearby messages** strip on the
+main screen, including while Location channels is selected. Tap a sender button
+to open that private conversation directly. Contacts also shows per-sender unread
+counts. These counts use received messages in the bounded loaded history window,
+not a full archive-wide count. Blocked contacts do not appear. Opening a private
+thread marks its loaded messages read only while the screen is focused and the
+app is in the foreground; background receipt and Settings do not mark them read.
+
+Enable **Settings → Notify for Nearby private messages** for optional local OS
+alerts. This is independent of the public mention setting and defaults off.
+Android uses a separate notification channel. Previews say only that a private
+message arrived in Nearby; names, content and contact identifiers are omitted.
+Tapping an OS notification opens the app; use its unread sender shortcut to open
+the conversation. Existing OS permission, sound, background and process-lifetime
+limits above still apply. This adds no remote push or wake-up service.
+
+Only newly accepted private message callbacks trigger DM alerts, including courier
+and internet delivery to mesh contacts. Delayed delivery may legitimately contain
+an old sender timestamp, so it is not rejected merely for age. History hydration,
+read/outgoing/public messages and duplicates do not create alerts. The DM queue
+is bounded to 32 candidates, 512 deduplication keys and one alert per ten seconds;
+additional messages remain unread without extra alerts. OS failures do not affect
+message storage. Disabling DM alerts clears only that category; full identity
+erasure invalidates and drains both categories before clearing local data.
+Location-channel private messages and private groups do not gain OS alerts here.

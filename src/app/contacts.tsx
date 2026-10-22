@@ -1,3 +1,4 @@
+import { unreadPrivateMessages } from '@/lib/unread-messages';
 import { displayNickname, duplicateNicknames, nicknameKey } from '@/lib/nicknames';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, View } from 'react-native';
@@ -19,11 +20,12 @@ import { workspaceStore } from '@/services/history/workspace';
 import { radius, spacing, uiDensity, useThemeColors } from '@/theme';
 
 type Action = 'open' | 'save' | 'unsave' | 'favorite' | 'block' | 'ping';
-type RowProps = { entry: ContactDirectoryEntry; busy: boolean; duplicate: boolean; onAction(id: string, action: Action): void };
-const ContactRow = memo(function ContactRow({ entry, busy, duplicate, onAction }: RowProps) {
+type RowProps = { entry: ContactDirectoryEntry; busy: boolean; duplicate: boolean; unread: number; onAction(id: string, action: Action): void };
+const ContactRow = memo(function ContactRow({ entry, busy, duplicate, unread, onAction }: RowProps) {
   const { t } = useTranslation(), c = useThemeColors(), contact = entry.contact;
   return <View style={{ padding: spacing.md, gap: spacing.sm, backgroundColor: c.surface, borderRadius: radius.lg }}>
     <AppText variant="subtitle" numberOfLines={1}>{displayNickname(entry.name, entry.id, duplicate)}</AppText>
+    {unread > 0 && <AppText tone="accent">{t('mobile.unread_private_count', { count: unread })}</AppText>}
     <AppText variant="caption" tone="muted">{t(entry.online ? 'mobile.mesh_online' : 'mobile.mesh_offline')}
       {contact?.blocked ? ` · ${t('mobile.contact_blocked')}` : contact && isSavedContact(contact) ? ` · ${t('mobile.saved_contact_status')}` : ''}</AppText>
     {contact && <AppText variant="caption" tone="muted">{t(contact.verified ? 'mobile.verified' : 'mobile.unverified')}</AppText>}
@@ -39,7 +41,7 @@ const ContactRow = memo(function ContactRow({ entry, busy, duplicate, onAction }
       </>}
     </View>
   </View>;
-}, (a, b) => a.duplicate === b.duplicate && a.busy === b.busy && a.onAction === b.onAction && a.entry.id === b.entry.id && a.entry.name === b.entry.name && a.entry.online === b.entry.online && a.entry.contact === b.entry.contact);
+}, (a, b) => a.unread === b.unread && a.duplicate === b.duplicate && a.busy === b.busy && a.onAction === b.onAction && a.entry.id === b.entry.id && a.entry.name === b.entry.name && a.entry.online === b.entry.online && a.entry.contact === b.entry.contact);
 
 export default function Contacts() {
   const { t } = useTranslation(), c = useThemeColors(), top = useScreenHeaderClearance();
@@ -52,6 +54,7 @@ export default function Contacts() {
   const working = useRef(false), mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useFocusEffect(useCallback(() => { void Promise.all([contactsService.restore().then(() => contactsService.prune()), bitchatService.restore()]).catch(() => { if (mounted.current) setFailed(true); }); }, []));
+  const unread = useMemo(() => unreadPrivateMessages(mesh.messages, new Set(contacts.contacts.filter(c => c.blocked).map(c => c.id))), [mesh.messages, contacts.contacts]);
   const entries = useMemo(() => contactDirectory(contacts.contacts, mesh.peers, mesh.messages, mesh.active, tab, query), [contacts.contacts, mesh.peers, mesh.messages, mesh.active, tab, query]);
   const onAction = useCallback((id: string, action: Action) => {
     if (working.current) return;
@@ -91,7 +94,7 @@ export default function Contacts() {
         {failed && <AppText tone="danger" accessibilityLiveRegion="polite">{t('mobile.failed')}</AppText>}
         {diagnostic && <AppText variant="caption" tone="muted" accessibilityLiveRegion="polite">{t('mobile.connection_result', { ...diagnostic, name: displayNickname(diagnostic.name, diagnostic.identity, duplicates.has(nicknameKey(diagnostic.name))) })}</AppText>}
       </View>}
-      renderItem={({ item }) => <ContactRow duplicate={duplicates.has(nicknameKey(item.name))} entry={item} busy={busy || codeBusy} onAction={onAction} />}
+      renderItem={({ item }) => <ContactRow unread={unread.get(item.id)?.count ?? 0} duplicate={duplicates.has(nicknameKey(item.name))} entry={item} busy={busy || codeBusy} onAction={onAction} />}
       ListEmptyComponent={contacts.ready ? <View style={{ gap: spacing.sm, paddingVertical: spacing.lg }}>
         <Radar size={uiDensity.iconButtonSize} color={c.textMuted} /><AppText variant="subtitle">{t('mobile.no_contacts')}</AppText>
         <AppText tone="muted">{t('mobile.no_contacts_hint')}</AppText>

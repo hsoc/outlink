@@ -37,10 +37,14 @@ For immediate erasure, tap the small Outlink icon at the top left of the main
 screen **three times within 1.5 seconds**. This runs the same full-data wipe as
 Settings, **without confirmation**. See [quick erase](docs/protocols/quick-erase.md).
 
-Tap a public message’s sender name to mention them. Enable **Notify when
+Tap received message text to mention its sender. Enable **Notify when
 mentioned** in Settings for local alerts in mesh and location channels. A live
 connection and notification permission are required. See
 [mentions and notifications](docs/protocols/mentions.md).
+
+Nearby DMs appear in an unread sender strip and in Contacts; tap the sender to
+open the private thread. Optional **Notify for Nearby private messages** in
+Settings enables generic local alerts independently of public mentions.
 
 ## Build
 

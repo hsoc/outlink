@@ -1,4 +1,5 @@
 import { GroupRuntime, type GroupInfo, type GroupMessage } from './compatibility/group-runtime';
+import { privateMessageAlerts } from '@/services/mentions/private-messages';
 import { mentionService } from '@/services/mentions/mentions';
 import { ensureNickname, nicknameStore, validateNickname } from '@/services/preferences/nickname';
 import { refreshAreaRelays } from '@/services/geohash/relay-refresh';
@@ -86,6 +87,7 @@ class BitchatService {
   }, message => this.mergeMessage(message));
   private mergeMessage(message: BitchatMessage) {
     const known = bitchatSessionStore.getState().messages.some(m => m.id === message.id && m.peer === message.peer);
+    if (!known && !contactsService.get(message.peer)?.blocked) privateMessageAlerts.received(message);
     if (!known) mentionService.received(message, 'mesh', 'public', message.bridge?.radioHint ?? meshStableId(message.peer, message.timestamp, message.content), [this.session?.id ?? '', this.bridgeIdentity]);
     bitchatSessionStore.setState(state => {
       const previous = state.messages.find(m => m.id === message.id && m.peer === message.peer);

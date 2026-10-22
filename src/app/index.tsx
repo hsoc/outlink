@@ -1,4 +1,6 @@
 import { displayNickname, duplicateNicknames, nicknameKey, nicknameMentionLabels } from '@/lib/nicknames';
+import { unreadPrivateMessages } from '@/lib/unread-messages';
+import { platform } from '@/platform';
 import { groupCommand } from '@/services/bitchat/compatibility/group-commands';
 import { sessionIntent } from '@/services/history/lifecycle';
 import { isChatAtLatest } from '@/lib/chat-scroll';
@@ -35,6 +37,7 @@ export default function Chats() {
   const { t } = useTranslation(), c = useThemeColors(), top = useScreenHeaderClearance();
   const savedContacts = useStore(contactsStore, state => state.contacts);
   const mesh = useStore(bitchatSessionStore), geo = useStore(geohashStore);
+  const unread = useMemo(() => unreadPrivateMessages(mesh.messages, new Set(savedContacts.filter(c => c.blocked).map(c => c.id))), [mesh.messages, savedContacts]);
   const workspace = useStore(workspaceStore);
   const { mode, hash, precision, relays, recipient } = workspace;
   const setMode = (mode: 'mesh' | 'geo') => workspaceStore.setState({ mode });
@@ -48,7 +51,8 @@ export default function Chats() {
   const draft = workspace.drafts[draftKey] ?? '';
   const setDraft = (value: string) => workspaceStore.setState(state => ({ drafts: { ...state.drafts, [draftKey]: value } }));
   const name = useStore(nicknameStore, state => state.name);
-  const duplicates = useMemo(() => duplicateNicknames(mode === 'mesh' ? (mesh.active ? [{ name, identity: mesh.id }, ...mesh.peers.filter(p => p.lastSeen > 0).map(p => ({ name: p.name, identity: p.id }))] : []) : (geo.connected ? [{ name, identity: geo.publicIdentity }, ...geo.participants] : [])), [mode, mesh.active, mesh.id, mesh.peers, name, geo.connected, geo.publicIdentity, geo.participants]);
+  const nearbyDuplicates = useMemo(() => duplicateNicknames(mesh.active ? [{ name, identity: mesh.id }, ...mesh.peers.filter(p => p.lastSeen > 0).map(p => ({ name: p.name, identity: p.id }))] : []), [mesh.active, mesh.id, mesh.peers, name]);
+  const duplicates = useMemo(() => mode === 'mesh' ? nearbyDuplicates : duplicateNicknames(geo.connected ? [{ name, identity: geo.publicIdentity }, ...geo.participants] : []), [mode, nearbyDuplicates, name, geo.connected, geo.publicIdentity, geo.participants]);
   const composerRef = useRef<TextInput>(null);
   const [ready, setReady] = useState(false);
   const ownIdentities = mode === 'mesh' ? [mesh.id, ...bitchatService.nicknameIdentities()].join(',') : geo.publicIdentity;
@@ -82,11 +86,16 @@ export default function Chats() {
     }).catch(() => { if (alive) { setReady(true); setActionError('other'); } });
     return () => { alive = false; };
   }, [t]);
-  useEffect(() => {
-    if (mode !== 'mesh' || !recipient || !mesh.active) return;
-    for (const message of mesh.messages) if (!message.outgoing && message.recipient && message.peer === recipient && message.delivery === 'delivered')
-      void bitchatService.read(recipient, message.id).catch(() => {});
-  }, [mode, recipient, mesh.active, mesh.messages]);
+  useFocusEffect(useCallback(() => {
+    if (mode !== 'mesh' || !recipient) return;
+    const markRead = () => {
+      if (platform.appState.currentState() !== 'active') return;
+      for (const message of mesh.messages) if (!message.outgoing && message.recipient && message.peer === recipient && message.delivery === 'delivered')
+        void bitchatService.read(recipient, message.id).catch(() => {});
+    };
+    markRead();
+    return platform.appState.addChangeListener(markRead);
+  }, [mode, recipient, mesh.messages]));
   useEffect(() => {
     if (mode !== 'geo' || !geoRecipient || !geo.privateActive) return;
     for (const message of geo.privateMessages) if (!message.outgoing && (message.channelThread === geoRecipient || message.peer === geoRecipient) && message.delivery === 'delivered') void geohashService.readPrivate(geoRecipient, message.id, message.peer).catch(() => {});
@@ -158,6 +167,14 @@ export default function Chats() {
         {(['mesh', 'geo'] as const).map(value => <AppButton key={value} label={t(`mobile.${value}`)} variant="secondary"
           fullWidth={false} selected={mode === value} disabled={busy} onPress={() => { setMode(value); setActionError(null); }} />)}
       </View>
+      {unread.size > 0 && <View style={{ gap: spacing.xs }}>
+        <AppText variant="caption" tone="accent" accessibilityLiveRegion="polite">{t('mobile.unread_private_messages')}</AppText>
+        <ScrollView horizontal keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: spacing.sm }}>
+          {[...unread].map(([id, entry]) => <AppButton key={id} variant="secondary" fullWidth={false}
+            label={t('mobile.unread_private_sender', { name: displayNickname(entry.name, id, nearbyDuplicates.has(nicknameKey(entry.name))), count: entry.count })}
+            onPress={() => { setMode('mesh'); setRecipient(id); }} />)}
+        </ScrollView>
+      </View>}
       {(mode === 'geo' && editingArea) || (!active && !isComposing) ? <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: spacing.lg, paddingBottom: spacing.lg }}>
         <Radar size={uiDensity.iconButtonSize} color={c.textMuted} />
         <AppText variant="title">{t(mode === 'mesh' ? 'bitchat.title' : 'mobile.geo')}</AppText>

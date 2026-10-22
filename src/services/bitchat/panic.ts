@@ -1,4 +1,5 @@
 import { resetNickname } from '@/services/preferences/nickname';
+import { privateMessageAlerts } from '@/services/mentions/private-messages';
 import { mentionService } from '@/services/mentions/mentions';
 import { invalidateSessionIntent } from '@/services/history/lifecycle';
 import { bitchatService, bitchatSessionStore } from './bitchat.service';
@@ -18,6 +19,7 @@ export function panicWipe(): Promise<void> {
     await bitchatService.stop(); geohashService.stop(); await geohashService.idle();
     bitchatSessionStore.setState({ busy: true });
     workspaceStore.setState({ ready: false, keepBackground: false, backgroundError: false, drafts: {}, recipient: undefined, internet: false, autoAreaRelays: true, gateway: false, bridge: false, bridgeCell: '', nearbyOnly: false, mode: 'mesh', hash: '' });
+    await privateMessageAlerts.clear().catch(() => {});
     await mentionService.clear().catch(() => {});
     await historyOperation(async () => {
       await platform.wipeLocalData();

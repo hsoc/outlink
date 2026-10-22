@@ -1,3 +1,4 @@
+import { privateMessageAlerts } from '@/services/mentions/private-messages';
 import { mentionService } from '@/services/mentions/mentions';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
@@ -25,6 +26,8 @@ export default function Settings() {
   const edits = useRef(0), saving = useRef(false), nameRef = useRef('');
   const [savingName, setSavingName] = useState(false);
   const [mentions, setMentions] = useState(false), [mentionBusy, setMentionBusy] = useState(false), [mentionError, setMentionError] = useState(false);
+  const [privateAlertsReady, setPrivateAlertsReady] = useState(false);
+  const [privateAlerts, setPrivateAlerts] = useState(false), [privateAlertBusy, setPrivateAlertBusy] = useState(false), [privateAlertError, setPrivateAlertError] = useState(false);
   const [backgroundBusy, setBackgroundBusy] = useState(false);
   const workspace = useStore(workspaceStore);
   const [erased, setErased] = useState(false), [networkBusy, setNetworkBusy] = useState(false);
@@ -37,6 +40,8 @@ export default function Settings() {
         setNameReady(true);
       }
     }).catch(() => { if (alive) setFailed(true); });
+    setPrivateAlertsReady(false);
+    void privateMessageAlerts.enabled().then(enabled => { if (alive) { setPrivateAlerts(enabled); setPrivateAlertsReady(true); } }).catch(() => { if (alive) setPrivateAlertError(true); });
     void mentionService.enabled().then(enabled => { if (alive) setMentions(enabled); }).catch(() => { if (alive) setMentionError(true); });
     return () => { alive = false; };
   }, []));
@@ -77,6 +82,18 @@ export default function Settings() {
         })()} />
       <AppText variant="caption" tone="muted">{t('mobile.mention_hint')}</AppText>
       {mentionError && <AppText variant="caption" tone="danger">{t('mobile.mention_permission_error')}</AppText>}
+    </View>
+    <View style={{ gap: spacing.sm }}>
+      <AppText variant="subtitle">{t('mobile.private_message_notifications')}</AppText>
+      <Switch accessibilityLabel={t('mobile.private_message_notifications')} value={privateAlerts}
+        disabled={!privateAlertsReady || privateAlertBusy || clearing} trackColor={{ false: colors.surfaceMuted, true: colors.accent }}
+        onValueChange={enabled => void (async () => {
+          setPrivateAlertBusy(true); setPrivateAlertError(false);
+          try { if (await privateMessageAlerts.configure(enabled)) setPrivateAlerts(enabled); else setPrivateAlertError(true); }
+          catch { setPrivateAlertError(true); } finally { setPrivateAlertBusy(false); }
+        })()} />
+      <AppText variant="caption" tone="muted">{t('mobile.private_message_notification_hint')}</AppText>
+      {privateAlertError && <AppText tone="danger">{t('mobile.mention_permission_error')}</AppText>}
     </View>
     <AppText variant="subtitle">{t('mobile.appearance')}</AppText>
     <View style={{ flexDirection: 'row', gap: spacing.sm }}>{(['system','light','dark'] as const).map(value => <AppButton key={value}

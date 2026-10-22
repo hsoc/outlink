@@ -121,3 +121,9 @@ different suffixes; location rotation changes its discriminator. Short suffixes
 can collide or be imitated and do not establish trust. Your own header hides the
 suffix for compactness; other participants' labels include it. Legacy plain-name
 mentions may still alert multiple identically named users. See [nicknames](protocols/display-names.md).
+
+Optional Nearby private-message notifications are generated locally after receipt.
+Their previews exclude sender names, content and contact identifiers. They use a
+separate opt-in preference and Android channel from public mentions. Full erasure
+attempts to clear both notification categories. In-app unread sender shortcuts
+work without notification permission; they show names only inside the app.
