@@ -12,7 +12,7 @@ import { areaRelays } from '@/services/geohash/relay-directory';
 import { contactsStore, contactsService, contactAvailable } from '@/services/bitchat/compatibility/contacts';
 import { workspaceStore, restoreWorkspace } from '@/services/history/workspace';
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
-import { FlatList, ScrollView, View, Keyboard, type TextInput } from 'react-native';
+import { FlatList, ScrollView, View, Keyboard, type NativeScrollEvent, type TextInput } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useTranslation } from 'react-i18next';
 import { useStore } from 'zustand';
@@ -92,7 +92,12 @@ export default function Chats() {
   const fingerprint = peer?.fingerprint || savedContact?.fingerprint;
   const listRef = useRef<FlatList<BitchatMessage | GeoMessage>>(null);
   const atLatest = useRef(true);
-  useEffect(() => { atLatest.current = true; }, [mode, recipient, geoRecipient, geo.hash]);
+  const userScrolling = useRef(false);
+  const recordScrollPosition = (event: NativeScrollEvent) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event;
+    atLatest.current = isChatAtLatest(layoutMeasurement.height, contentOffset.y, contentSize.height, spacing.xl);
+  };
+  useEffect(() => { atLatest.current = true; userScrolling.current = false; }, [mode, recipient, geoRecipient, geo.hash]);
   const messages = useMemo(() => (mode === 'geo' ? geoRecipient ? geo.privateMessages.filter(m => m.channelThread === geoRecipient || m.peer === geoRecipient || m.recipient === geoRecipient) : geo.messages : mesh.messages.filter(m => recipient ?
     m.recipient && (m.peer === recipient || m.recipient === recipient) : !m.recipient)).filter(m => !blockedKeys.has(messageUserKey(m))), [blockedKeys, mode, recipient, mesh.messages, geo.messages, geo.privateMessages, geoRecipient]);
   useEffect(() => {
@@ -194,6 +199,9 @@ export default function Chats() {
     });
   }
   async function send() {
+    atLatest.current = true;
+    userScrolling.current = false;
+    listRef.current?.scrollToEnd({ animated: false });
     const command = mode === 'mesh' ? groupCommand(draft) : null;
     if (command) {
       if (command.action === 'create') { const id = await bitchatService.createGroup(command.argument); router.push({ pathname: '/groups', params: { id } }); }
@@ -309,9 +317,14 @@ export default function Chats() {
         <FlatList<BitchatMessage | GeoMessage> ref={listRef} key={draftKey} data={messages} keyExtractor={m => m.id + ('peer' in m ? m.peer : m.pubkey)} keyboardShouldPersistTaps="handled"
           style={{ flex: 1, minHeight: 0 }}
           scrollEventThrottle={100}
+          onScrollBeginDrag={() => { userScrolling.current = true; }}
+          onScrollEndDrag={({ nativeEvent }) => { recordScrollPosition(nativeEvent); userScrolling.current = false; }}
+          onMomentumScrollBegin={() => { userScrolling.current = true; }}
+          onMomentumScrollEnd={({ nativeEvent }) => { recordScrollPosition(nativeEvent); userScrolling.current = false; }}
           onScroll={({ nativeEvent }) => {
-            const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-            atLatest.current = isChatAtLatest(layoutMeasurement.height, contentOffset.y, contentSize.height, spacing.xl);
+            // Layout/content changes also emit scroll events; only a gesture changes follow intent.
+            if (!userScrolling.current) return;
+            recordScrollPosition(nativeEvent);
           }}
           onContentSizeChange={() => { if (atLatest.current) listRef.current?.scrollToEnd({ animated: false }); }}
           onLayout={() => { if (atLatest.current) listRef.current?.scrollToEnd({ animated: false }); }}
