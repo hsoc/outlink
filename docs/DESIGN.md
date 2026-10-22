@@ -49,8 +49,8 @@ present a new identity as authenticated continuity in another client.
 
 Background connectivity is opt-in and visibly platform-limited. Its Android switch
 explains battery use and requires a visible ongoing notification with a Stop
-action. Public Mesh denotes Bluetooth broadcast; internet channels retain their
-separate public-channel label.
+action. Public Mesh denotes Bluetooth broadcast; internet channels use their area-code selector and retain public-channel context
+for accessibility.
 
 A Public Mesh composer with no available peer or enabled bridge route labels its
 disabled send button “Nobody Around”; available routes retain “Send”.
@@ -141,7 +141,7 @@ Delete conversation is a distinct destructive action at the end, with a
 confirmation describing local deletion, draft clearing and queued-send cancellation.
 It preserves contact identity/trust settings and does not imply remote deletion.
 
-Location conversations use one Public channel button labeled with the current
-area code. Tapping it opens the area controls; omit the separate area label and
-Change area button. Retain the public-channel wording to distinguish public
-broadcasts from private threads.
+Location conversations use one area button labeled only `#area`. Tapping it opens
+the area controls; omit the separate area label and Change area button. Its
+accessibility label retains public-channel context to distinguish broadcasts
+from private threads.
