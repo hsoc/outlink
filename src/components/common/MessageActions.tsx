@@ -16,10 +16,10 @@ export function MessageActions({ name, own, canMessage, canPost, onAction, onClo
       <ScrollView style={{ flexGrow: 0 }} accessibilityViewIsModal contentContainerStyle={{ gap: spacing.xs, padding: spacing.lg, paddingBottom: insets.bottom + spacing.lg, backgroundColor: c.surface, borderTopStartRadius: radius.xl, borderTopEndRadius: radius.xl }}>
         <AppText variant="subtitle">{name}</AppText>
         {(['copy', ...(!own ? ['message', 'hug', 'slap', 'block'] : [])] as MessageAction[]).map(action => <AppButton key={action}
-          label={t(`mobile.message_action_${action}`)} variant={action === 'block' ? 'danger' : 'text'}
+          label={t(`mobile.message_action_${action}`)} variant={action === 'block' ? 'danger' : 'secondary'}
           disabled={action === 'message' && !canMessage || (action === 'hug' || action === 'slap') && !canPost}
           onPress={() => onAction(action)} />)}
-        <AppButton label={t('common.cancel')} variant="text" onPress={onClose} />
+        <AppButton label={t('common.cancel')} variant="secondary" onPress={onClose} />
       </ScrollView>
     </View>
   </Modal>;

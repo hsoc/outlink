@@ -129,7 +129,10 @@ a mention. Replace per-message private-message buttons with Message user. Action
 post to the pressed conversation without overwriting drafts; unavailable routes
 remain disabled. Persistent identity blocks hide received messages and suppress
 alerts, with an unblock control in Settings. No decorative emoji is added to the
-menu; hug/slap emoji belong to the posted message content.
+menu; hug/slap emoji belong to the posted message content. All action-sheet
+rows, including Cancel, use matching full-width framed button heights and centered
+labels; ordinary actions use neutral secondary styling and Block keeps its danger
+styling.
 
 Contact cards keep per-person conversation management alongside contact actions.
 Delete conversation is a distinct destructive action at the end, with a
