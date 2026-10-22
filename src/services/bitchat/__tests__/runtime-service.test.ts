@@ -192,3 +192,13 @@ it('deletes a whole private conversation, cancels its outbox, and preserves the 
   expect(await records.list('outbox:' + peer, 100)).toEqual([]);
   expect(contactsService.get(peer)).toEqual(contact);
 });
+
+it('prepares discovered Nearby identities on demand without automatically saving them permanently', async () => {
+  await bitchatService.start(root, 'Alice'); await contactsService.idle();
+  await contactsService.remove(carrierId); expect(contactsService.get(carrierId)).toBeUndefined();
+  expect(await bitchatService.preparePrivateConversation(carrierId)).toBe(true);
+  expect(contactsService.get(carrierId)).toMatchObject({ noiseKey: bytesToHex(carrierKey), favorite: false, verified: false });
+  expect(contactsService.get(carrierId)?.saved).not.toBe(true);
+  const unknown = 'ee'.repeat(8);
+  expect(await bitchatService.preparePrivateConversation(unknown)).toBe(false); expect(contactsService.get(unknown)).toBeUndefined();
+});

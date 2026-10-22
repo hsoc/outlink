@@ -1,3 +1,4 @@
+import { configurePrivateInternet } from '@/services/preferences/internet-private';
 import { blockedUsers, blockedUsersStore } from '@/services/moderation/blocked-users';
 import { privateMessageAlerts } from '@/services/mentions/private-messages';
 import { mentionService } from '@/services/mentions/mentions';
@@ -136,7 +137,7 @@ export default function Settings() {
     <AppText tone="muted">{t('mobile.internet_private_hint')}</AppText>
     <AppButton label={t(workspace.internet ? 'mobile.disable' : 'mobile.enable')} variant="secondary" disabled={clearing || networkBusy || !workspace.ready} onPress={() => void (async () => {
       setClearing(true); setFailed(false);
-      try { const enabled = !workspace.internet; await bitchatService.enableInternet(enabled, workspace.relays.split(/\s+/).filter(Boolean)); await geohashService.enableInternet(enabled); workspaceStore.setState({ internet: enabled }); }
+      try { await configurePrivateInternet(!workspace.internet); }
       catch { setFailed(true); } finally { setClearing(false); }
     })()} />
     <AppText tone="muted">{t('mobile.storage_note')}</AppText>

@@ -140,3 +140,10 @@ for one peer across stored pages while preserving encrypted replay markers and
 keyed indexes. The history port owns transactional bounded scans; the service
 owns peer-scoped outbox cancellation, stale-load invalidation and deferred-merge
 guards. Contact/trust records and unrelated conversation scopes are preserved.
+
+Private internet configuration is shared between Settings and the Location private
+composer through `services/preferences/internet-private.ts`. Changes are serialized,
+published after both transports configure successfully, rolled back on failure,
+and canceled across identity erasure. Nearby private-conversation preparation uses
+already discovered keys and existing contact identity checks without marking a
+contact saved, favorite, or verified.

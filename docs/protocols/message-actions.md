@@ -8,10 +8,12 @@ backdrop; assistive technology can invoke the Message actions long-press action.
 - **Copy message:** copies the exact message text, including line breaks, to the
   system clipboard. Your own messages offer this action only.
 - **Message user:** opens the sender's encrypted private conversation. This
-  replaces the inline Private message button in location chat. Nearby needs a
-  known mesh contact; Location needs internet private messaging enabled. A bridged
-  Nostr sender is not assumed to be a known mesh contact, so Nearby cannot open
-  a Bluetooth DM for that bridge identity.
+  works even before the private transport is ready. Nearby prepares contact details
+  from discovered public keys without permanently saving or trusting the contact;
+  missing details show a rediscovery hint. Location opens the private composer and
+  offers an explicit Enable/Reconnect private messaging action when needed. Opening
+  the conversation alone does not enable internet messaging. A bridged Nostr sender
+  cannot be assumed to be a Bluetooth contact: an explanation offers Contacts instead.
 - **Hug user:** immediately posts `/me gives Alice a warm hug 🫂` to the current
   conversation, using the sender's displayed nickname in place of Alice.
 - **Slap user:** immediately posts `/me slaps Alice around a bit with a large
@@ -25,8 +27,8 @@ backdrop; assistive technology can invoke the Message actions long-press action.
 Hug and slap use ordinary chat text starting with `/me`; no new protocol field or
 command interpretation is required, and other clients may show the literal text.
 They post in the pressed public/private conversation and preserve any draft.
-Normal send limits, consent, route availability and errors apply. Message user,
-hug and slap are disabled when their route is unavailable. Menus are dismissed
+Normal send limits, consent, route availability and errors apply. Hug and slap
+are disabled when their route is unavailable; Message user is only disabled while busy. Menus are dismissed
 on navigation/erasure, and stale actions cannot execute in a different thread.
 
 ## Identity and persistence

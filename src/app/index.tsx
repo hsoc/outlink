@@ -1,5 +1,6 @@
+import { configurePrivateInternet } from '@/services/preferences/internet-private';
 import { MessageActions, type MessageAction } from '@/components/common/MessageActions';
-import { messageUserKey, socialMessage } from '@/lib/message-actions';
+import { messageUserKey, socialMessage, privateMessageTarget } from '@/lib/message-actions';
 import { blockedUsers, blockedUsersStore } from '@/services/moderation/blocked-users';
 import { displayNickname, duplicateNicknames, nicknameKey, nicknameMentionLabels, nicknameBase } from '@/lib/nicknames';
 import { unreadPrivateMessages, unreadLocationMessages } from '@/lib/unread-messages';
@@ -176,9 +177,14 @@ export default function Chats() {
         await blockedUsers.set([key, ...(thread?.keys ?? []).map(id => 'nostr:' + id)], nicknameBase(target.name), true); return;
       }
       if (action === 'message') {
-        if (mode === 'geo' && 'pubkey' in item) setPrivateTarget({ hash: geo.hash, pubkey: item.pubkey });
-        else if (mode === 'geo' && 'peer' in item) setPrivateTarget({ hash: geo.hash, pubkey: item.channelThread ?? item.peer });
-        else if ('peer' in item && !item.bridge) setRecipient(item.peer);
+        const destination = privateMessageTarget(item, mode);
+        if (destination.kind === 'geo') setPrivateTarget({ hash: geo.hash, pubkey: destination.peer });
+        else if (destination.kind === 'mesh') {
+          await bitchatService.preparePrivateConversation(destination.peer);
+          if (target.epoch === sessionIntent()) setRecipient(destination.peer);
+        } else if (await platform.confirmationDialog.confirm(t('mobile.message_action_message'), t('mobile.bridge_dm_unavailable'), t('common.cancel'), t('mobile.contacts'))) {
+          if (target.epoch === sessionIntent()) router.push('/contacts');
+        }
         return;
       }
       const content = socialMessage(action, target.name);
@@ -210,7 +216,7 @@ export default function Chats() {
   if (!ready) return <AppScreen><AppText>Outlink</AppText></AppScreen>;
   return <AppScreen edges={['bottom']}>
     {messageMenu && messageMenu.scope === draftKey && !wiping && <MessageActions name={messageMenu.name} own={messageMenu.message.outgoing}
-      canMessage={!busy && (mode === 'geo' ? geo.privateActive : 'peer' in messageMenu.message && !messageMenu.message.bridge && !!contactsService.get(messageMenu.message.peer))}
+      canMessage={!busy}
       canPost={!busy && active && (mode === 'mesh' ? !!recipient || hasMeshPeers || workspace.bridge && !workspace.nearbyOnly : !!geoRecipient ? geo.privateActive && !geoThread?.blocked : !!geo.connected)}
       onAction={action => void messageAction(action)} onClose={() => setMessageMenu(undefined)} />}
     {wiping || wipeStatus === 'failed' ? <View style={{ paddingTop: top, paddingHorizontal: spacing.lg }}>
@@ -269,7 +275,7 @@ export default function Chats() {
           </AppText>
           {geo.connected > 0 && <AppText variant="caption" tone="muted">{t('mobile.geo_active_hint')}</AppText>}
         </View>}
-        {mode === 'mesh' && recipient && !selectedOnline && <AppText variant="caption" tone="muted">{t(savedContact?.blocked ? 'mobile.contact_blocked' : savedContact ? 'mobile.mesh_offline_hint' : 'mobile.contact_reconnect_hint')}</AppText>}
+        {mode === 'mesh' && recipient && (!selectedOnline || !savedContact) && <AppText variant="caption" tone="muted">{t(savedContact?.blocked ? 'mobile.contact_blocked' : savedContact ? 'mobile.mesh_offline_hint' : 'mobile.contact_reconnect_hint')}</AppText>}
         {mode === 'geo' && <FlatList horizontal data={geo.privatePeers} keyExtractor={key => key} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm }}
           ListHeaderComponent={<AppButton label={`${t('mobile.public_channel')} · #${geo.hash}`} labelNumberOfLines={1} accessibilityHint={t('mobile.change_area')} variant="secondary" fullWidth={false} selected={!geoRecipient} disabled={busy} onPress={() => { setPrivateTarget(undefined); setEditingArea(true); }} />}
           renderItem={({ item: key }) => <AppButton label={geoUnread.has(key) ? t('mobile.unread_private_sender', { name: key.slice(0, 8), count: geoUnread.get(key)!.count }) : key.slice(0, 8)} variant="secondary" fullWidth={false} selected={geoRecipient === key} onPress={() => setPrivateTarget({ hash: geo.hash, pubkey: key })} />} />}
@@ -279,7 +285,11 @@ export default function Chats() {
             if (mode === 'mesh') await bitchatService.stop(); else geohashService.stop(); setRecipient(undefined);
           })} /> : <AppButton label={t('mobile.join')} variant="secondary" fullWidth={false} size="sm" loading={busy} disabled={!name.trim() || busy} onPress={() => void operate(join, 'join')} />}
         </View>
-        {mode === 'geo' && !geo.privateActive && geoRecipient && <AppText variant="caption" tone="muted">{t('mobile.geo_private_disabled')}</AppText>}
+        {mode === 'geo' && !geo.privateActive && geoRecipient && <View style={{ gap: spacing.sm }}>
+          <AppText variant="caption" tone="muted">{t('mobile.geo_private_disabled')}</AppText>
+          <AppText variant="caption" tone="muted">{t('mobile.internet_private_hint')}</AppText>
+          <AppButton label={t(workspace.internet ? 'mobile.retry_private_messaging' : 'mobile.enable_private_messaging')} variant="secondary" disabled={busy || !geo.active} onPress={() => void operate(() => configurePrivateInternet(true))} />
+        </View>}
         {mode === 'geo' && geoRecipient && <AppText variant="caption" selectable tone="muted">{geoThread?.head ?? geoRecipient}</AppText>}
         {mode === 'geo' && !geoRecipient && <AppText variant="caption" tone="muted">{t('mobile.channel_rotation_short')}</AppText>}
         {mode === 'geo' && geoRecipient && geoThread?.blocked && <>

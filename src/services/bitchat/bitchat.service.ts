@@ -619,6 +619,18 @@ class BitchatService {
       name, content, timestamp: Date.now(), outgoing: true, delivery: 'queued' });
     if (this.connection) void this.flush(peer).catch(() => bitchatSessionStore.setState({ error: true }));
   }
+  async preparePrivateConversation(peer: string): Promise<boolean> {
+    const epoch = sessionIntent();
+    await contactsService.restore(); await contactsService.idle();
+    if (epoch !== sessionIntent()) throw new Error('Conversation setup canceled by identity erasure');
+    if (blockedUsers.has('mesh:' + peer) || contactsService.get(peer)?.blocked) throw new Error('Contact is blocked');
+    if (!contactsService.get(peer)) {
+      const discovered = bitchatSessionStore.getState().peers.find(candidate => candidate.id === peer);
+      if (discovered?.noisePublicKey && discovered.signingPublicKey) await this.rememberPeer(discovered, false);
+    }
+    if (epoch !== sessionIntent()) throw new Error('Conversation setup canceled by identity erasure');
+    return !!contactsService.get(peer);
+  }
   async ping(peer: string) {
     if (!this.session || contactsService.get(peer)?.blocked) throw new Error('Contact is unavailable');
     return this.session.ping(peer);

@@ -126,8 +126,10 @@ Main conversation message text opens a compact action sheet on long-press:
 Copy message, Message user, Hug user, Slap user, and Block user. Own messages offer
 Copy only. A normal tap still mentions the sender; a long-press must not also add
 a mention. Replace per-message private-message buttons with Message user. Actions
-post to the pressed conversation without overwriting drafts; unavailable routes
-remain disabled. Persistent identity blocks hide received messages and suppress
+post to the pressed conversation without overwriting drafts. Message user opens
+the private composer regardless of route readiness; show rediscovery guidance or
+an explicit internet enable/reconnect action there. Opening a thread must not
+silently enable internet messaging. Hug and slap require an available send route. Persistent identity blocks hide received messages and suppress
 alerts, with an unblock control in Settings. No decorative emoji is added to the
 menu; hug/slap emoji belong to the posted message content. All action-sheet
 rows, including Cancel, use matching full-width framed button heights and centered
