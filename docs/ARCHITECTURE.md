@@ -134,3 +134,9 @@ native clipboard port. Receive/display blocks are identity-keyed encrypted
 protected records, restored before network startup; they suppress notifications
 and include proven Nostr thread aliases. UI state never treats nicknames as block
 keys. Full erasure invalidates pending writes and clears in-memory rules.
+
+[Conversation deletion](protocols/conversation-deletion.md) erases private content
+for one peer across stored pages while preserving encrypted replay markers and
+keyed indexes. The history port owns transactional bounded scans; the service
+owns peer-scoped outbox cancellation, stale-load invalidation and deferred-merge
+guards. Contact/trust records and unrelated conversation scopes are preserved.

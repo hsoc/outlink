@@ -47,6 +47,10 @@ Nearby DMs appear in an unread sender strip and in Contacts; tap the sender to
 open the private thread. Optional **Notify for private messages** in
 Settings enables generic local alerts for Nearby and Location DMs independently of public mentions. Location private threads also show unread sender shortcuts and counts.
 
+Use **Delete conversation** on a Nearby contact card to remove its local messages
+and draft and cancel queued sends while retaining the contact. See
+[conversation deletion](docs/protocols/conversation-deletion.md).
+
 ## Build
 
 Use Node.js 24 and npm, then:

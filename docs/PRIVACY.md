@@ -134,3 +134,9 @@ by app identity erasure. iOS copies are local-only. Blocked identity IDs and dis
 labels remain in encrypted local protected records until unblocked or erased.
 Blocking hides retained received history and suppresses new alerts; it cannot link
 unrelated newly created identities or delete copies on other devices.
+
+Delete conversation removes that Nearby thread's local content and draft and
+cancels queued local sends, keeping contact/trust/block records. Minimal encrypted
+replay markers at keyed indexes remain to prevent old deliveries/status updates
+from restoring content. Full history clearing or identity erasure removes them.
+This does not recall already transmitted messages or delete recipient/backup copies.

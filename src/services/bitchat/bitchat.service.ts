@@ -1,3 +1,4 @@
+import { sessionIntent } from '@/services/history/lifecycle';
 import { blockedUsers } from '@/services/moderation/blocked-users';
 import { GroupRuntime, type GroupInfo, type GroupMessage } from './compatibility/group-runtime';
 import { privateMessageAlerts } from '@/services/mentions/private-messages';
@@ -61,6 +62,8 @@ function contactsStoreLookup(sender: string) {
 }
 export const meshGroupsStore = createStore<{ groups: GroupInfo[]; messages: GroupMessage[]; self: string; historyEpoch: number }>(() => ({ groups: [], messages: [], self: '', historyEpoch: 0 }));
 class BitchatService {
+  private readonly conversationVersions = new Map<string, number>();
+  private readonly deletions = new Map<string, Promise<void>>();
   private groups?: GroupRuntime;
   private bridgeIdentity = '';
   nicknameIdentities(): string[] { return [this.session?.id ?? '', this.bridgeIdentity].filter(Boolean); }
@@ -86,7 +89,15 @@ class BitchatService {
     put: (peer, id, value) => putRecord(`outbox:${peer}`, id, value),
     remove: (peer, id) => removeRecord(`outbox:${peer}`, id),
   }, message => this.mergeMessage(message));
-  private mergeMessage(message: BitchatMessage) {
+  private mergeMessage(message: BitchatMessage, checked = false) {
+    const peer = message.recipient ? message.outgoing ? message.recipient : message.peer : undefined;
+    if (peer && this.conversationVersions.has(peer) && !checked) {
+      const epoch = sessionIntent();
+      void this.track((this.deletions.get(peer) ?? Promise.resolve()).then(() => historyOperation(() => platform.history.get('mesh', message.id + message.peer))).then(saved => {
+        if (epoch === sessionIntent() && !(saved && JSON.parse(saved).deleted)) this.mergeMessage(message, true);
+      })).catch(() => bitchatSessionStore.setState({ error: true }));
+      return;
+    }
     if (!message.outgoing && (blockedUsers.has('mesh:' + message.peer) || message.bridge && (blockedUsers.has('nostr:' + message.bridge.pubkey) || geohashService.isBlocked?.(message.bridge.pubkey)))) return;
     const known = bitchatSessionStore.getState().messages.some(m => m.id === message.id && m.peer === message.peer);
     if (!known && !contactsService.get(message.peer)?.blocked) privateMessageAlerts.received(message);
@@ -359,6 +370,32 @@ class BitchatService {
     ++this.historyVersion; this.before = undefined;
     bitchatSessionStore.setState({ messages: [] });
   }
+  deleteConversation(peer: string): Promise<void> {
+    if (!/^[0-9a-f]{16}$/.test(peer)) return Promise.reject(new Error('Invalid peer identity'));
+    const existing = this.deletions.get(peer); if (existing) return existing;
+    const epoch = sessionIntent();
+    this.conversationVersions.set(peer, (this.conversationVersions.get(peer) ?? 0) + 1);
+    const version = ++this.historyVersion;
+    const operation = (async () => {
+      const pending = await this.outbox.discard(peer);
+      await historyOperation(async () => {
+        if (epoch !== sessionIntent()) throw new Error('Conversation deletion canceled by identity erasure');
+        await platform.history.deleteConversation('mesh', peer, pending.map(message => message.id + message.peer));
+        if (epoch !== sessionIntent()) return;
+        bitchatSessionStore.setState(state => ({ messages: state.messages.filter(message => !message.recipient || (message.outgoing ? message.recipient : message.peer) !== peer) }));
+      });
+      const page = await loadMessages<BitchatMessage>('mesh');
+      if (epoch !== sessionIntent() || version !== this.historyVersion) return;
+      this.before = page.before === undefined ? this.before : Math.min(this.before ?? page.before, page.before);
+      this.hydrated = true;
+      bitchatSessionStore.setState(state => {
+        const messages = new Map(page.messages.map(message => [message.id + message.peer, message]));
+        for (const message of state.messages) messages.set(message.id + message.peer, message);
+        return { messages: [...messages.values()].sort((a, b) => a.timestamp - b.timestamp).slice(-500) };
+      });
+    })().finally(() => { if (this.deletions.get(peer) === operation) this.deletions.delete(peer); });
+    this.deletions.set(peer, operation); return this.track(operation);
+  }
   private before?: number;
   async restore(): Promise<void> {
     if (this.hydrated) return;
@@ -554,6 +591,8 @@ class BitchatService {
   }
   send(content: string, peer?: string, nearbyOnly = false): Promise<void> { return this.track(this.sendInternal(content, peer, nearbyOnly)); }
   private async sendInternal(content: string, peer?: string, nearbyOnly = false): Promise<void> {
+    const conversationVersion = peer ? this.conversationVersions.get(peer) ?? 0 : 0;
+    if (peer && this.deletions.has(peer)) throw new Error('Conversation is being deleted');
     if (!content.trim() || bytes(content).length > 255) throw new Error('Message must fit 255 UTF-8 bytes');
     if (!peer) {
       const session = this.session;
@@ -574,7 +613,9 @@ class BitchatService {
     await contactsService.keepForDelivery(peer);
     const name = await ensureNickname();
     this.rename(name);
-    await this.outbox.enqueue(peer, { id: await platform.deviceCrypto.randomUUID(), peer: own, recipient: peer,
+    const id = await platform.deviceCrypto.randomUUID();
+    if (this.deletions.has(peer) || conversationVersion !== (this.conversationVersions.get(peer) ?? 0)) throw new Error('Conversation was deleted');
+    await this.outbox.enqueue(peer, { id, peer: own, recipient: peer,
       name, content, timestamp: Date.now(), outgoing: true, delivery: 'queued' });
     if (this.connection) void this.flush(peer).catch(() => bitchatSessionStore.setState({ error: true }));
   }
@@ -642,7 +683,7 @@ class BitchatService {
   removeGroupMember(id: string, fingerprint: string) {
     return this.track((async () => { const groups = this.groups; if (!groups) throw new Error('Join Bluetooth first'); await groups.remove(id, fingerprint); await this.syncGroups(); })());
   }
-  resetLocalState() { meshGroupsStore.setState(s => ({ groups: [], messages: [], self: '', historyEpoch: s.historyEpoch + 1 })); this.hydrated = false; this.before = undefined; ++this.historyVersion; bitchatSessionStore.setState(empty, true); }
+  resetLocalState() { this.conversationVersions.clear(); this.deletions.clear(); meshGroupsStore.setState(s => ({ groups: [], messages: [], self: '', historyEpoch: s.historyEpoch + 1 })); this.hydrated = false; this.before = undefined; ++this.historyVersion; bitchatSessionStore.setState(empty, true); }
   removeIdentity(account: string): Promise<void> {
     return this.transition(async () => {
       if (this.account === account) await this.stopInternal();

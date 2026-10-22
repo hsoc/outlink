@@ -220,3 +220,52 @@ test('protected protocol records prevent silent key regeneration after secure st
     await assert.rejects(adapter.records.list('contacts'), /key/i); assert.equal(f.keys.size, 0);
   } finally { adapter.close(); f.cleanup(); }
 });
+test('conversation deletion erases all private pages, preserves other rooms, and blocks replay/status resurrection', async () => {
+  const f = fixture(); let adapter = f.open();
+  const privateMessage = (id, overrides = {}) => JSON.stringify({ id, peer: 'alice', recipient: 'bob', outgoing: true, content: 'private transcript', delivery: 'sent', ...overrides });
+  try {
+    for (let index = 0; index < 205; index++) await adapter.history.save('mesh', 'sent-' + index, privateMessage('sent-' + index));
+    await adapter.history.save('mesh', 'received', privateMessage('received', { peer: 'bob', recipient: 'alice', outgoing: false, delivery: 'read' }));
+    await adapter.history.save('mesh', 'public', privateMessage('public', { peer: 'bob', recipient: undefined, outgoing: false }));
+    await adapter.history.save('mesh', 'other', privateMessage('other', { recipient: 'carol' }));
+    await adapter.history.save('geo-private:area', 'location', privateMessage('location'));
+    await adapter.records.set('contacts', 'bob', 'preserved contact settings');
+    await adapter.history.deleteConversation('mesh', 'bob', ['pending-only']);
+    assert.deepEqual([...await adapter.history.load('mesh')].map(row => JSON.parse(row.value).id), ['public', 'other']);
+    assert.deepEqual(JSON.parse(await adapter.history.get('mesh', 'received')), { deleted: true, delivery: 'read' });
+    assert.equal(JSON.parse(await adapter.history.get('mesh', 'pending-only')).deleted, true);
+    await adapter.history.save('mesh', 'sent-0', privateMessage('sent-0', { delivery: 'read' }));
+    assert.equal(JSON.parse(await adapter.history.get('mesh', 'sent-0')).deleted, true);
+    adapter.close(); adapter = f.open();
+    assert.equal((await adapter.history.load('mesh')).length, 2);
+    assert.equal((await adapter.history.load('geo-private:area')).length, 1);
+    assert.equal(await adapter.records.get('contacts', 'bob'), 'preserved contact settings');
+    await adapter.history.save('mesh', 'new-dm', privateMessage('new-dm'));
+    assert.equal((await adapter.history.load('mesh')).length, 3);
+  } finally { adapter.close(); f.cleanup(); }
+});
+test('existing encrypted history gains replay markers without changing old message encryption', async () => {
+  const f = fixture(); let adapter = f.open();
+  try {
+    await adapter.history.save('mesh', 'old', JSON.stringify({ peer: 'bob', recipient: 'me', outgoing: false, content: 'old private', delivery: 'delivered' }));
+    adapter.close();
+    const raw = new DatabaseSync(join(f.directory, 'history.db'));
+    raw.exec('DROP INDEX encrypted_visible_sequence; ALTER TABLE encrypted_messages DROP COLUMN deleted'); raw.close();
+    adapter = f.open();
+    assert.equal((await adapter.history.load('mesh')).length, 1);
+    await adapter.history.deleteConversation('mesh', 'bob');
+    assert.equal((await adapter.history.load('mesh')).length, 0);
+    assert.equal(JSON.parse(await adapter.history.get('mesh', 'old')).deleted, true);
+  } finally { adapter.close(); f.cleanup(); }
+});
+test('conversation deletion rolls back content erasure if any encrypted row is corrupt', async () => {
+  const f = fixture(), adapter = f.open();
+  try {
+    const value = JSON.stringify({ peer: 'bob', recipient: 'me', outgoing: false, content: 'keep on failure' });
+    await adapter.history.save('mesh', 'corrupt', value); await adapter.history.save('mesh', 'healthy', value);
+    const raw = new DatabaseSync(join(f.directory, 'history.db'));
+    raw.exec("UPDATE encrypted_messages SET value = 'corrupt' WHERE sequence = 1"); raw.close();
+    await assert.rejects(adapter.history.deleteConversation('mesh', 'bob'), /format/i);
+    assert.equal(JSON.parse(await adapter.history.get('mesh', 'healthy')).content, 'keep on failure');
+  } finally { adapter.close(); f.cleanup(); }
+});

@@ -30,6 +30,9 @@ export function createEncryptedStorage(
           sequence INTEGER PRIMARY KEY AUTOINCREMENT, scope TEXT NOT NULL, id TEXT NOT NULL,
           value TEXT NOT NULL, UNIQUE(scope, id));
         CREATE INDEX IF NOT EXISTS protected_scope_sequence ON protected_records(scope, sequence);`);
+      const columns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(encrypted_messages)');
+      if (!columns.some(column => column.name === 'deleted')) await db.execAsync('ALTER TABLE encrypted_messages ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0');
+      await db.execAsync('CREATE INDEX IF NOT EXISTS encrypted_visible_sequence ON encrypted_messages(room, deleted, sequence)');
       const marker = await db.getFirstAsync<{ value: string }>('SELECT value FROM local_meta WHERE name = ?', 'key-check-v1');
       let key = await secrets.getItem(KEY);
       if (!key) {
@@ -97,7 +100,7 @@ export function createEncryptedStorage(
     },
     async load(input, before = Number.MAX_SAFE_INTEGER) {
       const { db, cipher } = await get(), room = cipher.index(`room:${input}`);
-      const rows = await db.getAllAsync<Row>('SELECT sequence, room, id, value FROM encrypted_messages WHERE room = ? AND sequence < ? ORDER BY sequence DESC LIMIT 200', room, before);
+      const rows = await db.getAllAsync<Row>('SELECT sequence, room, id, value FROM encrypted_messages WHERE room = ? AND deleted = 0 AND sequence < ? ORDER BY sequence DESC LIMIT 200', room, before);
       const messages: { sequence: number; value: string }[] = [];
       for (const [index, row] of rows.reverse().entries()) {
         messages.push({ sequence: row.sequence, value: cipher.open(row.value, `message:${room}:${row.id}`) });
@@ -108,7 +111,35 @@ export function createEncryptedStorage(
     async save(input, messageId, value) {
       const { db, cipher } = await get();
       const room = cipher.index(`room:${input}`), id = cipher.index(`id:${input}:${messageId}`);
-      await db.runAsync('INSERT INTO encrypted_messages(room, id, value) VALUES (?, ?, ?) ON CONFLICT(room, id) DO UPDATE SET value = excluded.value', room, id, cipher.seal(value, `message:${room}:${id}`));
+      await db.runAsync('INSERT INTO encrypted_messages(room, id, value) VALUES (?, ?, ?) ON CONFLICT(room, id) DO UPDATE SET value = excluded.value WHERE encrypted_messages.deleted = 0', room, id, cipher.seal(value, `message:${room}:${id}`));
+    },
+    async deleteConversation(input, peer, pendingIds = []) {
+      const { db, cipher } = await get(), room = cipher.index(`room:${input}`);
+      // Erase content while retaining opaque replay markers, with bounded memory and async I/O.
+      await db.withExclusiveTransactionAsync(async tx => {
+        await tx.execAsync('PRAGMA secure_delete = ON');
+        let before = Number.MAX_SAFE_INTEGER;
+        while (true) {
+          const rows = await tx.getAllAsync<Row>('SELECT sequence, room, id, value FROM encrypted_messages WHERE room = ? AND deleted = 0 AND sequence < ? ORDER BY sequence DESC LIMIT 200', room, before);
+          if (!rows.length) break;
+          for (const [index, row] of rows.entries()) {
+            let message: { recipient?: string; peer?: string; outgoing?: boolean; delivery?: string };
+            const plaintext = cipher.open(row.value, `message:${room}:${row.id}`);
+            try { message = JSON.parse(plaintext); } catch { continue; }
+            if (message?.recipient && (message.outgoing ? message.recipient : message.peer) === peer) {
+              const marker = JSON.stringify({ deleted: true, delivery: message.delivery === 'read' ? 'read' : 'delivered' });
+              await tx.runAsync('UPDATE encrypted_messages SET value = ?, deleted = 1 WHERE sequence = ?', cipher.seal(marker, `message:${room}:${row.id}`), row.sequence);
+            }
+            if (index % 20 === 19) await new Promise(resolve => setTimeout(resolve, 0));
+          }
+          before = rows[rows.length - 1].sequence;
+        }
+        for (const messageId of pendingIds) {
+          const id = cipher.index(`id:${input}:${messageId}`), value = cipher.seal(JSON.stringify({ deleted: true, delivery: 'delivered' }), `message:${room}:${id}`);
+          await tx.runAsync('INSERT INTO encrypted_messages(room, id, value, deleted) VALUES (?, ?, ?, 1) ON CONFLICT(room, id) DO UPDATE SET value = excluded.value, deleted = 1', room, id, value);
+        }
+      });
+      await db.execAsync('PRAGMA wal_checkpoint(TRUNCATE)');
     },
     async clear() {
       const { db } = await get();

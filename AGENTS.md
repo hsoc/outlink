@@ -93,3 +93,12 @@ the native port; hug/slap are ordinary `/me` text sent to the pressed conversati
 without replacing drafts. Restore identity-based encrypted block rules before
 network startup, suppress alerts for blocked senders, preserve known Nostr aliases,
 and keep Settings unblocking and full-wipe cancellation in sync.
+
+# Conversation deletion
+
+Read `docs/protocols/conversation-deletion.md` before altering per-person deletion.
+Preserve contact/trust records, public/group/Location history and unrelated outboxes.
+Erase private content across all stored pages with bounded async processing; retain
+only encrypted keyed replay markers and reject status resurrection. Keep the
+confirmation, draft clearing, peer-scoped send cancellation, stale-load guards,
+schema migration and real SQLite tests in sync.

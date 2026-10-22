@@ -1,3 +1,5 @@
+import { sessionIntent } from '@/services/history/lifecycle';
+import { platform } from '@/platform';
 import { blockedUsersStore } from '@/services/moderation/blocked-users';
 import { unreadPrivateMessages } from '@/lib/unread-messages';
 import { displayNickname, duplicateNicknames, nicknameKey } from '@/lib/nicknames';
@@ -17,10 +19,11 @@ import { contactsService, contactsStore, isSavedContact } from '@/services/bitch
 import { contactDirectory, type ContactDirectoryEntry, type ContactDirectoryTab } from '@/services/bitchat/compatibility/contact-directory';
 import { bitchatService, bitchatSessionStore } from '@/services/bitchat/bitchat.service';
 import { nicknameStore } from '@/services/preferences/nickname';
-import { workspaceStore } from '@/services/history/workspace';
+import { historyOperation } from '@/services/history/history';
+import { workspaceStore, restoreWorkspace } from '@/services/history/workspace';
 import { radius, spacing, uiDensity, useThemeColors } from '@/theme';
 
-type Action = 'open' | 'save' | 'unsave' | 'favorite' | 'block' | 'ping';
+type Action = 'open' | 'save' | 'unsave' | 'favorite' | 'block' | 'ping' | 'delete';
 type RowProps = { entry: ContactDirectoryEntry; busy: boolean; duplicate: boolean; unread: number; onAction(id: string, action: Action): void };
 const ContactRow = memo(function ContactRow({ entry, busy, duplicate, unread, onAction }: RowProps) {
   const { t } = useTranslation(), c = useThemeColors(), contact = entry.contact;
@@ -40,6 +43,7 @@ const ContactRow = memo(function ContactRow({ entry, busy, duplicate, unread, on
         <AppButton label={t(contact.blocked ? 'mobile.unblock' : 'mobile.block')} variant="text" fullWidth={false} disabled={busy} onPress={() => onAction(entry.id, 'block')} />
         <AppButton label={t('mobile.check_connection')} variant="text" fullWidth={false} disabled={busy || !entry.online || contact.blocked} onPress={() => onAction(entry.id, 'ping')} />
       </>}
+      <AppButton label={t('mobile.delete_conversation')} variant="danger" fullWidth={false} disabled={busy} onPress={() => onAction(entry.id, 'delete')} />
     </View>
   </View>;
 }, (a, b) => a.unread === b.unread && a.duplicate === b.duplicate && a.busy === b.busy && a.onAction === b.onAction && a.entry.id === b.entry.id && a.entry.name === b.entry.name && a.entry.online === b.entry.online && a.entry.contact === b.entry.contact);
@@ -68,6 +72,20 @@ export default function Contacts() {
         if (contact?.blocked) throw new Error('Contact is blocked');
         workspaceStore.setState({ mode: 'mesh', recipient: id }); router.dismissTo('/'); return;
       }
+      if (action === 'delete') {
+        const epoch = sessionIntent();
+        if (!await platform.confirmationDialog.confirm(t('mobile.delete_conversation'), t('mobile.delete_conversation_confirm'), t('common.cancel'), t('mobile.delete_conversation'))) return;
+        if (epoch !== sessionIntent()) return;
+        if (!workspaceStore.getState().ready) await restoreWorkspace();
+        if (epoch !== sessionIntent()) return;
+        await bitchatService.deleteConversation(id);
+        if (epoch !== sessionIntent()) return;
+        workspaceStore.setState(state => {
+          const drafts = { ...state.drafts }; delete drafts[`mesh:${id}`];
+          return { drafts, recipient: state.recipient === id ? undefined : state.recipient };
+        });
+        await historyOperation(async () => {}); return;
+      }
       if (!contact) throw new Error('Rediscover or import this contact');
       if (action === 'save') await contactsService.save(contact);
       if (action === 'unsave') await contactsService.upsert(id, current => ({ ...(current ?? contact), saved: false, expiresAt: Date.now() + 86400000 }));
@@ -80,7 +98,7 @@ export default function Contacts() {
     })().catch(() => { if (mounted.current) setFailed(true); }).finally(() => {
       working.current = false; if (mounted.current) setBusy(false);
     });
-  }, []);
+  }, [t]);
   return <AppScreen edges={['bottom']}>
     <FlatList data={contacts.ready ? entries : []} keyExtractor={entry => entry.id}
       contentContainerStyle={{ padding: spacing.lg, paddingTop: top, gap: spacing.md }} keyboardShouldPersistTaps="handled"

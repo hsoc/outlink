@@ -62,3 +62,17 @@ it('keeps a stable conversation scope separate from full wire-recipient authoriz
   await expect(f.outbox.enqueue('bob-original', { ...message, recipient: 'bob-another' })).rejects.toThrow('reused');
   await f.outbox.acknowledge('bob-original', message.id, 'read', 'bob-new'); expect(f.records.size).toBe(0);
 });
+it('discards only the selected peer and does not resurrect an in-flight delivery', async () => {
+  const f = fixture(); await f.outbox.enqueue('bob', f.message('one')); await f.outbox.enqueue('bob', f.message('two'));
+  await f.outbox.enqueue('carol', { ...f.message('other'), recipient: 'carol' });
+  let release!: () => void;
+  const deliver = jest.fn(() => new Promise<void>(resolve => { release = resolve; }));
+  const flushing = f.outbox.flush('bob', deliver);
+  while (!release) await Promise.resolve();
+  const discarded = await f.outbox.discard('bob');
+  expect(discarded.map(message => message.id)).toEqual(['one', 'two']);
+  release(); await flushing;
+  expect(deliver).toHaveBeenCalledTimes(1); expect(await f.storage.list('bob')).toEqual([]);
+  expect(await f.storage.list('carol')).toHaveLength(1);
+  expect(f.changed.some(message => message.delivery === 'sent')).toBe(false);
+});

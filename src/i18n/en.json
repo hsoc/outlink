@@ -177,6 +177,8 @@
     "storage_failed": "Could not save local preferences. Check available device storage.",
     "action_text_hug": "/me gives {{name}} a warm hug 🫂",
     "action_text_slap": "/me slaps {{name}} around a bit with a large trout 🐟",
+    "delete_conversation": "Delete conversation",
+    "delete_conversation_confirm": "Delete all local messages and the draft for this Nearby conversation, and cancel queued outgoing messages? Your contact and its settings stay saved. Messages already sent cannot be removed from the other device.",
     "message_action_copy": "Copy message",
     "message_action_message": "Message user",
     "message_action_hug": "Hug user",

@@ -130,3 +130,8 @@ post to the pressed conversation without overwriting drafts; unavailable routes
 remain disabled. Persistent identity blocks hide received messages and suppress
 alerts, with an unblock control in Settings. No decorative emoji is added to the
 menu; hug/slap emoji belong to the posted message content.
+
+Contact cards keep per-person conversation management alongside contact actions.
+Delete conversation is a distinct destructive action at the end, with a
+confirmation describing local deletion, draft clearing and queued-send cancellation.
+It preserves contact identity/trust settings and does not imply remote deletion.

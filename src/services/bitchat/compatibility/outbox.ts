@@ -11,6 +11,7 @@ export interface OutboxStorage {
 /** Storage commits precede transmission; only authenticated delivery/read acknowledgments clear mail. */
 export class MessageOutbox {
   private generation = 0;
+  private readonly peerGenerations = new Map<string, number>();
   private readonly mutations = new Map<string, Promise<unknown>>();
   private mutate<T>(peer: string, task: () => Promise<T>): Promise<T> {
     const operation = (this.mutations.get(peer) ?? Promise.resolve()).catch(() => {}).then(task);
@@ -19,6 +20,14 @@ export class MessageOutbox {
     return operation;
   }
   cancelFlushes() { ++this.generation; }
+  async discard(peer: string): Promise<BitchatMessage[]> {
+    this.peerGenerations.set(peer, (this.peerGenerations.get(peer) ?? 0) + 1);
+    return this.mutate(peer, async () => {
+      const entries = await this.storage.list(peer);
+      for (const entry of entries) await this.storage.remove(peer, entry.message.id);
+      return entries.map(entry => entry.message);
+    });
+  }
   async idle() { await Promise.allSettled([...this.flushing.values(), ...this.mutations.values()]); }
   private readonly flushing = new Map<string, Promise<void>>();
   constructor(private readonly storage: OutboxStorage,
@@ -48,20 +57,20 @@ export class MessageOutbox {
     this.flushing.set(peer, work); return work;
   }
   private async flushInternal(peer: string, deliver: (entry: PendingMessage) => Promise<void | DeliveryResult>, available: (entry: PendingMessage) => boolean) {
-    const generation = this.generation;
+    const generation = this.generation, peerGeneration = this.peerGenerations.get(peer) ?? 0;
     const pending = await this.storage.list(peer);
     for (const entry of pending.sort((a, b) => a.message.timestamp - b.message.timestamp)) {
-      if (generation !== this.generation) break;
+      if (generation !== this.generation || peerGeneration !== (this.peerGenerations.get(peer) ?? 0)) break;
       if (entry.expiresAt <= this.now() || entry.attempts >= 8) { await this.mutate(peer, async () => { if (await this.storage.get(peer, entry.message.id)) await this.drop(peer, entry); }); continue; }
       if (!available(entry)) continue;
       if (entry.lastAttempt && this.now() - entry.lastAttempt < 30000) continue;
       const next = await this.mutate(peer, async () => {
         const current = await this.storage.get(peer, entry.message.id);
-        if (!current || generation !== this.generation) return;
+        if (!current || generation !== this.generation || peerGeneration !== (this.peerGenerations.get(peer) ?? 0)) return;
         const updated = { ...current, attempts: current.attempts + 1, lastAttempt: this.now() };
         await this.storage.put(peer, entry.message.id, updated); return updated;
       });
-      if (!next) continue;
+      if (!next || generation !== this.generation || peerGeneration !== (this.peerGenerations.get(peer) ?? 0)) continue;
       try {
         const result = await deliver(next);
         await this.mutate(peer, async () => {

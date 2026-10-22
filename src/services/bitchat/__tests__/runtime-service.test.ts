@@ -24,7 +24,7 @@ jest.mock('@/services/mentions/private-messages', () => ({ privateMessageAlerts:
 jest.mock('@/services/mentions/mentions', () => ({ mentionService: { received: jest.fn() } }));
 jest.mock('@/services/geohash/geohash.service', () => ({ geohashService: { acceptCarrier: jest.fn() } }));
 jest.mock('@/platform', () => ({ platform: { proximityTransport: {}, records: { get: jest.fn(), set: jest.fn(), remove: jest.fn(), list: jest.fn() },
-  history: { save: jest.fn(), load: jest.fn(async () => []), get: jest.fn() }, preferences: { getItem: jest.fn(async () => null), setItem: jest.fn(async () => {}) },
+  history: { save: jest.fn(), deleteConversation: jest.fn(), load: jest.fn(async () => []), get: jest.fn() }, preferences: { getItem: jest.fn(async () => null), setItem: jest.fn(async () => {}) },
   secureStorage: { getItem: jest.fn(), setItem: jest.fn() }, deviceCrypto: { randomUUID: jest.fn(async () => 'outgoing-one') } } }));
 jest.mock('../compatibility/private-mailbox', () => {
   const actual = jest.requireActual('../compatibility/private-mailbox');
@@ -172,4 +172,23 @@ it('does not deliver or alert on a blocked mesh sender', async () => {
   expect(bitchatSessionStore.getState().messages.some(m => m.id.startsWith('blocked-'))).toBe(false);
   expect(mentionService.received).not.toHaveBeenCalled(); expect(privateMessageAlerts.received).not.toHaveBeenCalled();
   await blockedUsers.set(['mesh:' + carrierId], 'Carrier', false);
+});
+
+it('deletes a whole private conversation, cancels its outbox, and preserves the contact and other messages', async () => {
+  await bitchatService.start(root, 'Alice'); const peer = peerId(recipientKey), contact = structuredClone(contactsService.get(peer));
+  const own = bitchatSessionStore.getState().id;
+  const outgoing = { id: 'delete-queued', peer: own, recipient: peer, name: 'Alice', content: 'private', timestamp: Date.now(), outgoing: true, delivery: 'queued' as const };
+  await records.put('outbox:' + peer, outgoing.id, { message: outgoing, attempts: 0, lastAttempt: 0, expiresAt: Date.now() + 86400000 });
+  const publicMessage = { ...outgoing, id: 'public-keep', recipient: undefined };
+  bitchatSessionStore.setState({ messages: [outgoing, publicMessage] });
+  jest.mocked(platform.history.deleteConversation).mockImplementationOnce(async (_room, _peer, ids) => {
+    for (const id of ids ?? []) history.set('mesh:' + id, JSON.stringify({ deleted: true }));
+  });
+  const olderOther = { ...outgoing, id: 'older-other', recipient: 'cc'.repeat(8), timestamp: outgoing.timestamp - 1 };
+  jest.mocked(platform.history.load).mockResolvedValueOnce([{ sequence: 1, value: JSON.stringify(olderOther) }]);
+  await bitchatService.deleteConversation(peer);
+  expect(platform.history.deleteConversation).toHaveBeenCalledWith('mesh', peer, [outgoing.id + own]);
+  expect(bitchatSessionStore.getState().messages).toEqual([olderOther, publicMessage]);
+  expect(await records.list('outbox:' + peer, 100)).toEqual([]);
+  expect(contactsService.get(peer)).toEqual(contact);
 });
