@@ -1,3 +1,4 @@
+import { blockedUsers } from '@/services/moderation/blocked-users';
 import { GroupRuntime, type GroupInfo, type GroupMessage } from './compatibility/group-runtime';
 import { privateMessageAlerts } from '@/services/mentions/private-messages';
 import { mentionService } from '@/services/mentions/mentions';
@@ -86,6 +87,7 @@ class BitchatService {
     remove: (peer, id) => removeRecord(`outbox:${peer}`, id),
   }, message => this.mergeMessage(message));
   private mergeMessage(message: BitchatMessage) {
+    if (!message.outgoing && (blockedUsers.has('mesh:' + message.peer) || message.bridge && (blockedUsers.has('nostr:' + message.bridge.pubkey) || geohashService.isBlocked?.(message.bridge.pubkey)))) return;
     const known = bitchatSessionStore.getState().messages.some(m => m.id === message.id && m.peer === message.peer);
     if (!known && !contactsService.get(message.peer)?.blocked) privateMessageAlerts.received(message);
     if (!known) mentionService.received(message, 'mesh', 'public', message.bridge?.radioHint ?? meshStableId(message.peer, message.timestamp, message.content), [this.session?.id ?? '', this.bridgeIdentity]);
@@ -235,7 +237,7 @@ class BitchatService {
       const fields = decodeTlv(opened.payload.subarray(1)), id = text(fields.get(0) ?? new Uint8Array()), content = text(fields.get(1) ?? new Uint8Array());
       if (!id || !content.trim()) return true;
       const sender = peerId(opened.sender), contact = contactsService.get(sender);
-      if (contact?.blocked || contact && contact.noiseKey !== bytesToHex(opened.sender)) return true;
+      if (blockedUsers.has('mesh:' + sender) || contact?.blocked || contact && contact.noiseKey !== bytesToHex(opened.sender)) return true;
       const message: BitchatMessage = { id, peer: sender, recipient: peerId(this.identity.noisePublicKey), name: contact?.name ?? sender, content, timestamp: Date.now(), outgoing: false, delivery: 'delivered' };
       const existing = await historyOperation(() => platform.history.get('mesh', id + sender));
       if (!existing) { await saveMessage('mesh', id + sender, message); this.mergeMessage(message); }
@@ -321,7 +323,7 @@ class BitchatService {
   private async receiveInternet(sender: string, payload: InternetPayload) {
     if (payload.kind === 'rotation' || payload.kind === 'rotation-ack') return;
     const contact = contactsStoreLookup(sender);
-    if (!contact || contact.blocked || payload.senderId && payload.senderId !== contact.id || payload.recipientId && payload.recipientId !== bitchatSessionStore.getState().id) return;
+    if (!contact || blockedUsers.has('mesh:' + contact.id) || contact.blocked || payload.senderId && payload.senderId !== contact.id || payload.recipientId && payload.recipientId !== bitchatSessionStore.getState().id) return;
     if (payload.kind === 'receipt') { await this.receipt(payload.id, contact.id, payload.delivery); return; }
     if (await this.favoriteNotification(contact.id, payload.content)) return;
     const own = bitchatSessionStore.getState().id;
@@ -392,7 +394,7 @@ class BitchatService {
   start(account: string, name: string): Promise<void> {
     return this.transition(async () => {
       await this.stopInternal();
-      await this.restore(); await contactsService.restore();
+      await blockedUsers.restore(); await this.restore(); await contactsService.restore();
       bitchatSessionStore.setState({ busy: true, error: false });
       try {
         this.identity = await loadIdentity(account); this.account = account;
@@ -422,7 +424,7 @@ class BitchatService {
             void this.rememberPeer(peer, !old?.lastSeen || peer.secure && !old.secure).catch(() => bitchatSessionStore.setState({ error: true }));
           },
           message: message => {
-            if (contactsService.get(message.peer)?.blocked) return;
+            if (blockedUsers.has('mesh:' + message.peer) || contactsService.get(message.peer)?.blocked) return;
             if (message.content.startsWith('[FAVORITED]:') || message.content.startsWith('[UNFAVORITED]:')) {
               if (!message.outgoing) void this.favoriteNotification(message.peer, message.content).catch(() => bitchatSessionStore.setState({ error: true }));
               return;
@@ -595,6 +597,7 @@ class BitchatService {
     }
   }
   private async storeGroupMessage(message: GroupMessage) {
+    if (blockedUsers.has('mesh:' + message.sender.slice(0, 16))) return;
     if (contactsStore.getState().contacts.some(c => c.fingerprint === message.sender && c.blocked)) return;
     await historyOperation(async () => {
       const room = `group:${message.group}`, id = `${message.sender}:${message.id}`;

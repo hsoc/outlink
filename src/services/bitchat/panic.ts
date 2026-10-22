@@ -1,3 +1,4 @@
+import { blockedUsers } from '@/services/moderation/blocked-users';
 import { resetNickname } from '@/services/preferences/nickname';
 import { privateMessageAlerts } from '@/services/mentions/private-messages';
 import { mentionService } from '@/services/mentions/mentions';
@@ -25,7 +26,7 @@ export function panicWipe(): Promise<void> {
       await platform.wipeLocalData();
       await resetMobileIdentity();
     });
-    resetNickname();
+    resetNickname(); blockedUsers.reset();
     bitchatService.resetLocalState(); geohashService.clearMessages();
     geohashStore.setState({ hash: '' }); contactsStore.setState({ contacts: [], ready: false });
     workspaceStore.setState({ ready: true });

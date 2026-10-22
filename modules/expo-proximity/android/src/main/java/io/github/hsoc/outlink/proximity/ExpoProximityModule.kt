@@ -1,5 +1,7 @@
 package io.github.hsoc.outlink.proximity
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothGatt
@@ -112,6 +114,11 @@ class ExpoProximityModule : Module() {
 
   override fun definition() = ModuleDefinition {
     Name("ExpoProximity")
+    AsyncFunction("copyTextAsync") { text: String ->
+      val context = appContext.reactContext ?: throw IllegalStateException("Application unavailable")
+      val clipboard = context.getSystemService(ClipboardManager::class.java) ?: throw IllegalStateException("Clipboard unavailable")
+      clipboard.setPrimaryClip(ClipData.newPlainText("Outlink", text))
+    }
     AsyncFunction("backgroundRunningAsync") { ConnectivityService.running }
     AsyncFunction("backgroundTokenAsync") { ConnectivityService.token }
     AsyncFunction("stopBackgroundAsync") {

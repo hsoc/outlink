@@ -1,3 +1,4 @@
+import { blockedUsers } from '@/services/moderation/blocked-users';
 /** @jest-environment node */
 import { privateMessageAlerts, PRIVATE_MESSAGE_PREFERENCE } from '../private-messages';
 import { platform } from '@/platform';
@@ -55,4 +56,13 @@ it('scopes duplicate IDs by transport and location channel', async () => {
     const ids = jest.mocked(platform.mentionNotifications.show).mock.calls.map(([alert]) => alert.id);
     expect(new Set(ids).size).toBe(3);
   } finally { clock.mockRestore(); }
+});
+
+it('rechecks blocks after asynchronous preference loading', async () => {
+  let release!: (value: string) => void;
+  jest.mocked(platform.preferences.getItem).mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
+  privateMessageAlerts.received(message()); await Promise.resolve(); await Promise.resolve();
+  const check = jest.spyOn(blockedUsers, 'has').mockReturnValue(true);
+  try { release('true'); await privateMessageAlerts.idle(); expect(platform.mentionNotifications.show).not.toHaveBeenCalled(); }
+  finally { check.mockRestore(); }
 });

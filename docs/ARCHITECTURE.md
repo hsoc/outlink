@@ -128,3 +128,9 @@ bounded loaded window; marking read requires a focused foreground thread.
 Location DM arrival hooks fire only after new authenticated message persistence,
 not on delivery/read status changes. Proven rotation aliases share an unread
 conversation root; counts stay scoped to the loaded area and bounded history.
+
+[Message actions](protocols/message-actions.md) use the existing send paths and a
+native clipboard port. Receive/display blocks are identity-keyed encrypted
+protected records, restored before network startup; they suppress notifications
+and include proven Nostr thread aliases. UI state never treats nicknames as block
+keys. Full erasure invalidates pending writes and clears in-memory rules.

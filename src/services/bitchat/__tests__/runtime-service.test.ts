@@ -1,3 +1,4 @@
+import { blockedUsers } from '@/services/moderation/blocked-users';
 import { privateMessageAlerts } from '@/services/mentions/private-messages';
 import { mentionService } from '@/services/mentions/mentions';
 /** @jest-environment node */
@@ -159,4 +160,16 @@ it('isolates group history and drafts from public chats and clears group memory 
   await bitchatService.stop();
   expect(meshGroupsStore.getState().groups[0].id).toBe(id);
   bitchatService.resetLocalState(); expect(meshGroupsStore.getState().groups).toEqual([]);
+});
+
+it('does not deliver or alert on a blocked mesh sender', async () => {
+  await bitchatService.start(root, 'Alice');
+  await blockedUsers.set(['mesh:' + carrierId], 'Carrier', true);
+  const active = session() as unknown as { callbacks: { message(message: unknown): void } };
+  jest.mocked(mentionService.received).mockClear(); jest.mocked(privateMessageAlerts.received).mockClear();
+  active.callbacks.message({ id: 'blocked-public', peer: carrierId, name: 'Carrier', content: '@Alice blocked', timestamp: Date.now(), outgoing: false, delivery: 'sent' });
+  active.callbacks.message({ id: 'blocked-dm', peer: carrierId, recipient: bitchatSessionStore.getState().id, name: 'Carrier', content: 'blocked', timestamp: Date.now(), outgoing: false, delivery: 'delivered' });
+  expect(bitchatSessionStore.getState().messages.some(m => m.id.startsWith('blocked-'))).toBe(false);
+  expect(mentionService.received).not.toHaveBeenCalled(); expect(privateMessageAlerts.received).not.toHaveBeenCalled();
+  await blockedUsers.set(['mesh:' + carrierId], 'Carrier', false);
 });

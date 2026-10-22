@@ -1,3 +1,4 @@
+import { blockedUsersStore } from '@/services/moderation/blocked-users';
 import { displayNickname, duplicateNicknames, nicknameKey } from '@/lib/nicknames';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, View, type TextInput } from 'react-native';
@@ -31,6 +32,7 @@ function GroupScreen() {
   const { t } = useTranslation(), c = useThemeColors(), top = useScreenHeaderClearance();
   const state = useStore(meshGroupsStore), mesh = useStore(bitchatSessionStore), contacts = useStore(contactsStore, s => s.contacts);
   const ownName = useStore(nicknameStore, s => s.name);
+  const blocked = useStore(blockedUsersStore, s => s.users);
   const params = useLocalSearchParams<{ id?: string }>();
   const [selected, setSelected] = useState<string | undefined>(params.id), [name, setName] = useState('');
   const draftKey = `group:${selected ?? ''}`;
@@ -56,8 +58,9 @@ function GroupScreen() {
   const messages = useMemo(() => {
     const map = new Map((loadedFor === historyKey ? older : []).map(m => [m.sender + ':' + m.id, m]));
     for (const m of state.messages) if (m.group === selected) map.set(m.sender + ':' + m.id, m);
-    return [...map.values()].sort((a, b) => a.timestamp - b.timestamp).reverse();
-  }, [older, state.messages, selected, loadedFor, historyKey]);
+    const hidden = new Set(blocked.map(user => user.key));
+    return [...map.values()].filter(message => !hidden.has('mesh:' + message.sender.slice(0, 16))).sort((a, b) => a.timestamp - b.timestamp).reverse();
+  }, [older, state.messages, selected, loadedFor, historyKey, blocked]);
   async function act(task: () => Promise<unknown>) {
     if (working.current) return;
     working.current = true; setBusy(true); setFailed(false);

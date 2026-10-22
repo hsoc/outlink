@@ -88,8 +88,8 @@ operation, and distinguish completed erasure from a failure requiring retry.
 Conversation messages use content-sized rounded bubbles, capped below the full
 row width. Outgoing bubbles align to the logical end with the accent-soft fill;
 incoming bubbles align to the start with the elevated surface. A smaller lower
-corner points toward the sender side. Preserve selectable content, sender/key
-labels, bridge attribution, private-message actions, and delivery status. Use the
+corner points toward the sender side. Provide Copy message through the long-press menu in main conversations; retain
+selectable group text and sender/key labels, bridge attribution, private-message actions, and delivery status. Use the
 same treatment for mesh and location conversations in both themes and RTL.
 
 Location presets cover Region through Block and include approximate grid widths,
@@ -102,7 +102,8 @@ three-minute window, inclusion of self, and identity-based estimate. Disconnecte
 relays show unavailable rather than implying zero users or live presence.
 
 Tapping received message text inserts a plain-text sender mention into the current
-draft and focuses the composer, without sending. Preserve long-press text selection.
+draft and focuses the composer, without sending. In main conversations, press-and-hold opens message actions instead of native
+text selection; group text keeps native selection.
 Public chat sender names provide the same shortcut. Mentions of
 the saved shared nickname receive an accent bubble outline and a text label,
 independent of OS permissions. Local mention notifications are explicitly opt-in
@@ -120,3 +121,12 @@ counts, independent of OS permission. Sender shortcuts open the private thread
 directly. Only the visible foreground conversation marks messages read. Optional
 Private-message notifications are separate from public mention alerts and
 use generic previews without names or content.
+
+Main conversation message text opens a compact action sheet on long-press:
+Copy message, Message user, Hug user, Slap user, and Block user. Own messages offer
+Copy only. A normal tap still mentions the sender; a long-press must not also add
+a mention. Replace per-message private-message buttons with Message user. Actions
+post to the pressed conversation without overwriting drafts; unavailable routes
+remain disabled. Persistent identity blocks hide received messages and suppress
+alerts, with an unblock control in Settings. No decorative emoji is added to the
+menu; hug/slap emoji belong to the posted message content.

@@ -1,3 +1,4 @@
+import { blockedUsers } from '@/services/moderation/blocked-users';
 import { nicknameMentionLabels } from '@/lib/nicknames';
 import english from '@/i18n/en.json';
 import { bytesToHex } from '@noble/hashes/utils.js';
@@ -8,7 +9,7 @@ import { ensureNickname } from '@/services/preferences/nickname';
 import { historyOperation } from '@/services/history/history';
 import { sessionIntent } from '@/services/history/lifecycle';
 export const MENTION_PREFERENCE = 'mobile.mentionNotifications';
-type Message = { id: string; content: string; timestamp: number; outgoing: boolean; recipient?: string };
+type Message = { id: string; content: string; timestamp: number; outgoing: boolean; recipient?: string; peer?: string; pubkey?: string; bridge?: { pubkey: string } };
 let revision = 0, queued = 0, pending: Promise<void> = Promise.resolve(), lastAlert = -Infinity;
 const seen = new Set<string>();
 let copy = { channelName: english.mobile.mention_notifications, meshBody: english.mobile.mention_alert_mesh, geoBody: english.mobile.mention_alert_geo };
@@ -36,6 +37,8 @@ export const mentionService = {
       if (epoch !== sessionIntent() || version !== revision || Date.now() - lastAlert < 10000 || !await this.enabled()) return;
       const name = await ensureNickname();
       if (epoch !== sessionIntent() || version !== revision || !([name, ...ownIdentities.flatMap(id => nicknameMentionLabels(name, id))].some(label => mentionMatcher(label)(message.content)))) return;
+      const blockedKey = mode === 'geo' ? 'nostr:' + message.pubkey : message.bridge ? 'nostr:' + message.bridge.pubkey : 'mesh:' + message.peer;
+      if (blockedUsers.has(blockedKey)) return;
       await platform.mentionNotifications.show({ id, title: 'Outlink', body: mode === 'mesh' ? copy.meshBody : copy.geoBody, channelName: copy.channelName }); lastAlert = Date.now();
     }).catch(() => { /* Notification failure must not reject or discard chat messages. */ }).finally(() => { --queued; });
   },

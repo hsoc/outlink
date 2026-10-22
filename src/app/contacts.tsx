@@ -1,3 +1,4 @@
+import { blockedUsersStore } from '@/services/moderation/blocked-users';
 import { unreadPrivateMessages } from '@/lib/unread-messages';
 import { displayNickname, duplicateNicknames, nicknameKey } from '@/lib/nicknames';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -31,7 +32,7 @@ const ContactRow = memo(function ContactRow({ entry, busy, duplicate, unread, on
     {contact && <AppText variant="caption" tone="muted">{t(contact.verified ? 'mobile.verified' : 'mobile.unverified')}</AppText>}
     {contact && <AppText variant="caption" tone="muted" selectable>{contact.fingerprint}</AppText>}
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-      <AppButton label={t('mobile.private_message')} variant="secondary" fullWidth={false} disabled={busy || contact?.blocked} onPress={() => onAction(entry.id, 'open')} />
+      <AppButton label={t('mobile.message_action_message')} variant="secondary" fullWidth={false} disabled={busy || contact?.blocked} onPress={() => onAction(entry.id, 'open')} />
       {contact && <>
         {!isSavedContact(contact) && <AppButton label={t('mobile.save_contact')} variant="text" fullWidth={false} disabled={busy} onPress={() => onAction(entry.id, 'save')} />}
         {contact.saved && !contact.favorite && !contact.verified && !contact.blocked && <AppButton label={t('mobile.unsave_contact')} variant="text" fullWidth={false} disabled={busy} onPress={() => onAction(entry.id, 'unsave')} />}
@@ -54,7 +55,8 @@ export default function Contacts() {
   const working = useRef(false), mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useFocusEffect(useCallback(() => { void Promise.all([contactsService.restore().then(() => contactsService.prune()), bitchatService.restore()]).catch(() => { if (mounted.current) setFailed(true); }); }, []));
-  const unread = useMemo(() => unreadPrivateMessages(mesh.messages, new Set(contacts.contacts.filter(c => c.blocked).map(c => c.id))), [mesh.messages, contacts.contacts]);
+  const blockedUsers = useStore(blockedUsersStore, state => state.users);
+  const unread = useMemo(() => unreadPrivateMessages(mesh.messages, new Set([...contacts.contacts.filter(c => c.blocked).map(c => c.id), ...blockedUsers.filter(user => user.key.startsWith('mesh:')).map(user => user.key.slice(5))])), [mesh.messages, contacts.contacts, blockedUsers]);
   const entries = useMemo(() => contactDirectory(contacts.contacts, mesh.peers, mesh.messages, mesh.active, tab, query), [contacts.contacts, mesh.peers, mesh.messages, mesh.active, tab, query]);
   const onAction = useCallback((id: string, action: Action) => {
     if (working.current) return;

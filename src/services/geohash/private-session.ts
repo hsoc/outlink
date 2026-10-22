@@ -16,6 +16,7 @@ export type PrivateDependencies = {
   records: ProtocolStorage; outbox: OutboxStorage; hash?: string; legacyPubkey?: string;
   get(id: string): Promise<BitchatMessage | null>;
   save(message: BitchatMessage): Promise<void>;
+  blocked?(sender: string, aliases?: string[]): boolean;
   received?(message: BitchatMessage): void;
   changed(message: BitchatMessage): void; connection(count: number): void; error(): void;
   threads?(threads: (GeoThread & { blocked: boolean; migrating: boolean })[]): void;
@@ -123,7 +124,7 @@ export class GeoPrivateSession {
     await this.deps.records.put('geo-acks', key, { peer, own, id, status: previous?.status === 'read' ? 'read' : status, expires: Date.now() + 86400000 });
   }
   private async receive(sender: string, payload: InternetPayload, own: string) {
-    if (this.stopped || !this.hasOwn(own) || !publicKey(sender) || !payload.id || bytes(payload.id).length > 255 ||
+    if (this.deps.blocked?.(sender) || this.stopped || !this.hasOwn(own) || !publicKey(sender) || !payload.id || bytes(payload.id).length > 255 ||
         !!payload.recipientId || payload.timestamp < Date.now() - 86400000 || payload.timestamp > Date.now() + 300000) return;
     if (payload.kind === 'rotation' || payload.kind === 'rotation-ack') { await this.migrate(sender, own, payload); return; }
     if (payload.kind === 'receipt') {
@@ -140,7 +141,7 @@ export class GeoPrivateSession {
     }
     if (bytes(payload.content).length > 4096 || !payload.content.trim()) return;
     const thread = (await this.thread(sender, own))!;
-    if (!this.acceptsSender(thread, sender)) return;
+    if (this.deps.blocked?.(sender, thread.keys) || !this.acceptsSender(thread, sender)) return;
     // A known peer explicitly reaching the new inbox can renew an expired pair.
     if (!this.hasOwn(thread.local) && own === this.pubkey && sender === thread.head) await this.saveThread(thread, { ...thread, local: own });
     const previous = await this.deps.get(payload.id + sender);

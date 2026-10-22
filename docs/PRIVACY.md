@@ -127,3 +127,10 @@ Their previews exclude sender names, content and contact identifiers. They use a
 separate opt-in preference and Android channel from public mentions. Full erasure
 attempts to clear both notification categories. In-app unread sender shortcuts
 work without notification permission; they show names only inside the app.
+
+Long-press Copy message intentionally places exact text on the OS clipboard,
+outside app encryption; text pasted elsewhere and clipboard copies are not erased
+by app identity erasure. iOS copies are local-only. Blocked identity IDs and display
+labels remain in encrypted local protected records until unblocked or erased.
+Blocking hides retained received history and suppresses new alerts; it cannot link
+unrelated newly created identities or delete copies on other devices.

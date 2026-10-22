@@ -13,6 +13,7 @@ export type { PreferencesPort, LocationPort } from './mobile';
 export type { AppStatePort, AppStateStatus } from './app-state';
 export type { ProximityTransportPort, ProximityTransportSubscription } from './proximity-transport';
 export interface PlatformAdapters {
+  clipboard: { writeText(text: string): Promise<void> };
   mentionNotifications: MentionNotificationsPort;
   backgroundConnectivity: BackgroundConnectivityPort;
   history: HistoryPort;

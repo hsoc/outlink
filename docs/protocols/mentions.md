@@ -67,7 +67,7 @@ Tap received message text in Public Mesh, location channels, private conversatio
 or private Bluetooth groups to append the sender mention to the current draft and
 focus the message box. Existing draft text is preserved; tapping does not send.
 The mention uses the visible nickname, including its four-character discriminator
-only for active duplicates. Long-press remains available for text selection.
+only for active duplicates. In Nearby and Location conversations, long-press opens the [message actions](message-actions.md) menu, including Copy message. Group text retains native selection.
 Tapping your own messages does not insert a mention. Public sender labels retain
 their existing shortcut. This does not enable private/group mention notifications.
 

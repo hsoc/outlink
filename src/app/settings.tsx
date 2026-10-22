@@ -1,6 +1,7 @@
+import { blockedUsers, blockedUsersStore } from '@/services/moderation/blocked-users';
 import { privateMessageAlerts } from '@/services/mentions/private-messages';
 import { mentionService } from '@/services/mentions/mentions';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import { NetworkSettings } from '@/components/bitchat/NetworkSettings';
 import { panicWipe } from '@/services/bitchat/panic';
@@ -29,6 +30,8 @@ export default function Settings() {
   const [privateAlertsReady, setPrivateAlertsReady] = useState(false);
   const [privateAlerts, setPrivateAlerts] = useState(false), [privateAlertBusy, setPrivateAlertBusy] = useState(false), [privateAlertError, setPrivateAlertError] = useState(false);
   const [backgroundBusy, setBackgroundBusy] = useState(false);
+  const blocks = useStore(blockedUsersStore, s => s.users);
+  const blockRows = useMemo(() => [...new Map(blocks.map(entry => [entry.group ?? entry.key, entry])).values()], [blocks]);
   const workspace = useStore(workspaceStore);
   const [erased, setErased] = useState(false), [networkBusy, setNetworkBusy] = useState(false);
   const [clearing, setClearing] = useState(false), [failed, setFailed] = useState(false);
@@ -41,10 +44,11 @@ export default function Settings() {
       }
     }).catch(() => { if (alive) setFailed(true); });
     setPrivateAlertsReady(false);
+    void blockedUsers.restore().catch(() => { if (alive) setFailed(true); });
     void privateMessageAlerts.enabled().then(enabled => { if (alive) { setPrivateAlerts(enabled); setPrivateAlertsReady(true); } }).catch(() => { if (alive) setPrivateAlertError(true); });
     void mentionService.enabled().then(enabled => { if (alive) setMentions(enabled); }).catch(() => { if (alive) setMentionError(true); });
     return () => { alive = false; };
-  }, []));
+  }, [setFailed]));
   useEffect(() => { void restoreWorkspace().catch(() => setFailed(true)); }, []);
   const { t } = useTranslation(), top = useScreenHeaderClearance();
   const preference = useThemeStore(s => s.preference), accent = useThemeStore(s => s.accent);
@@ -95,6 +99,12 @@ export default function Settings() {
       <AppText variant="caption" tone="muted">{t('mobile.private_message_notification_hint')}</AppText>
       {privateAlertError && <AppText tone="danger">{t('mobile.mention_permission_error')}</AppText>}
     </View>
+    {blockRows.length > 0 && <View style={{ gap: spacing.sm }}>
+      <AppText variant="subtitle">{t('mobile.blocked_users')}</AppText>
+      {blockRows.map(entry => <AppButton key={entry.key} variant="text" disabled={clearing}
+        label={t('mobile.unblock_user', { name: entry.name })}
+        onPress={() => { setClearing(true); void blockedUsers.set(blocks.filter(user => (user.group ?? user.key) === (entry.group ?? entry.key)).map(user => user.key), entry.name, false).catch(() => setFailed(true)).finally(() => setClearing(false)); }} />)}
+    </View>}
     <AppText variant="subtitle">{t('mobile.appearance')}</AppText>
     <View style={{ flexDirection: 'row', gap: spacing.sm }}>{(['system','light','dark'] as const).map(value => <AppButton key={value}
       label={t(`mobile.${value}`)} variant="secondary" fullWidth={false} selected={preference === value} onPress={() => useThemeStore.getState().setPreference(value)} />)}</View>

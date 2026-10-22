@@ -1,3 +1,4 @@
+import { blockedUsers } from '@/services/moderation/blocked-users';
 import english from '@/i18n/en.json';
 import { platform } from '@/platform';
 import { historyOperation } from '@/services/history/history';
@@ -31,6 +32,7 @@ export const privateMessageAlerts = {
     pending = pending.catch(() => {}).then(async () => {
       if (epoch !== sessionIntent() || version !== revision || Date.now() - lastAlert < 10000 || !await this.enabled()) return;
       if (epoch !== sessionIntent() || version !== revision) return;
+      if (blockedUsers.has((mode === 'geo' ? 'nostr:' : 'mesh:') + message.peer)) return;
       await platform.mentionNotifications.show({ id, title: 'Outlink', body: mode === 'geo' ? copy.geoBody : copy.body, channelName: copy.channelName, kind: 'private' });
       lastAlert = Date.now();
     }).catch(() => { /* Native alert failures must not interrupt private delivery. */ }).finally(() => { --queued; });

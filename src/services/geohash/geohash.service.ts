@@ -1,3 +1,4 @@
+import { blockedUsers } from '@/services/moderation/blocked-users';
 import { mentionService } from '@/services/mentions/mentions';
 import { privateMessageAlerts } from '@/services/mentions/private-messages';
 import { ensureNickname, nicknameStore, validateNickname } from '@/services/preferences/nickname';
@@ -30,6 +31,10 @@ geohashStore.subscribe((state, previous) => {
   }
 });
 class GeohashService {
+  isBlocked(key: string) {
+    const thread = geohashStore.getState().privateThreads.find(t => t.peer === key || t.head === key || t.keys.includes(key));
+    return [key, ...(thread?.keys ?? [])].some(id => blockedUsers.has('nostr:' + id));
+  }
   meshFallback?: (event: Event, hash: string) => Promise<boolean>;
   acceptCarrier(event: Event, hash: string) { if (this.connection?.hash === hash) this.session?.acceptEvent(event); }
   connection?: { hash: string; name: string; relays: string[] };
@@ -87,6 +92,7 @@ class GeohashService {
     const hash = normalizeGeohash(input); let relays = normalizeGeoRelays(relayInput);
     this.stop(); const revision = ++this.revision;
     await this.closing;
+    await blockedUsers.restore();
     await this.restore(hash);
     if (revision !== this.revision) return;
     const preferences = JSON.parse(await platform.preferences.getItem('mobile.workspace') ?? '{}');
@@ -111,7 +117,7 @@ class GeohashService {
       const current = () => revision === this.revision;
       this.session = new GeohashSession(hash, key, name, relays, {
         message: message => {
-          if (!current() || geohashStore.getState().messages.some(m => m.id === message.id)) return;
+          if (!current() || !message.outgoing && this.isBlocked(message.pubkey) || geohashStore.getState().messages.some(m => m.id === message.id)) return;
           mentionService.received(message, 'geo', hash, message.id, [geohashStore.getState().publicIdentity]);
           geohashStore.setState(state => {
             const messages = [...state.messages, message].sort((a, b) => a.timestamp - b.timestamp || a.id.localeCompare(b.id)).slice(-500);
@@ -199,6 +205,7 @@ class GeohashService {
         put: (peer, id, value) => putRecord(scope(`outbox:${peer}`), id, value), remove: (peer, id) => removeRecord(scope(`outbox:${peer}`), id) },
       get: async id => { const row = await historyOperation(() => platform.history.get(`geo-private:${hash}`, id)); return row ? JSON.parse(row) : null; },
       save: message => saveMessage(`geo-private:${hash}`, message.id + message.peer, message),
+      blocked: (sender, aliases = []) => [sender, ...aliases].some(key => this.isBlocked(key)),
       received: message => { if (current()) privateMessageAlerts.received(message, 'geo', hash); },
       changed: message => {
         if (!current()) return;

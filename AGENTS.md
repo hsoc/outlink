@@ -84,3 +84,12 @@ from the bounded loaded message window and mark read only in a focused foregroun
 private thread. Feed optional DM alerts only from newly accepted arrival callbacks,
 never history hydration. Preserve separate mention/DM preferences and native
 cleanup categories; full identity erasure invalidates and drains both queues.
+
+# Message actions
+
+Read `docs/protocols/message-actions.md` before changing action routing or blocks.
+Keep normal tap mentions separate from long-press actions. Copy exact text through
+the native port; hug/slap are ordinary `/me` text sent to the pressed conversation,
+without replacing drafts. Restore identity-based encrypted block rules before
+network startup, suppress alerts for blocked senders, preserve known Nostr aliases,
+and keep Settings unblocking and full-wipe cancellation in sync.

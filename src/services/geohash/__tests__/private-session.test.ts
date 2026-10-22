@@ -217,3 +217,11 @@ it('labels outgoing location private messages with the shared nickname while ret
   expect([...b.history.values()][0].peer).toBe(a.session.pubkey);
   expect(JSON.stringify(hub.events)).not.toContain('Outlink1234');
 });
+
+it('discards blocked private senders before saving or alerting, including proven aliases', async () => {
+  const hub = relay(), a = client(1, hub), b = client(2, hub);
+  const blocked = jest.fn(() => true); b.deps.blocked = blocked; b.deps.received = jest.fn();
+  await a.session.send(b.session.pubkey, 'blocked');
+  await until(() => blocked.mock.calls.length > 0);
+  expect(b.history.size).toBe(0); expect(b.deps.received).not.toHaveBeenCalled();
+});

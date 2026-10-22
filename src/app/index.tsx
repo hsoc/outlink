@@ -1,4 +1,7 @@
-import { displayNickname, duplicateNicknames, nicknameKey, nicknameMentionLabels } from '@/lib/nicknames';
+import { MessageActions, type MessageAction } from '@/components/common/MessageActions';
+import { messageUserKey, socialMessage } from '@/lib/message-actions';
+import { blockedUsers, blockedUsersStore } from '@/services/moderation/blocked-users';
+import { displayNickname, duplicateNicknames, nicknameKey, nicknameMentionLabels, nicknameBase } from '@/lib/nicknames';
 import { unreadPrivateMessages, unreadLocationMessages } from '@/lib/unread-messages';
 import { platform } from '@/platform';
 import { groupCommand } from '@/services/bitchat/compatibility/group-commands';
@@ -8,7 +11,7 @@ import { areaRelays } from '@/services/geohash/relay-directory';
 import { contactsStore, contactsService, contactAvailable } from '@/services/bitchat/compatibility/contacts';
 import { workspaceStore, restoreWorkspace } from '@/services/history/workspace';
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
-import { FlatList, ScrollView, View, type TextInput } from 'react-native';
+import { FlatList, ScrollView, View, Keyboard, type TextInput } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useTranslation } from 'react-i18next';
 import { useStore } from 'zustand';
@@ -37,8 +40,15 @@ export default function Chats() {
   const { t } = useTranslation(), c = useThemeColors(), top = useScreenHeaderClearance();
   const savedContacts = useStore(contactsStore, state => state.contacts);
   const mesh = useStore(bitchatSessionStore), geo = useStore(geohashStore);
-  const unread = useMemo(() => unreadPrivateMessages(mesh.messages, new Set(savedContacts.filter(c => c.blocked).map(c => c.id))), [mesh.messages, savedContacts]);
-  const geoUnread = useMemo(() => unreadLocationMessages(geo.privateMessages, geo.privateThreads), [geo.privateMessages, geo.privateThreads]);
+  const blocked = useStore(blockedUsersStore, s => s.users);
+  const blockedKeys = useMemo(() => {
+    const keys = new Set(blocked.map(user => user.key));
+    for (const contact of savedContacts) if (contact.blocked) keys.add('mesh:' + contact.id);
+    for (const thread of geo.privateThreads) if (thread.keys.some(key => keys.has('nostr:' + key))) for (const key of thread.keys) keys.add('nostr:' + key);
+    return keys;
+  }, [blocked, savedContacts, geo.privateThreads]);
+  const unread = useMemo(() => unreadPrivateMessages(mesh.messages, new Set([...blockedKeys].filter(key => key.startsWith('mesh:')).map(key => key.slice(5)))), [mesh.messages, blockedKeys]);
+  const geoUnread = useMemo(() => unreadLocationMessages(geo.privateMessages.filter(message => !blockedKeys.has(messageUserKey(message))), geo.privateThreads), [geo.privateMessages, geo.privateThreads, blockedKeys]);
   const workspace = useStore(workspaceStore);
   const { mode, hash, precision, relays, recipient } = workspace;
   const setMode = (mode: 'mesh' | 'geo') => workspaceStore.setState({ mode });
@@ -54,6 +64,12 @@ export default function Chats() {
   const name = useStore(nicknameStore, state => state.name);
   const nearbyDuplicates = useMemo(() => duplicateNicknames(mesh.active ? [{ name, identity: mesh.id }, ...mesh.peers.filter(p => p.lastSeen > 0).map(p => ({ name: p.name, identity: p.id }))] : []), [mesh.active, mesh.id, mesh.peers, name]);
   const duplicates = useMemo(() => mode === 'mesh' ? nearbyDuplicates : duplicateNicknames(geo.connected ? [{ name, identity: geo.publicIdentity }, ...geo.participants] : []), [mode, nearbyDuplicates, name, geo.connected, geo.publicIdentity, geo.participants]);
+  const [messageMenu, setMessageMenu] = useState<{ message: BitchatMessage | GeoMessage; name: string; scope: string; epoch: number }>();
+  const longPressed = useRef(false), menuConsumed = useRef(false);
+  useFocusEffect(useCallback(() => {
+    const remove = platform.appState.addChangeListener(state => { if (state !== 'active') setMessageMenu(undefined); });
+    return () => { remove(); setMessageMenu(undefined); };
+  }, []));
   const composerRef = useRef<TextInput>(null);
   const [ready, setReady] = useState(false);
   const ownIdentities = mode === 'mesh' ? [mesh.id, ...bitchatService.nicknameIdentities()].join(',') : geo.publicIdentity;
@@ -76,11 +92,11 @@ export default function Chats() {
   const listRef = useRef<FlatList<BitchatMessage | GeoMessage>>(null);
   const atLatest = useRef(true);
   useEffect(() => { atLatest.current = true; }, [mode, recipient, geoRecipient, geo.hash]);
-  const messages = useMemo(() => mode === 'geo' ? geoRecipient ? geo.privateMessages.filter(m => m.channelThread === geoRecipient || m.peer === geoRecipient || m.recipient === geoRecipient) : geo.messages : mesh.messages.filter(m => recipient ?
-    m.recipient && (m.peer === recipient || m.recipient === recipient) : !m.recipient), [mode, recipient, mesh.messages, geo.messages, geo.privateMessages, geoRecipient]);
+  const messages = useMemo(() => (mode === 'geo' ? geoRecipient ? geo.privateMessages.filter(m => m.channelThread === geoRecipient || m.peer === geoRecipient || m.recipient === geoRecipient) : geo.messages : mesh.messages.filter(m => recipient ?
+    m.recipient && (m.peer === recipient || m.recipient === recipient) : !m.recipient)).filter(m => !blockedKeys.has(messageUserKey(m))), [blockedKeys, mode, recipient, mesh.messages, geo.messages, geo.privateMessages, geoRecipient]);
   useEffect(() => {
     let alive = true;
-    void Promise.all([ensureNickname(), restoreWorkspace(), bitchatService.restore(), contactsService.restore()]).then(async () => {
+    void Promise.all([blockedUsers.restore(), ensureNickname(), restoreWorkspace(), bitchatService.restore(), contactsService.restore()]).then(async () => {
       const savedHash = workspaceStore.getState().hash;
       if (savedHash) await geohashService.restore(savedHash).catch(() => {});
       if (alive) setReady(true);
@@ -119,6 +135,7 @@ export default function Chats() {
   const quickErase = useCallback(() => {
     if (wipingRef.current) return;
     wipingRef.current = true; ++areaRequest.current;
+    setMessageMenu(undefined); longPressed.current = false;
     setWiping(true); setWipeStatus(null); setActionError(null);
     void (async () => {
       try {
@@ -144,6 +161,32 @@ export default function Chats() {
     if (identity) await bitchatService.start(identity, value);
     else { await geohashService.join(hash, value, workspace.autoAreaRelays ? areaRelays(hash) : relays.split(/\s+/).filter(Boolean)); await bitchatService.refreshNetwork(); setEditingArea(false); }
   }
+  async function messageAction(action: MessageAction) {
+    if (menuConsumed.current) return;
+    menuConsumed.current = true;
+    const target = messageMenu; setMessageMenu(undefined);
+    if (!target || target.epoch !== sessionIntent() || target.scope !== draftKey) return;
+    const item = target.message, key = messageUserKey(item);
+    await operate(async () => {
+      if (action === 'copy') { await platform.clipboard.writeText(item.content); return; }
+      if (item.outgoing) return;
+      if (action === 'block') {
+        const identity = key.slice(key.indexOf(':') + 1);
+        const thread = key.startsWith('nostr:') ? geo.privateThreads.find(t => t.peer === identity || t.keys.includes(identity)) : undefined;
+        await blockedUsers.set([key, ...(thread?.keys ?? []).map(id => 'nostr:' + id)], nicknameBase(target.name), true); return;
+      }
+      if (action === 'message') {
+        if (mode === 'geo' && 'pubkey' in item) setPrivateTarget({ hash: geo.hash, pubkey: item.pubkey });
+        else if (mode === 'geo' && 'peer' in item) setPrivateTarget({ hash: geo.hash, pubkey: item.channelThread ?? item.peer });
+        else if ('peer' in item && !item.bridge) setRecipient(item.peer);
+        return;
+      }
+      const content = socialMessage(action, target.name);
+      if (mode === 'mesh') await bitchatService.send(content, recipient, workspace.nearbyOnly);
+      else if (geoRecipient) await geohashService.sendPrivate(geoRecipient, content);
+      else await geohashService.send(content);
+    });
+  }
   async function send() {
     const command = mode === 'mesh' ? groupCommand(draft) : null;
     if (command) {
@@ -166,6 +209,10 @@ export default function Chats() {
     : `Internet · ${geo.connected > 0 ? t('mobile.relays_connected', { count: geo.connected }) : t('mobile.relays_disconnected')}`;
   if (!ready) return <AppScreen><AppText>Outlink</AppText></AppScreen>;
   return <AppScreen edges={['bottom']}>
+    {messageMenu && messageMenu.scope === draftKey && !wiping && <MessageActions name={messageMenu.name} own={messageMenu.message.outgoing}
+      canMessage={!busy && (mode === 'geo' ? geo.privateActive : 'peer' in messageMenu.message && !messageMenu.message.bridge && !!contactsService.get(messageMenu.message.peer))}
+      canPost={!busy && active && (mode === 'mesh' ? !!recipient || hasMeshPeers || workspace.bridge && !workspace.nearbyOnly : !!geoRecipient ? geo.privateActive && !geoThread?.blocked : !!geo.connected)}
+      onAction={action => void messageAction(action)} onClose={() => setMessageMenu(undefined)} />}
     {wiping || wipeStatus === 'failed' ? <View style={{ paddingTop: top, paddingHorizontal: spacing.lg }}>
       <AppText tone={wiping ? 'muted' : 'danger'} accessibilityLiveRegion="assertive">{t(wiping ? 'mobile.quick_erasing' : 'mobile.quick_erase_failed')}</AppText>
     </View> : <KeyboardAvoidingView behavior="padding" style={{ flex: 1, paddingTop: top, paddingHorizontal: spacing.lg, gap: spacing.sm, minHeight: 0 }}>
@@ -269,7 +316,8 @@ export default function Chats() {
             const displayName = displayNickname(item.name, 'pubkey' in item ? item.pubkey : item.bridge?.pubkey ?? item.peer, duplicates.has(nicknameKey(item.name)));
             const mentionName = displayName;
             const isMentioned = publicChat && canMention && mentioned(item.content);
-            const insertMention = () => { setDraft(appendMention(workspaceStore.getState().drafts[draftKey] ?? '', mentionName)); composerRef.current?.focus(); };
+            const openMenu = () => { if (busy) return; menuConsumed.current = false; longPressed.current = true; Keyboard.dismiss(); setMessageMenu({ message: item, name: displayName, scope: draftKey, epoch: sessionIntent() }); };
+            const insertMention = () => { if (longPressed.current) return; setDraft(appendMention(workspaceStore.getState().drafts[draftKey] ?? '', mentionName)); composerRef.current?.focus(); };
             return <View style={{
             alignSelf: item.outgoing ? 'flex-end' : 'flex-start', maxWidth: uiDensity.messageBubbleMaxWidth,
             paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.xs,
@@ -282,12 +330,15 @@ export default function Chats() {
             <AppText variant="caption" tone={canMention ? 'accent' : 'muted'} selectable={!canMention}
               accessibilityRole={canMention ? 'button' : undefined}
               accessibilityLabel={(canMention ? t('mobile.mention_name', { name: mentionName }) : displayName) + ('pubkey' in item ? ' · ' + item.pubkey : '')}
-              onPress={canMention ? insertMention : undefined}>{displayName}</AppText>
+              onPressIn={() => { longPressed.current = false; }} onPress={canMention ? insertMention : undefined}>{displayName}</AppText>
             {isMentioned && <AppText variant="caption" tone="accent">{t('mobile.mentioned_you')}</AppText>}
-            <AppText selectable onPress={canMention ? insertMention : undefined}
-              accessibilityHint={canMention ? t('mobile.mention_name', { name: mentionName }) : undefined}>{item.content}</AppText>
+            <AppText selectable={false} onPressIn={() => { longPressed.current = false; }}
+              onLongPress={openMenu}
+              accessibilityRole="button" accessibilityActions={[{ name: 'longpress', label: t('mobile.message_actions') }]}
+              onAccessibilityAction={event => { if (event.nativeEvent.actionName === 'longpress') openMenu(); }}
+              onPress={canMention ? insertMention : undefined}
+              accessibilityHint={t(item.outgoing ? 'mobile.own_message_menu_hint' : 'mobile.message_menu_hint')}>{item.content}</AppText>
             {'bridge' in item && item.bridge && <AppText variant="caption" tone="muted">{t('mobile.via_bridge')}</AppText>}
-            {mode === 'geo' && !geoRecipient && 'pubkey' in item && !item.outgoing && <AppButton label={t('mobile.private_message')} variant="text" fullWidth={false} disabled={busy || !geo.privateActive} onPress={() => setPrivateTarget({ hash: geo.hash, pubkey: item.pubkey })} />}
             {item.outgoing && <AppText variant="caption" tone="muted" align="end">{t(mode === 'geo' && item.delivery === 'sent' ? 'mobile.relay_accepted' : `bitchat.${item.delivery}`)}</AppText>}
           </View>; }}
           ListEmptyComponent={<View style={{ gap: spacing.md, paddingVertical: spacing.lg }}>

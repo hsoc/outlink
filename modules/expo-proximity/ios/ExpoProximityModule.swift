@@ -2,6 +2,8 @@ import Compression
 import CoreBluetooth
 import ExpoModulesCore
 import Foundation
+import UIKit
+import UniformTypeIdentifiers
 
 private let nearbyServiceUUID = CBUUID(string: "45D8B02F-6D80-4FC6-914E-B85FCD0440D3")
 private let profileUUID = CBUUID(string: "55980CEE-27E5-48A9-BF1C-AB5DA34B4402")
@@ -79,6 +81,12 @@ public final class ExpoProximityModule: Module {
 
   public func definition() -> ModuleDefinition {
     Name("ExpoProximity")
+    AsyncFunction("copyTextAsync") { (text: String, promise: Promise) in
+      DispatchQueue.main.async {
+        UIPasteboard.general.setItems([[UTType.utf8PlainText.identifier: text]], options: [.localOnly: true])
+        promise.resolve(nil)
+      }
+    }
     Events("onPeer", "onSignal", "onMessage", "onConnection", "onBluetoothState")
 
     AsyncFunction("configureProtocolAsync") { (mode: String, promise: Promise) in

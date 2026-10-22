@@ -1,3 +1,4 @@
+import { blockedUsers } from '@/services/moderation/blocked-users';
 import { privateMessageAlerts } from '@/services/mentions/private-messages';
 import { GeoPrivateSession } from '../private-session';
 import { mentionService } from '@/services/mentions/mentions';
@@ -21,7 +22,7 @@ jest.mock('@/platform', () => { const secrets = new Map([['outlink.mobile.identi
   preferences: { getItem: jest.fn(async (key: string) => key === 'mobile.nickname' ? 'Alice' : JSON.stringify({ autoAreaRelays: false, internet: false })), setItem: jest.fn(async () => {}) },
   secureStorage: { getItem: jest.fn(async (key: string) => secrets.get(key) ?? null), setItem: jest.fn(async (key: string, value: string) => { secrets.set(key, value); }), deleteItem: jest.fn(async (key: string) => { secrets.delete(key); }) },
   location: { currentCoordinates: jest.fn(async () => ({ latitude: 57.64911, longitude: 10.40744 })) },
-  history: { load: async () => [], save: async () => {} }, records: { list: async () => [] },
+  history: { load: async () => [], save: async () => {} }, records: { get: async () => null, list: async () => [] },
 } }; });
 jest.mock('../relay-refresh', () => ({ refreshAreaRelays: jest.fn(async () => {}), stopRelayRefresh: jest.fn(async () => {}) }));
 const sockets: (GeoSocket & { url: string })[] = [];
@@ -165,4 +166,17 @@ it('feeds only new private arrival hooks to scoped alerts and ignores callbacks 
   expect(privateMessageAlerts.received).toHaveBeenCalledWith(message, 'geo', 'u4pruy');
   geohashService.stop(); deps.received!({ ...message, id: 'late' });
   expect(privateMessageAlerts.received).toHaveBeenCalledTimes(1);
+});
+
+it('suppresses public messages and mentions from blocked known location aliases', async () => {
+  await geohashService.join('u4pruy', 'Alice', ['wss://one.example']); sockets.forEach(socket => socket.onopen?.());
+  const event = createGeohashEvent(new Uint8Array(32).fill(7), 'u4pruy', 'Bob', '@Alice blocked');
+  const old = 'c'.repeat(64);
+  geohashStore.setState({ privateThreads: [{ peer: old, head: event.pubkey, keys: [old, event.pubkey], local: '', blocked: false, migrating: false }] });
+  const check = jest.spyOn(blockedUsers, 'has').mockImplementation(key => key === 'nostr:' + old);
+  try {
+    for (const socket of sockets) socket.onmessage?.({ data: JSON.stringify(['EVENT', 'geohash', event]) });
+    expect(geohashStore.getState().messages.some(message => message.id === event.id)).toBe(false);
+    expect(mentionService.received).not.toHaveBeenCalled();
+  } finally { check.mockRestore(); }
 });
