@@ -1,4 +1,5 @@
 import { mentionService } from '@/services/mentions/mentions';
+import { privateMessageAlerts } from '@/services/mentions/private-messages';
 import { ensureNickname, nicknameStore, validateNickname } from '@/services/preferences/nickname';
 import { ChannelIdentities, clearIdentitySet, type ChannelIdentitySet } from './channel-identities';
 import { GeoPrivateSession, type GeoThread } from './private-session';
@@ -198,6 +199,7 @@ class GeohashService {
         put: (peer, id, value) => putRecord(scope(`outbox:${peer}`), id, value), remove: (peer, id) => removeRecord(scope(`outbox:${peer}`), id) },
       get: async id => { const row = await historyOperation(() => platform.history.get(`geo-private:${hash}`, id)); return row ? JSON.parse(row) : null; },
       save: message => saveMessage(`geo-private:${hash}`, message.id + message.peer, message),
+      received: message => { if (current()) privateMessageAlerts.received(message, 'geo', hash); },
       changed: message => {
         if (!current()) return;
         geohashStore.setState(state => {

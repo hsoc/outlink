@@ -1,5 +1,5 @@
 import { displayNickname, duplicateNicknames, nicknameKey, nicknameMentionLabels } from '@/lib/nicknames';
-import { unreadPrivateMessages } from '@/lib/unread-messages';
+import { unreadPrivateMessages, unreadLocationMessages } from '@/lib/unread-messages';
 import { platform } from '@/platform';
 import { groupCommand } from '@/services/bitchat/compatibility/group-commands';
 import { sessionIntent } from '@/services/history/lifecycle';
@@ -38,6 +38,7 @@ export default function Chats() {
   const savedContacts = useStore(contactsStore, state => state.contacts);
   const mesh = useStore(bitchatSessionStore), geo = useStore(geohashStore);
   const unread = useMemo(() => unreadPrivateMessages(mesh.messages, new Set(savedContacts.filter(c => c.blocked).map(c => c.id))), [mesh.messages, savedContacts]);
+  const geoUnread = useMemo(() => unreadLocationMessages(geo.privateMessages, geo.privateThreads), [geo.privateMessages, geo.privateThreads]);
   const workspace = useStore(workspaceStore);
   const { mode, hash, precision, relays, recipient } = workspace;
   const setMode = (mode: 'mesh' | 'geo') => workspaceStore.setState({ mode });
@@ -96,10 +97,15 @@ export default function Chats() {
     markRead();
     return platform.appState.addChangeListener(markRead);
   }, [mode, recipient, mesh.messages]));
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     if (mode !== 'geo' || !geoRecipient || !geo.privateActive) return;
-    for (const message of geo.privateMessages) if (!message.outgoing && (message.channelThread === geoRecipient || message.peer === geoRecipient) && message.delivery === 'delivered') void geohashService.readPrivate(geoRecipient, message.id, message.peer).catch(() => {});
-  }, [mode, geoRecipient, geo.privateActive, geo.privateMessages]);
+    const markRead = () => {
+      if (platform.appState.currentState() !== 'active') return;
+      for (const message of geo.privateMessages) if (!message.outgoing && (message.channelThread === geoRecipient || geohashService.privatePeer(message.peer) === geoRecipient) && message.delivery === 'delivered') void geohashService.readPrivate(geoRecipient, message.id, message.peer).catch(() => {});
+    };
+    markRead();
+    return platform.appState.addChangeListener(markRead);
+  }, [mode, geoRecipient, geo.privateActive, geo.privateMessages]));
   async function operate(task: () => Promise<void>, action: 'join' | 'send' | 'other' = 'other') {
     if (working) return;
     setWorking(true); setActionError(null);
@@ -175,6 +181,14 @@ export default function Chats() {
             onPress={() => { setMode('mesh'); setRecipient(id); }} />)}
         </ScrollView>
       </View>}
+      {geoUnread.size > 0 && <View style={{ gap: spacing.xs }}>
+        <AppText variant="caption" tone="accent" accessibilityLiveRegion="polite">{t('mobile.unread_location_messages')}</AppText>
+        <ScrollView horizontal keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: spacing.sm }}>
+          {[...geoUnread].map(([id, entry]) => <AppButton key={id} variant="secondary" fullWidth={false}
+            label={t('mobile.unread_private_sender', { name: entry.name, count: entry.count })}
+            onPress={() => { workspaceStore.setState(state => ({ mode: 'geo', hash: geo.hash, precision: state.hash === geo.hash ? state.precision : 0 })); setPrivateTarget({ hash: geo.hash, pubkey: id }); setEditingArea(false); }} />)}
+        </ScrollView>
+      </View>}
       {(mode === 'geo' && editingArea) || (!active && !isComposing) ? <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: spacing.lg, paddingBottom: spacing.lg }}>
         <Radar size={uiDensity.iconButtonSize} color={c.textMuted} />
         <AppText variant="title">{t(mode === 'mesh' ? 'bitchat.title' : 'mobile.geo')}</AppText>
@@ -211,7 +225,7 @@ export default function Chats() {
         {mode === 'mesh' && recipient && !selectedOnline && <AppText variant="caption" tone="muted">{t(savedContact?.blocked ? 'mobile.contact_blocked' : savedContact ? 'mobile.mesh_offline_hint' : 'mobile.contact_reconnect_hint')}</AppText>}
         {mode === 'geo' && <FlatList horizontal data={geo.privatePeers} keyExtractor={key => key} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm }}
           ListHeaderComponent={<AppButton label={t('mobile.public_channel')} variant="secondary" fullWidth={false} selected={!geoRecipient} onPress={() => setPrivateTarget(undefined)} />}
-          renderItem={({ item: key }) => <AppButton label={key.slice(0, 8)} variant="secondary" fullWidth={false} selected={geoRecipient === key} onPress={() => setPrivateTarget({ hash: geo.hash, pubkey: key })} />} />}
+          renderItem={({ item: key }) => <AppButton label={geoUnread.has(key) ? t('mobile.unread_private_sender', { name: key.slice(0, 8), count: geoUnread.get(key)!.count }) : key.slice(0, 8)} variant="secondary" fullWidth={false} selected={geoRecipient === key} onPress={() => setPrivateTarget({ hash: geo.hash, pubkey: key })} />} />}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
           <AppText variant="caption" tone="muted">{transportHint}</AppText>
           {active ? <AppButton label={t('bitchat.leave')} variant="text" fullWidth={false} size="sm" disabled={busy} onPress={() => void operate(async () => {

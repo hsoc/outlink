@@ -16,6 +16,7 @@ export type PrivateDependencies = {
   records: ProtocolStorage; outbox: OutboxStorage; hash?: string; legacyPubkey?: string;
   get(id: string): Promise<BitchatMessage | null>;
   save(message: BitchatMessage): Promise<void>;
+  received?(message: BitchatMessage): void;
   changed(message: BitchatMessage): void; connection(count: number): void; error(): void;
   threads?(threads: (GeoThread & { blocked: boolean; migrating: boolean })[]): void;
 };
@@ -146,7 +147,7 @@ export class GeoPrivateSession {
     if (!previous) {
       const message: BitchatMessage = { id: payload.id, peer: sender, recipient: own, channelThread: thread.peer, name: sender.slice(0, 8), content: payload.content,
         timestamp: payload.timestamp, outgoing: false, delivery: 'delivered' };
-      await this.deps.save(message); this.deps.changed(message);
+      await this.deps.save(message); this.deps.changed(message); this.deps.received?.(message);
     }
     await this.ack(sender, own, payload.id, previous?.delivery === 'read' ? 'read' : 'delivered');
     void this.flush().catch(this.deps.error);

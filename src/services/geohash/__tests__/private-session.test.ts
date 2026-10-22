@@ -39,7 +39,7 @@ function storage() {
     put: async (peer, id, entry) => { pending.set(peer + id, structuredClone(entry)); }, remove: async (peer, id) => { pending.delete(peer + id); },
   }, get: async id => history.get(id) ?? null,
     save: async message => { history.set(message.id + message.peer, structuredClone(message)); },
-    changed: m => { changes.push(m); }, connection: jest.fn(), error: jest.fn() };
+    received: jest.fn(), changed: m => { changes.push(m); }, connection: jest.fn(), error: jest.fn() };
   return { deps, history, pending, records, changes };
 }
 const sessions: GeoPrivateSession[] = [];
@@ -68,6 +68,8 @@ it('delivers encrypted area private text after sender departure and authenticate
   const restarted = client(1, hub, a);
   await until(() => restarted.pending.size === 0 && [...restarted.history.values()][0].delivery === 'read');
   expect(b.history.size).toBe(1); expect(b.deps.error).not.toHaveBeenCalled();
+  expect(b.deps.received).toHaveBeenCalledTimes(1);
+  expect(b.deps.received).toHaveBeenCalledWith(expect.objectContaining({ content: 'private while offline', outgoing: false, delivery: 'delivered' }));
 });
 it('persists failed read receipts and sends them after a cold restart', async () => {
   const hub = relay(), a = client(1, hub), b = client(2, hub);

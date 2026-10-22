@@ -22,7 +22,7 @@ export default function Layout() {
   useEffect(() => {
     let alive = true;
     const mentionCopy = () => mentionService.setCopy({ channelName: i18n.t('mobile.mention_notifications'), meshBody: i18n.t('mobile.mention_alert_mesh'), geoBody: i18n.t('mobile.mention_alert_geo') });
-    const privateCopy = () => privateMessageAlerts.setCopy({ channelName: i18n.t('mobile.private_message_notifications'), body: i18n.t('mobile.private_message_alert') });
+    const privateCopy = () => privateMessageAlerts.setCopy({ channelName: i18n.t('mobile.private_message_notifications'), body: i18n.t('mobile.private_message_alert'), geoBody: i18n.t('mobile.private_message_alert_geo') });
     privateCopy(); i18n.on('languageChanged', privateCopy);
     mentionCopy(); i18n.on('languageChanged', mentionCopy);
     void useThemeStore.getState().load().finally(() => { if (alive) setReady(true); });

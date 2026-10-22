@@ -115,8 +115,8 @@ acceptance, creator management, and full member fingerprints. Keep roster member
 separate from live reachability. Distinguish encrypted group broadcasts from public
 mesh and 1:1 receipt semantics; explain local leave and creator departure.
 
-Received Nearby DMs surface through a compact unread sender strip and per-contact
+Received Nearby and Location-channel DMs surface through a compact unread sender strip and per-contact
 counts, independent of OS permission. Sender shortcuts open the private thread
 directly. Only the visible foreground conversation marks messages read. Optional
-Nearby private-message notifications are separate from public mention alerts and
+Private-message notifications are separate from public mention alerts and
 use generic previews without names or content.

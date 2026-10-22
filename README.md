@@ -43,8 +43,8 @@ connection and notification permission are required. See
 [mentions and notifications](docs/protocols/mentions.md).
 
 Nearby DMs appear in an unread sender strip and in Contacts; tap the sender to
-open the private thread. Optional **Notify for Nearby private messages** in
-Settings enables generic local alerts independently of public mentions.
+open the private thread. Optional **Notify for private messages** in
+Settings enables generic local alerts for Nearby and Location DMs independently of public mentions. Location private threads also show unread sender shortcuts and counts.
 
 ## Build
 

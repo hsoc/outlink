@@ -38,3 +38,21 @@ it('persists explicit enable and disable independently of mentions', async () =>
   expect(platform.preferences.setItem).toHaveBeenCalledWith(PRIVATE_MESSAGE_PREFERENCE, 'true');
   await privateMessageAlerts.configure(false); expect(platform.preferences.setItem).toHaveBeenLastCalledWith(PRIVATE_MESSAGE_PREFERENCE, 'false');
 });
+it('alerts for location arrivals without exposing the sender, area or message text', async () => {
+  privateMessageAlerts.received(message(), 'geo', 'u4pruy'); await privateMessageAlerts.idle();
+  const alert = jest.mocked(platform.mentionNotifications.show).mock.calls[0][0];
+  expect(alert.body).toBe('You received a private message in Location channels.');
+  expect(JSON.stringify(alert)).not.toMatch(/Alice|secret|alice|u4pruy/);
+});
+it('scopes duplicate IDs by transport and location channel', async () => {
+  let now = Date.now(); const clock = jest.spyOn(Date, 'now').mockImplementation(() => now);
+  try {
+    privateMessageAlerts.received(message()); await privateMessageAlerts.idle(); now += 10001;
+    privateMessageAlerts.received(message(), 'geo', 'u4pruy'); await privateMessageAlerts.idle(); now += 10001;
+    privateMessageAlerts.received(message(), 'geo', 'u4pruy'); await privateMessageAlerts.idle();
+    privateMessageAlerts.received(message(), 'geo', 'u4pru'); await privateMessageAlerts.idle();
+    expect(platform.mentionNotifications.show).toHaveBeenCalledTimes(3);
+    const ids = jest.mocked(platform.mentionNotifications.show).mock.calls.map(([alert]) => alert.id);
+    expect(new Set(ids).size).toBe(3);
+  } finally { clock.mockRestore(); }
+});

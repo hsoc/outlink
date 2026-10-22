@@ -71,7 +71,7 @@ only for active duplicates. Long-press remains available for text selection.
 Tapping your own messages does not insert a mention. Public sender labels retain
 their existing shortcut. This does not enable private/group mention notifications.
 
-## Nearby private messages
+## Nearby and Location-channel private messages
 
 Incoming Nearby DMs now surface in an **Unread Nearby messages** strip on the
 main screen, including while Location channels is selected. Tap a sender button
@@ -81,15 +81,15 @@ not a full archive-wide count. Blocked contacts do not appear. Opening a private
 thread marks its loaded messages read only while the screen is focused and the
 app is in the foreground; background receipt and Settings do not mark them read.
 
-Enable **Settings → Notify for Nearby private messages** for optional local OS
+Enable **Settings → Notify for private messages** for optional local OS
 alerts. This is independent of the public mention setting and defaults off.
-Android uses a separate notification channel. Previews say only that a private
-message arrived in Nearby; names, content and contact identifiers are omitted.
+Android uses a private-message notification channel separate from mentions.
+Previews say only that a private message arrived in Nearby or Location channels; names, content and contact identifiers are omitted.
 Tapping an OS notification opens the app; use its unread sender shortcut to open
 the conversation. Existing OS permission, sound, background and process-lifetime
 limits above still apply. This adds no remote push or wake-up service.
 
-Only newly accepted private message callbacks trigger DM alerts, including courier
+Only newly accepted private message callbacks trigger DM alerts, including Location-channel DMs, courier
 and internet delivery to mesh contacts. Delayed delivery may legitimately contain
 an old sender timestamp, so it is not rejected merely for age. History hydration,
 read/outgoing/public messages and duplicates do not create alerts. The DM queue
@@ -97,4 +97,25 @@ is bounded to 32 candidates, 512 deduplication keys and one alert per ten second
 additional messages remain unread without extra alerts. OS failures do not affect
 message storage. Disabling DM alerts clears only that category; full identity
 erasure invalidates and drains both categories before clearing local data.
-Location-channel private messages and private groups do not gain OS alerts here.
+Private groups do not gain OS alerts here.
+
+Location DMs have an **Unread Location messages** sender strip visible from either
+main tab, plus unread counts on Location private-conversation buttons. A shortcut
+opens the matching private thread in the currently loaded area, leaving any area
+edit form. The proven conversation root groups rotated sender keys together;
+expired/blocked private threads do not contribute unread indicators. Names use the
+existing private-message identity label, without assuming a public nickname is an
+authenticated private identity. Like Nearby, counts cover the bounded loaded
+history window; other areas are not aggregated into a global inbox. With private
+messaging active, only a focused foreground private thread sends read receipts;
+Settings and background receipt leave messages unread. Offline history retains
+its unread state until private messaging is active again.
+
+One private-message notification preference covers both transports. Existing
+Nearby notification choices are preserved; users who already enabled them now
+also receive Location DM alerts. The queue/rate limit is shared, with deduplication
+scoped by transport and area so identical message IDs in different scopes do not
+collide. Location notifications enter only through the new authenticated incoming
+message hook, after persistence; receipt/status updates and history restoration
+do not notify. Existing location internet consent and platform lifecycle limits
+remain: notifications do not start a connection or wake a stopped application.

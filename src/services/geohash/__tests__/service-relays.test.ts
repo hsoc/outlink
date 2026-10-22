@@ -1,3 +1,5 @@
+import { privateMessageAlerts } from '@/services/mentions/private-messages';
+import { GeoPrivateSession } from '../private-session';
 import { mentionService } from '@/services/mentions/mentions';
 import { createGeohashEvent } from '../geohash-protocol';
 /** @jest-environment node */
@@ -9,6 +11,11 @@ import { platform } from '@/platform';
 import { eraseChannelIdentities, CHANNEL_ROTATION_MS } from '../channel-identities';
 import { areaRelays } from '../relay-directory';
 import type { GeoSocket } from '../geohash-session';
+jest.mock('@/services/mentions/private-messages', () => ({ privateMessageAlerts: { received: jest.fn() } }));
+jest.mock('../private-session', () => {
+  const actual = jest.requireActual('../private-session');
+  return { ...actual, GeoPrivateSession: jest.fn().mockImplementation((...args) => new actual.GeoPrivateSession(...args)) };
+});
 jest.mock('@/services/mentions/mentions', () => ({ mentionService: { received: jest.fn() } }));
 jest.mock('@/platform', () => { const secrets = new Map([['outlink.mobile.identity', 'aa'.repeat(32)]]); return { platform: {
   preferences: { getItem: jest.fn(async (key: string) => key === 'mobile.nickname' ? 'Alice' : JSON.stringify({ autoAreaRelays: false, internet: false })), setItem: jest.fn(async () => {}) },
@@ -146,4 +153,16 @@ it('passes a received public location mention to notification handling only once
   sockets[0].onmessage?.(frame); sockets[0].onmessage?.(frame);
   expect(mentionService.received).toHaveBeenCalledTimes(1);
   expect(mentionService.received).toHaveBeenCalledWith(expect.objectContaining({ content: '@Alice hello', outgoing: false }), 'geo', 'u4pruy', event.id, [expect.any(String)]);
+});
+
+it('feeds only new private arrival hooks to scoped alerts and ignores callbacks after leave', async () => {
+  await geohashService.join('u4pruy', 'Alice', ['wss://one.example']); await geohashService.enableInternet(true);
+  const deps = jest.mocked(GeoPrivateSession).mock.calls.at(-1)![2];
+  const message = { id: 'dm', peer: 'b'.repeat(64), recipient: geohashStore.getState().publicIdentity, name: 'bbbbbbbb', content: 'secret', timestamp: Date.now(), outgoing: false, delivery: 'delivered' as const };
+  deps.changed(message);
+  expect(privateMessageAlerts.received).not.toHaveBeenCalled();
+  deps.received!(message);
+  expect(privateMessageAlerts.received).toHaveBeenCalledWith(message, 'geo', 'u4pruy');
+  geohashService.stop(); deps.received!({ ...message, id: 'late' });
+  expect(privateMessageAlerts.received).toHaveBeenCalledTimes(1);
 });
