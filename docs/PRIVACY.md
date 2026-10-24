@@ -1,3 +1,8 @@
+---
+layout: default
+title: Outlink Privacy Policy
+---
+
 # Privacy and network behaviour
 
 Outlink does not require an account, phone number, registered username, or
