@@ -18,12 +18,19 @@ The existing four repository secrets are unchanged:
 
 Keep the same long-lived key to allow installed Outlink APKs to update. The
 workflow runs mobile checks, generates the Android project, builds a release
-APK, signs and verifies it, and uploads `Outlink-android.apk` in **android-apk**.
+APK and (when signing credentials are present) an Android App Bundle (AAB), signs
+and verifies both, and uploads `Outlink-android.apk` in **android-apk** and
+`Outlink-android.aab` in **android-aab**. Upload the AAB to Google Play Console;
+the APK is for direct installation and testing. Google Play App Signing should
+be configured before production release. When using Google-generated app signing
+keys, the upload key and the Play-distributed signing key differ.
 A manual branch build without any signing secrets produces a testing APK with
-the generated development signature. Partial credentials fail. Tag builds
+the generated development signature and does **not** generate a Play Store AAB. Partial credentials fail. Tag builds
 require signing credentials. Keep independent backups of the keystore/passwords.
 
-No Play Store upload or public GitHub Release is performed automatically. Tag
+No Play Store upload or public GitHub Release is performed automatically. An AAB
+is available only for signed builds; keep the keystore and secret values backed up.
+Before each release, increment `expo.android.versionCode` in `app.json`. Tag
 runs build Android artifacts; use manual dispatch to request an iOS build.
 
 ## iOS
