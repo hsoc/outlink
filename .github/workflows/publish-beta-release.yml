@@ -1,0 +1,62 @@
+name: Publish first Outlink beta release
+on:
+  push:
+    branches: [master]
+    paths:
+      - '.github/workflows/publish-beta-release.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Download successful signed Android build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p release/apk release/aab
+          gh run download 40109108901 --repo "$GITHUB_REPOSITORY" --name android-apk --dir release/apk
+          gh run download 40109108901 --repo "$GITHUB_REPOSITORY" --name android-aab --dir release/aab
+          test -s release/apk/Outlink-android.apk
+          test -s release/aab/Outlink-android.aab
+      - name: Publish prerelease once
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view v1.0.0-beta.1 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo 'Release v1.0.0-beta.1 already exists; not overwriting published assets.'
+            exit 0
+          fi
+          cat > RELEASE_NOTES.md <<'EOF'
+          # Outlink 1.0.0 Beta 1
+
+          Initial Android beta distribution of Outlink, a decentralized messenger supporting Bitchat-compatible Nearby Bluetooth mesh chat, encrypted private conversations, and public location channels through Nostr.
+
+          ## Downloads
+          - **Outlink-android.apk**: signed standalone Android installer for direct testing.
+          - **Outlink-android.aab**: signed Android App Bundle for Google Play Console; not directly installable.
+
+          ## Before installing
+          - This is a **beta**, not a fully validated stable release. Bluetooth interoperability, background connectivity, and message delivery still require physical multi-device testing.
+          - Bluetooth mesh delivery and internet relay connectivity are not guaranteed. Location-channel public messages are visible to participating relays.
+          - The application ID is `io.github.hsoc.outlink`.
+          - APK users may need to enable installation from their browser or file manager in Android settings.
+          - Updates must use the same signing certificate. Debug-signed builds may require uninstalling before installation.
+
+          See [privacy and network behavior](https://github.com/hsoc/outlink/blob/master/docs/PRIVACY.md) and [release testing guidance](https://github.com/hsoc/outlink/blob/master/docs/RELEASING.md).
+
+          Built from commit `6a67f9f93e9ec3c0a5c2c6df8f4a53a225010109` by successful [Build Mobile Apps run #40109108901](https://github.com/hsoc/outlink/actions/runs/40109108901) on October 24, 2026.
+          EOF
+          gh release create v1.0.0-beta.1 \
+            release/apk/Outlink-android.apk \
+            release/aab/Outlink-android.aab \
+            --repo "$GITHUB_REPOSITORY" \
+            --target 6a67f9f93e9ec3c0a5c2c6df8f4a53a225010109 \
+            --title "Outlink v1.0.0 Beta 1" \
+            --notes-file RELEASE_NOTES.md \
+            --prerelease
