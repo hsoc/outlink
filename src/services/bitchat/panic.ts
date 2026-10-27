@@ -1,3 +1,4 @@
+import { cashuTransfers } from '@/services/cashu/transfers';
 import { blockedUsers } from '@/services/moderation/blocked-users';
 import { resetNickname } from '@/services/preferences/nickname';
 import { privateMessageAlerts } from '@/services/mentions/private-messages';
@@ -13,7 +14,8 @@ import { resetMobileIdentity } from './mobile-identity';
 let wiping: Promise<void> | undefined;
 export function panicWipe(): Promise<void> {
   return wiping ??= (async () => {
-    invalidateSessionIntent(); resetNickname();
+    invalidateSessionIntent(); resetNickname(); cashuTransfers.reset();
+    await cashuTransfers.idle();
     workspaceStore.setState({ keepBackground: false, backgroundError: false });
     // Native notification/service cleanup must not prevent transport shutdown and key deletion.
     await platform.backgroundConnectivity?.stop().catch(() => {});
@@ -26,7 +28,7 @@ export function panicWipe(): Promise<void> {
       await platform.wipeLocalData();
       await resetMobileIdentity();
     });
-    resetNickname(); blockedUsers.reset();
+    resetNickname(); blockedUsers.reset(); cashuTransfers.reset();
     bitchatService.resetLocalState(); geohashService.clearMessages();
     geohashStore.setState({ hash: '' }); contactsStore.setState({ contacts: [], ready: false });
     workspaceStore.setState({ ready: true });

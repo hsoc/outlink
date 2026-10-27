@@ -1,6 +1,6 @@
 {
-  "reviewed": "2026-10-20",
-  "lockfileSha256": "24e2f8929652f9d9c43e46dc68a196b43248d055b0e079525c747c06709aee4e",
+  "reviewed": "2026-10-27",
+  "lockfileSha256": "5ad58b20e8eab060aa23299da5e740654d64505b66ebf7d49428db27ad452b2d",
   "scope": "All locked non-development npm packages on all platforms. Includes build utilities; not an exact binary inventory.",
   "packages": [
     {
@@ -1110,6 +1110,27 @@
       ]
     },
     {
+      "name": "@cashu/cashu-ts",
+      "version": "4.13.0",
+      "license": "MIT OR Apache-2.0",
+      "integrity": "sha512-xbQR8xuF9iAkaMTOk944k7tjicGlvM1+dcxyYkkx/SGZj8O0lPJcUcFzSw6uDqmpJ06VrWLUCEXTwhnUleEQLg==",
+      "repository": "git+https://github.com/cashubtc/cashu-ts",
+      "licenseFiles": [
+        {
+          "source": "LICENSE-APACHE",
+          "sha256": "ce8f197a55bb111111fb2f2b2f8e9cc4c13cc31b8315eabedff185005096a4d6"
+        },
+        {
+          "source": "LICENSE-MIT",
+          "sha256": "373b5700edb3de9020ffd15930edef9537f0a5a089a4aa34e4ba1919d2e79dd6"
+        },
+        {
+          "source": "LICENSE.md",
+          "sha256": "17c76c0c1068f030e9beddb648d5e17d0bbefeb687f06b8f583a5de20a6f272e"
+        }
+      ]
+    },
+    {
       "name": "@chainsafe/as-chacha20poly1305",
       "version": "0.1.0",
       "license": "Apache-2.0",
@@ -2051,11 +2072,39 @@
       ]
     },
     {
+      "name": "@noble/curves",
+      "version": "2.4.0",
+      "license": "MIT",
+      "integrity": "sha512-P4/62zrgfH33CneE3Dn4WhJVA22YUU0eR51wKIan4NVRvwsA0YnPTwWGpNbpuacSujmSFLvyzpyuR30+fbq2Ew==",
+      "repository": "git+https://github.com/paulmillr/noble-curves.git",
+      "homepage": "https://paulmillr.com/noble/",
+      "licenseFiles": [
+        {
+          "source": "LICENSE",
+          "sha256": "4f221aee6e072336700c408c68ab3b96a3fc09f6aebe6f48f1bd99e5ef13faec"
+        }
+      ]
+    },
+    {
       "name": "@noble/hashes",
       "version": "2.0.1",
       "license": "MIT",
       "integrity": "sha512-XlOlEbQcE9fmuXxrVTXCTlG2nlRXa9Rj3rr5Ue/+tX+nmkgbX720YHh0VR3hBF9xDvwnb8D2shVGOwNx+ulArw==",
       "repository": "git+https://github.com/paulmillr/noble-hashes.git",
+      "licenseFiles": [
+        {
+          "source": "LICENSE",
+          "sha256": "4f221aee6e072336700c408c68ab3b96a3fc09f6aebe6f48f1bd99e5ef13faec"
+        }
+      ]
+    },
+    {
+      "name": "@noble/hashes",
+      "version": "2.4.0",
+      "license": "MIT",
+      "integrity": "sha512-X5XaVWZIBCT7HHZGm5I7ZQXDwLG+bGXuSrMQAW+7Zvl87h1kmc1ZB1VSRJcpUfoUrGQp4Fkoxm5kZ+Ms+aW+eA==",
+      "repository": "git+https://github.com/paulmillr/noble-hashes.git",
+      "homepage": "https://paulmillr.com/noble/",
       "licenseFiles": [
         {
           "source": "LICENSE",
@@ -2557,10 +2606,11 @@
     },
     {
       "name": "@scure/base",
-      "version": "2.2.0",
+      "version": "2.4.0",
       "license": "MIT",
-      "integrity": "sha512-b8XEupJibegiXV+tDUseI8oLQc8ei3d/4Jkb2RpbHh3MfE054ov3uIz2dhFkB3FI8iwYkEh0gGCApkrYggkPNg==",
+      "integrity": "sha512-thZ1TuJwFwBblOhgsjDKvvGirBxNp+wSvY/DR6tJBJOTDhdAAcHJ8Vbr2eFnqaxeca4+t0i9KBf+uHYGWwZORg==",
       "repository": "git+https://github.com/paulmillr/scure-base.git",
+      "homepage": "https://paulmillr.com/noble/#scure",
       "licenseFiles": [
         {
           "source": "LICENSE",
@@ -2574,6 +2624,20 @@
       "license": "MIT",
       "integrity": "sha512-4Md1NI5BzoVP+bhyJaY3K6yMesEFzNS1sE/cP+9nuvE7p/b0kx9XbpDHHFl8dHtufcbdHRUUQdRqLIPHN/s7yA==",
       "repository": "git+https://github.com/paulmillr/scure-bip32.git",
+      "licenseFiles": [
+        {
+          "source": "LICENSE",
+          "sha256": "1565efd0ec4580bfaa96c7eeaaa9af3791baa1cc562c3bde62d0a055910b9ec7"
+        }
+      ]
+    },
+    {
+      "name": "@scure/bip32",
+      "version": "2.4.0",
+      "license": "MIT",
+      "integrity": "sha512-i3DS0CptAocyvqE4n3SUkpzeQK4vJMFwWLofTwRiiKo2aWojBOfyMCgfKw9HVpO6fSY5AK86sHS/Uzn8kK9Few==",
+      "repository": "git+https://github.com/paulmillr/scure-bip32.git",
+      "homepage": "https://paulmillr.com/noble/#scure",
       "licenseFiles": [
         {
           "source": "LICENSE",

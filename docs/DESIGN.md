@@ -145,3 +145,9 @@ Location conversations use one area button labeled only `#area`. Tapping it open
 the area controls; omit the separate area label and Change area button. Its
 accessibility label retains public-channel context to distinguish broadcasts
 from private threads.
+
+Cashu transfers are explicit actions inside Nearby private conversations, with a
+Settings entry for received/recovery records. Review shows the stated amount, mint
+and recipient identity before sending. Never label offline tokens Paid or Redeemed.
+Keep token secrets out of chat bubbles; copying bearer money requires confirmation.
+Explain external redemption, double-spend risk and full-erasure loss before use.

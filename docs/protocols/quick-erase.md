@@ -35,3 +35,8 @@ Private Bluetooth group keys, rosters, invitations, revocation retry metadata,
 drafts and histories are included in full local erasure. Group UI metadata and
 message buffers reset with the other local stores. This cannot erase copies
 already retained by group members or relays.
+
+Full erasure also destroys all prepared and received Cashu token records after
+draining pending transfer writes. There is no funds exception or extra confirmation
+for the triple-tap shortcut. Cashu screens and Settings warn users to keep secure
+recovery copies until redemption in their external wallet.

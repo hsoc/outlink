@@ -132,6 +132,7 @@ export default function Settings() {
       {workspace.backgroundError && <AppText variant="caption" tone="danger">{t('mobile.background_failed')}</AppText>}
     </View>
     <AppButton label={t('mobile.contacts')} variant="secondary" disabled={clearing || networkBusy || backgroundBusy} onPress={() => router.push('/contacts')} />
+    <AppButton label={t('cashu.title')} variant="secondary" disabled={clearing} onPress={() => router.push('/payments')} />
     <NetworkSettings disabled={clearing} onBusyChange={setNetworkBusy} />
     <AppText variant="subtitle">{t('mobile.internet_private')}</AppText>
     <AppText tone="muted">{t('mobile.internet_private_hint')}</AppText>

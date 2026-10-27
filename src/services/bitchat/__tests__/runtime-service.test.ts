@@ -1,3 +1,6 @@
+import { cashuTransfers, cashuStore } from '@/services/cashu/transfers';
+import { tokenParts } from '@/services/cashu/token';
+import { encoded } from '@/services/cashu/test-support/token';
 import { blockedUsers } from '@/services/moderation/blocked-users';
 import { privateMessageAlerts } from '@/services/mentions/private-messages';
 import { mentionService } from '@/services/mentions/mentions';
@@ -201,4 +204,31 @@ it('prepares discovered Nearby identities on demand without automatically saving
   expect(contactsService.get(carrierId)?.saved).not.toBe(true);
   const unknown = 'ee'.repeat(8);
   expect(await bitchatService.preparePrivateConversation(unknown)).toBe(false); expect(contactsService.get(unknown)).toBeUndefined();
+});
+
+it('sends Cashu only through the live encrypted Bluetooth session, without mail or chat history', async () => {
+  await bitchatService.start(root, 'Alice'); await contactsService.idle();
+  const item = await cashuTransfers.prepare(carrierId, encoded());
+  const current = session() as unknown as BitchatSession;
+  await bitchatService.sendCashu(carrierId, item.id);
+  expect(current.sendPrivate).toHaveBeenCalledTimes(tokenParts(encoded()).length);
+  expect(jest.mocked(current.sendPrivate).mock.calls.every(call => call[0] === carrierId && call[1].startsWith('OLC1:'))).toBe(true);
+  expect(await records.list('outbox:' + carrierId, 100)).toEqual([]);
+  expect(bitchatSessionStore.getState().messages.some(message => message.content.startsWith('OLC1:'))).toBe(false);
+  await bitchatService.stop();
+  await expect(bitchatService.sendCashu(carrierId, item.id)).rejects.toThrow();
+});
+it('assembles incoming Noise DM frames outside chat history and ignores public or blocked frames', async () => {
+  await bitchatService.start(root, 'Alice'); await contactsService.idle(); cashuTransfers.reset();
+  const callback = (session() as unknown as { callbacks: { message(message: unknown): void } }).callbacks.message;
+  for (const content of tokenParts(encoded())) callback({ id: content, peer: carrierId, name: 'Carrier', content, timestamp: Date.now(), outgoing: false, delivery: 'delivered' });
+  await cashuTransfers.idle(); expect(cashuStore.getState().transfers).toEqual([]);
+  for (const content of tokenParts(encoded())) callback({ id: content, peer: carrierId, recipient: bitchatSessionStore.getState().id, name: 'Carrier', content, timestamp: Date.now(), outgoing: false, delivery: 'delivered' });
+  await cashuTransfers.idle();
+  expect(cashuStore.getState().transfers[0]).toMatchObject({ peer: carrierId, complete: true, outgoing: false });
+  expect(bitchatSessionStore.getState().messages).toEqual([]);
+  await contactsService.upsert(carrierId, contact => ({ ...contact!, blocked: true }));
+  cashuTransfers.reset();
+  callback({ id: 'blocked-cashu', peer: carrierId, recipient: bitchatSessionStore.getState().id, content: tokenParts(encoded())[0], outgoing: false });
+  await cashuTransfers.idle(); expect(cashuStore.getState().transfers).toEqual([]);
 });

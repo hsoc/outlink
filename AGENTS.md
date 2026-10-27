@@ -41,7 +41,7 @@ These are examples — the standard is to *think about the performance character
 Outlink now ships Android and iOS only. UI uses shared primitives and theme
 from `src/components/common` and `src/theme`. Services use the mobile platform
 ports, not Expo/React Native imports. Keep Bitchat BLE private messages separate
-from public geohash Nostr channels. No desktop runtime, wallet, generic Nostr
+from public geohash Nostr channels. No desktop runtime, wallet account/bootstrap, generic Nostr
 account/inbox bootstrap, or push notification service should be reintroduced.
 Preferences are asynchronous key/value storage; secrets use secure storage.
 
@@ -102,3 +102,13 @@ Erase private content across all stored pages with bounded async processing; ret
 only encrypted keyed replay markers and reject status resurrection. Keep the
 confirmation, draft clearing, peer-scoped send cancellation, stale-load guards,
 schema migration and real SQLite tests in sync.
+
+# Cashu transfers
+
+Prepared Cashu token transfers are authorized; funding and redemption stay external.
+Read [Cashu transfers](docs/protocols/cashu-transfers.md) before changing payments.
+Keep bearer tokens out of public/group/relay/courier paths, chat drafts/history,
+notifications, logs and UI stores. Preserve encrypted durable assembly, local
+proof-overlap protection, explicit export confirmation and full-wipe draining.
+Never interpret Bluetooth receipts, token amounts or structural parsing as payment
+settlement. Do not add mint connections or wallet custody without explicit scope.

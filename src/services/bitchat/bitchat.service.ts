@@ -1,3 +1,5 @@
+import { cashuTransfers } from '@/services/cashu/transfers';
+import { CASHU_PREFIX, tokenParts } from '@/services/cashu/token';
 import { sessionIntent } from '@/services/history/lifecycle';
 import { blockedUsers } from '@/services/moderation/blocked-users';
 import { GroupRuntime, type GroupInfo, type GroupMessage } from './compatibility/group-runtime';
@@ -90,6 +92,8 @@ class BitchatService {
     remove: (peer, id) => removeRecord(`outbox:${peer}`, id),
   }, message => this.mergeMessage(message));
   private mergeMessage(message: BitchatMessage, checked = false) {
+    // Cashu frames use only live Noise DMs, never chat history, relay mail, or courier storage.
+    if (message.content.startsWith(CASHU_PREFIX)) return;
     const peer = message.recipient ? message.outgoing ? message.recipient : message.peer : undefined;
     if (peer && this.conversationVersions.has(peer) && !checked) {
       const epoch = sessionIntent();
@@ -462,6 +466,10 @@ class BitchatService {
           },
           message: message => {
             if (blockedUsers.has('mesh:' + message.peer) || contactsService.get(message.peer)?.blocked) return;
+            if (message.content.startsWith(CASHU_PREFIX)) {
+              if (!message.outgoing && message.recipient && !message.bridge) void this.track(cashuTransfers.receive(message.peer, message.content)).catch(() => bitchatSessionStore.setState({ error: true }));
+              return;
+            }
             if (message.content.startsWith('[FAVORITED]:') || message.content.startsWith('[UNFAVORITED]:')) {
               if (!message.outgoing) void this.favoriteNotification(message.peer, message.content).catch(() => bitchatSessionStore.setState({ error: true }));
               return;
@@ -618,6 +626,18 @@ class BitchatService {
     await this.outbox.enqueue(peer, { id, peer: own, recipient: peer,
       name, content, timestamp: Date.now(), outgoing: true, delivery: 'queued' });
     if (this.connection) void this.flush(peer).catch(() => bitchatSessionStore.setState({ error: true }));
+  }
+  async sendCashu(peer: string, id: string): Promise<void> {
+    return this.track((async () => {
+      const epoch = sessionIntent(), session = this.session;
+      if (!session || !await this.preparePrivateConversation(peer)) throw new Error('Join Nearby and select a known contact');
+      const wire = await cashuTransfers.token({ peer, id, outgoing: true });
+      const parts = tokenParts(wire), attempt = await platform.deviceCrypto.randomUUID();
+      for (let index = 0; index < parts.length; index++) {
+        if (epoch !== sessionIntent() || session !== this.session || contactsService.get(peer)?.blocked || blockedUsers.has('mesh:' + peer)) throw new Error('Transfer canceled');
+        await session.sendPrivate(peer, parts[index], `cashu-${attempt}-${index}`);
+      }
+    })());
   }
   async preparePrivateConversation(peer: string): Promise<boolean> {
     const epoch = sessionIntent();

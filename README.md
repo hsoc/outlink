@@ -1,13 +1,16 @@
 # Outlink
 
 An MIT-licensed Bitchat-compatible messenger for **Android and iOS**. No accounts,
-phone numbers, wallets, or username registration.
+phone numbers, wallet accounts, or username registration.
 
 - **Nearby:** Bluetooth mesh public chat, Noise-encrypted private messages, and
   invitation-based encrypted private groups. Open **Private groups** to create,
   accept invitations and inspect members. Buttons and `/group` commands are
   supported. See [private groups](docs/protocols/private-groups.md) for instructions,
   key rotation, offline behavior and the 255-member wire/official-client limits.
+- **Cashu transfers:** send tokens prepared in an external Cashu wallet through
+  Nearby encrypted DMs. Received tokens remain unverified until redeemed in that
+  wallet. Both phones need Outlink support. See [instructions and limits](docs/protocols/cashu-transfers.md).
 - **Location channels:** public Bitchat geohash chat and presence over Nostr.
   Enter an area code manually, or choose an approximate area using optional
   foreground location access. Region, City, District, Neighborhood, and Block

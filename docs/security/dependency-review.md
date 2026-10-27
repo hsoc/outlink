@@ -125,3 +125,20 @@ A fresh production npm audit still reports 43 findings (27 high, 16 moderate,
 0 critical). No dependency versions were changed. See the
 [source review and cleanup fixes](security-review-2026-10-20.md) for findings,
 validation and remaining limitations.
+
+## Prepared Cashu transfer decoder — 2026-10-28
+
+Pinned `@cashu/cashu-ts` 4.13.0 for standard token decoding only, using its MIT
+license option. Its required Noble/Scure dependencies and original license texts
+are included in the regenerated mobile notices. No mint/network wallet instance
+is constructed. The lockfile resolves additional crypto versions required by the
+SDK and updates shared `@scure/base` to 2.4.0.
+
+Fresh full `npm audit` reports **10 affected package entries (4 high, 6 moderate)**
+for both the pre-change lockfile and the Cashu lockfile. Neither the Cashu decoder
+nor its newly resolved crypto dependencies appear as affected entries. Remaining
+entries are Expo/CLI/router/config-plugins, decode-uri-component, node-forge,
+query-string, uuid, xcode and zod; they were not changed or suppressed in this
+feature. These current counts supersede the older snapshot counts above without
+claiming those older advisories were all independently fixed. See the
+[current audit snapshot](dependency-audit-2026-10-28.json).

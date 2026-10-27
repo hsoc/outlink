@@ -1,7 +1,7 @@
 # Mobile architecture
 
 Outlink ships Android and iOS applications only. There is no desktop runtime,
-account bootstrap, wallet, old Nearby session, or configured remote push service.
+account bootstrap, wallet balance/deposit runtime, old Nearby session, or configured remote push service.
 Local mention alerts use the Expo notification SDK through a platform port; remote
 registration and notification background modes remain disabled.
 
@@ -147,3 +147,10 @@ published after both transports configure successfully, rolled back on failure,
 and canceled across identity erasure. Nearby private-conversation preparation uses
 already discovered keys and existing contact identity checks without marking a
 contact saved, favorite, or verified.
+
+[Cashu transfers](protocols/cashu-transfers.md) own prepared-token framing and
+serialized encrypted protected records, separate from chat history and outboxes.
+The live Nearby Noise-DM path dispatches reserved frames to durable assembly;
+private mail, public channels and groups cannot import them. UI state contains
+only bounded metadata. No mint client is created and no mint network request is
+made. Full erasure drains Cashu writes before deleting the local store.

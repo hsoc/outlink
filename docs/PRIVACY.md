@@ -145,3 +145,10 @@ cancels queued local sends, keeping contact/trust/block records. Minimal encrypt
 replay markers at keyed indexes remain to prevent old deliveries/status updates
 from restoring content. Full history clearing or identity erasure removes them.
 This does not recall already transmitted messages or delete recipient/backup copies.
+
+Prepared [Cashu tokens](protocols/cashu-transfers.md) are bearer money, stored in
+encrypted protected records separate from chat history. Transfers use Nearby Noise
+DMs only; no mint connection is made. Copying exports the token to the OS clipboard
+and an external wallet. That wallet may contact its mint and expose its own network
+metadata. Full quick erase destroys Outlink's tokens; deleting chat history does
+not. Keep recovery copies securely until external redemption.
