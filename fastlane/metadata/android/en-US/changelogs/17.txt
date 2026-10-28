@@ -1,0 +1,3 @@
+Fix Android release-build stalls with serialized native configuration and diagnostic watchdogs.
+Expire chat history after six hours, load 512 messages and compact after Clear local history.
+Cashu tokens and protected delivery/contact records remain separate from history cleanup.

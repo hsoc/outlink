@@ -1,3 +1,4 @@
+import { androidGradleArguments, runAndroidGradle } from './android-gradle.mjs';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { signAndroid, signAndroidBundle, signingMode } from './release-signing.mjs';
@@ -14,7 +15,7 @@ if(signing==='signed') {
 // Release bundles must not inherit the generated debug signing configuration.
 // Without release credentials, build only a debug-signed testing APK.
 const tasks = [':app:assembleRelease', ...(signing==='signed' ? [':app:bundleRelease'] : [])];
-run('./gradlew',[...tasks,'--no-daemon','--max-workers=2'],'android');
+await runAndroidGradle('./gradlew', androidGradleArguments(tasks), { cwd: 'android', env: { ...process.env, EXPO_PUBLIC_APP_ENV: 'production' } });
 const folder='android/app/build/outputs/apk/release/';
 const input=folder+(signing==='signed'?'app-release-unsigned.apk':'app-release.apk');
 if(!existsSync(input))throw new Error('APK output missing');

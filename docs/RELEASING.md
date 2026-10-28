@@ -3,8 +3,8 @@
 Run the **Build Mobile Apps** workflow from the Actions tab. Android defaults to
 on; iOS is optional. There are no desktop build targets or desktop credentials.
 Both use the existing Outlink production application ID `io.github.hsoc.outlink`.
-Development builds use `.dev`. The public app version is `1.1.1`; changing it does not require a Git tag. Android version code and iOS
-build number are 16; keep increasing these counters even when changing the
+Development builds use `.dev`. The public app version is `1.1.2`; changing it does not require a Git tag. Android version code and iOS
+build number are 17; keep increasing these counters even when changing the
 public version scheme.
 
 ## Android
@@ -86,3 +86,26 @@ uses only that run's APK/AAB artifacts, and refuses to overwrite an existing rel
 It adds SHA-256 checksums and the source/build-run links to the published notes.
 iOS remains an optional manually requested build; tag releases do not attach an IPA.
 The historical first-beta workflow is retained only for its original release.
+
+## Android native-build stalls
+
+The 1.1.1 run stopped producing output during native CMake configuration for
+react-native-screens and timed out after 90 minutes. Both Gradle worker slots were
+running native configuration; the logs do not establish an exact deadlock cause.
+The build runner now disables project parallelism and uses one Gradle worker,
+while limiting CMake subprocess parallelism to two. CI preinstalls CMake 3.22.1 and
+both NDK versions used by the locked modules (27.1.12297006 and 27.0.12077973),
+avoiding SDK installation during concurrent native configuration. All existing
+Android ABIs, source-built modules and signing verification remain enabled.
+
+The native Gradle runner uses plain detailed logs and a 15-minute no-output
+watchdog. Progress heartbeats do not reset that timer. A stall captures process
+names and selected Gradle/Prefab Java thread stacks, terminates the process group,
+and fails visibly. Failure/cancellation uploads `android-build-diagnostics` for
+seven days, including Gradle and relevant CMake logs. Signing secrets are removed
+from the native process environment; environment dumps and signing files are not
+collected. The normal 90-minute outer job limit is unchanged. A diagnostic pass
+can distinguish a native configuration stall from a slow but progressing build.
+
+The failed 1.1.1 tag is retained as provenance; the corrected stable release is
+1.1.2/build 17. Existing published release assets are never replaced.

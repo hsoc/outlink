@@ -27,6 +27,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: node --test scripts/android-gradle.test.mjs
       - run: npm run check:mobile
       - run: npx tsc --noEmit
       - run: npm run lint
@@ -52,7 +53,7 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v4
-      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;27.1.12297006'
+      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;27.1.12297006' 'ndk;27.0.12077973' 'cmake;3.22.1'
       - run: npm ci
       - name: Check Android signing availability
         env:
@@ -65,6 +66,20 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      - name: Preserve native build diagnostics on failure
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-build-diagnostics
+          path: |
+            release/android-diagnostics/
+            node_modules/react-native-screens/android/.cxx/**/CMakeCache.txt
+            node_modules/react-native-screens/android/.cxx/**/CMakeFiles/CMakeOutput.log
+            node_modules/react-native-screens/android/.cxx/**/CMakeFiles/CMakeError.log
+            node_modules/react-native-screens/android/.cxx/**/logs/**
+            node_modules/react-native-worklets/android/.cxx/**/logs/**
+          if-no-files-found: ignore
+          retention-days: 7
       - uses: actions/upload-artifact@v7
         with:
           name: android-apk
