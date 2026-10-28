@@ -247,7 +247,9 @@
     "nickname_label": "Nickname",
     "nickname_hint": "Used in Nearby, location chats, groups and contact codes. An identity suffix, such as Alice#7a2f, appears only when active nicknames are duplicated. Your header shows @Alice. Changing your nickname keeps your keys and conversations.",
     "edit_nickname": "@{{name}} — change nickname in Settings",
-    "unknown_nickname": "Anonymous"
+    "unknown_nickname": "Anonymous",
+    "info": "Info",
+    "location_info": "Location channels information"
   },
   "groups": {
     "title": "Private groups",

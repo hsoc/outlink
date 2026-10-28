@@ -1,3 +1,4 @@
+import { LocationInfo } from '@/components/common/LocationInfo';
 import { configurePrivateInternet } from '@/services/preferences/internet-private';
 import { MessageActions, type MessageAction } from '@/components/common/MessageActions';
 import { messageUserKey, socialMessage, privateMessageTarget } from '@/lib/message-actions';
@@ -66,10 +67,11 @@ export default function Chats() {
   const nearbyDuplicates = useMemo(() => duplicateNicknames(mesh.active ? [{ name, identity: mesh.id }, ...mesh.peers.filter(p => p.lastSeen > 0).map(p => ({ name: p.name, identity: p.id }))] : []), [mesh.active, mesh.id, mesh.peers, name]);
   const duplicates = useMemo(() => mode === 'mesh' ? nearbyDuplicates : duplicateNicknames(geo.connected ? [{ name, identity: geo.publicIdentity }, ...geo.participants] : []), [mode, nearbyDuplicates, name, geo.connected, geo.publicIdentity, geo.participants]);
   const [messageMenu, setMessageMenu] = useState<{ message: BitchatMessage | GeoMessage; name: string; scope: string; epoch: number }>();
+  const [locationInfo, setLocationInfo] = useState(false);
   const longPressed = useRef(false), menuConsumed = useRef(false);
   useFocusEffect(useCallback(() => {
-    const remove = platform.appState.addChangeListener(state => { if (state !== 'active') setMessageMenu(undefined); });
-    return () => { remove(); setMessageMenu(undefined); };
+    const remove = platform.appState.addChangeListener(state => { if (state !== 'active') { setMessageMenu(undefined); setLocationInfo(false); } });
+    return () => { remove(); setMessageMenu(undefined); setLocationInfo(false); };
   }, []));
   const composerRef = useRef<TextInput>(null);
   const [ready, setReady] = useState(false);
@@ -141,7 +143,7 @@ export default function Chats() {
   const quickErase = useCallback(() => {
     if (wipingRef.current) return;
     wipingRef.current = true; ++areaRequest.current;
-    setMessageMenu(undefined); longPressed.current = false;
+    setMessageMenu(undefined); setLocationInfo(false); longPressed.current = false;
     setWiping(true); setWipeStatus(null); setActionError(null);
     void (async () => {
       try {
@@ -224,6 +226,7 @@ export default function Chats() {
     : `Internet · ${geo.connected > 0 ? t('mobile.relays_connected', { count: geo.connected }) : t('mobile.relays_disconnected')}`;
   if (!ready) return <AppScreen><AppText>Outlink</AppText></AppScreen>;
   return <AppScreen edges={['bottom']}>
+    {locationInfo && !wiping && <LocationInfo onClose={() => setLocationInfo(false)} />}
     {messageMenu && messageMenu.scope === draftKey && !wiping && <MessageActions name={messageMenu.name} own={messageMenu.message.outgoing}
       canMessage={!busy}
       canPost={!busy && active && (mode === 'mesh' ? !!recipient || hasMeshPeers || workspace.bridge && !workspace.nearbyOnly : !!geoRecipient ? geo.privateActive && !geoThread?.blocked : !!geo.connected)}
@@ -231,9 +234,12 @@ export default function Chats() {
     {wiping || wipeStatus === 'failed' ? <View style={{ paddingTop: top, paddingHorizontal: spacing.lg }}>
       <AppText tone={wiping ? 'muted' : 'danger'} accessibilityLiveRegion="assertive">{t(wiping ? 'mobile.quick_erasing' : 'mobile.quick_erase_failed')}</AppText>
     </View> : <KeyboardAvoidingView behavior="padding" style={{ flex: 1, paddingTop: top, paddingHorizontal: spacing.lg, gap: spacing.sm, minHeight: 0 }}>
-      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-        {(['mesh', 'geo'] as const).map(value => <AppButton key={value} label={t(`mobile.${value}`)} variant="secondary"
-          fullWidth={false} selected={mode === value} disabled={busy} onPress={() => { setMode(value); setActionError(null); }} />)}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm }}>
+        {(['mesh', 'geo'] as const).map(value => <View key={value} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+          <AppButton label={t(`mobile.${value}`)} variant="secondary"
+            fullWidth={false} selected={mode === value} disabled={busy} onPress={() => { setMode(value); setLocationInfo(false); setActionError(null); }} />
+          {value === 'geo' && mode === 'geo' && <AppButton label={t('mobile.info')} accessibilityLabel={t('mobile.location_info')} variant="text" fullWidth={false} size="sm" onPress={() => { Keyboard.dismiss(); setLocationInfo(true); }} />}
+        </View>)}
       </View>
       {unread.size > 0 && <View style={{ gap: spacing.xs }}>
         <AppText variant="caption" tone="accent" accessibilityLiveRegion="polite">{t('mobile.unread_private_messages')}</AppText>
@@ -282,7 +288,6 @@ export default function Chats() {
           <AppText variant="caption" weight="semibold" tone={geo.connected > 0 ? 'accent' : 'muted'}>
             {t(geo.connected > 0 ? 'mobile.geo_active_count' : 'mobile.geo_active_unavailable', { count: geo.present })}
           </AppText>
-          {geo.connected > 0 && <AppText variant="caption" tone="muted">{t('mobile.geo_active_hint')}</AppText>}
         </View>}
         {mode === 'mesh' && recipient && (!selectedOnline || !savedContact) && <AppText variant="caption" tone="muted">{t(savedContact?.blocked ? 'mobile.contact_blocked' : savedContact ? 'mobile.mesh_offline_hint' : 'mobile.contact_reconnect_hint')}</AppText>}
         {mode === 'geo' && <FlatList horizontal data={geo.privatePeers} keyExtractor={key => key} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm }}
@@ -300,13 +305,12 @@ export default function Chats() {
           <AppButton label={t(workspace.internet ? 'mobile.retry_private_messaging' : 'mobile.enable_private_messaging')} variant="secondary" disabled={busy || !geo.active} onPress={() => void operate(() => configurePrivateInternet(true))} />
         </View>}
         {mode === 'geo' && geoRecipient && <AppText variant="caption" selectable tone="muted">{geoThread?.head ?? geoRecipient}</AppText>}
-        {mode === 'geo' && !geoRecipient && <AppText variant="caption" tone="muted">{t('mobile.channel_rotation_short')}</AppText>}
         {mode === 'geo' && geoRecipient && geoThread?.blocked && <>
           <AppText variant="caption" tone="danger">{t('mobile.channel_identity_expired')}</AppText>
           <AppButton label={t('mobile.channel_identity_recover')} variant="secondary" disabled={busy || !geo.privateActive} onPress={() => void operate(() => geohashService.useCurrentIdentity(geoRecipient))} />
         </>}
         {mode === 'geo' && geoRecipient && geoThread?.migrating && !geoThread.blocked && <AppText variant="caption" tone="muted">{t('mobile.channel_identity_pending')}</AppText>}
-        <AppText variant="caption" tone="muted">{t(mode === 'geo' ? geoRecipient ? 'mobile.geo_private_active_notice' : 'mobile.geo_public_notice' : recipient ? 'bitchat.private_notice' : workspace.bridge && !workspace.nearbyOnly ? 'mobile.bridge_notice' : 'bitchat.public_notice')}</AppText>
+        <AppText variant="caption" tone="muted">{t(mode === 'geo' ? geoRecipient ? 'mobile.geo_private_active_notice' : 'mobile.public_channel' : recipient ? 'bitchat.private_notice' : workspace.bridge && !workspace.nearbyOnly ? 'mobile.bridge_notice' : 'bitchat.public_notice')}</AppText>
         {mode === 'mesh' && (workspace.gateway || workspace.bridge) && <AppText variant="caption" tone="muted">
           {t('mobile.bridge_relay_status', { count: mesh.bridgeRelays })}
         </AppText>}

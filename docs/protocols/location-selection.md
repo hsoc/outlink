@@ -39,3 +39,8 @@ codes show an inline error and cannot join. Editing clears the preset selection.
 Selecting a preset fills the code but does not join or switch a live channel.
 The header nickname shares the saved default and editing behavior documented in
 [display names](display-names.md).
+
+Tap **Info** beside **Location channels** to read the activity-count estimate,
+public relay visibility and daily identity-rotation explanation. The panel closes
+with Close, the backdrop or Android Back, and is dismissed on background/navigation
+or full erasure. Opening it does not change the area, connection or draft.

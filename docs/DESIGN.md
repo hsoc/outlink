@@ -98,7 +98,10 @@ from the same location fix, fill it only when empty, and preserve custom or acti
 bridge choices. Choosing an area or relay policy never enables bridging.
 
 Joined location channels show an explicit Active recently count and explain its
-three-minute window, inclusion of self, and identity-based estimate. Disconnected
+three-minute window, inclusion of self, and identity-based estimate in the Info
+panel beside Location channels. Keep the count and a short public/private label
+visible; move public relay/privacy and daily-identity explanations into that panel.
+Retain the initial join privacy notice and actionable private identity warnings. Disconnected
 relays show unavailable rather than implying zero users or live presence.
 
 Tapping received message text inserts a plain-text sender mention into the current
