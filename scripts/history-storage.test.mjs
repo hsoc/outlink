@@ -305,3 +305,18 @@ test('expiry migration assigns existing encrypted rows a deadline and does not r
     assert.equal(f.raw(db => db.prepare('SELECT count(*) AS n FROM encrypted_messages').get().n), 0);
   } finally { adapter.close(); f.cleanup(); }
 });
+
+test('explicit history clearing compacts free pages while preserving protected money and delivery records', async () => {
+  const f = fixture(); const adapter = f.open();
+  try {
+    for (const scope of ['cashu-transfers', 'outbox:peer', 'contacts']) await adapter.records.set(scope, 'protected', 'retain this record');
+    for (let index = 0; index < 24; index++) await adapter.history.save('mesh', String(index), JSON.stringify({ timestamp: f.now(), content: 'x'.repeat(16000) }));
+    const before = f.raw(db => db.prepare('PRAGMA page_count').get().page_count);
+    await adapter.history.clear();
+    const after = f.raw(db => db.prepare('PRAGMA page_count').get().page_count);
+    assert.ok(after < before, `expected compaction to reduce pages: ${before} -> ${after}`);
+    assert.equal(f.raw(db => db.prepare('PRAGMA freelist_count').get().freelist_count), 0);
+    assert.equal((await adapter.history.load('mesh')).length, 0);
+    for (const scope of ['cashu-transfers', 'outbox:peer', 'contacts']) assert.equal(await adapter.records.get(scope, 'protected'), 'retain this record');
+  } finally { adapter.close(); f.cleanup(); }
+});

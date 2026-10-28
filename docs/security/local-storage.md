@@ -110,5 +110,8 @@ already older than six hours is excluded from displayed history. Local expiratio
 does not erase remote copies, relay storage, clipboard text or backups.
 
 Cleanup checkpoints/truncates the WAL. SQLite reuses freed database pages; it does
-not promise to shrink the main file immediately. Full erasure still compacts the
-database. No minute-by-minute full VACUUM is introduced.
+not promise to shrink the main file immediately. Clear local history and full erasure compact the database with VACUUM and WAL
+checkpoint/truncation. History clearing preserves protected records, including Cashu
+tokens, contacts and pending delivery records. Compaction errors are reported even
+if message deletion has already completed; repeating Clear local history retries
+compaction. No minute-by-minute full VACUUM is introduced.

@@ -179,7 +179,8 @@ export function createEncryptedStorage(
     async clear() {
       const { db } = await get();
       await db.runAsync('DELETE FROM encrypted_messages');
-      await db.execAsync('PRAGMA wal_checkpoint(TRUNCATE)');
+      // Explicit history clearing reclaims free pages; periodic expiration only reuses them.
+      await db.execAsync('PRAGMA wal_checkpoint(TRUNCATE); VACUUM; PRAGMA wal_checkpoint(TRUNCATE);');
     },
   };
   const preferences: PreferencesPort = {
