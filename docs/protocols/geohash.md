@@ -47,7 +47,7 @@ and wrong/duplicate channel tags are rejected. Relays remain untrusted.
 
 Messages are limited to 16000 UTF-8 bytes. JSON frames are capped at 32 KiB and
 32 frames per second per relay before signature work. There are at most six
-relays per session, eight pending publishes, 500 visible messages, and 2048 deduplication IDs.
+relays per session, eight pending publishes, 512 visible messages, and 2048 deduplication IDs.
 Relays reconnect with bounded exponential delay while the channel is open.
 Duplicate events from multiple relays are shown once. Late callbacks after
 leaving cannot reactivate the session.

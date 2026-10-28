@@ -1,3 +1,4 @@
+import { MESSAGE_WINDOW, messageIsFresh } from '@/lib/message-retention';
 import { blockedUsers } from '@/services/moderation/blocked-users';
 import { mentionService } from '@/services/mentions/mentions';
 import { privateMessageAlerts } from '@/services/mentions/private-messages';
@@ -73,7 +74,7 @@ class GeohashService {
     const page = await loadMessages<GeoMessage>(`geo:${hash}`, this.before);
     if (version !== this.historyVersion || hash !== geohashStore.getState().hash) return;
     this.before = page.before;
-    geohashStore.setState(state => ({ messages: [...page.messages, ...state.messages].slice(0, 500) }));
+    geohashStore.setState(state => ({ messages: [...page.messages, ...state.messages].slice(0, MESSAGE_WINDOW) }));
   }
   private session?: GeohashSession;
   private directoryTimer?: ReturnType<typeof setInterval>;
@@ -117,10 +118,10 @@ class GeohashService {
       const current = () => revision === this.revision;
       this.session = new GeohashSession(hash, key, name, relays, {
         message: message => {
-          if (!current() || !message.outgoing && this.isBlocked(message.pubkey) || geohashStore.getState().messages.some(m => m.id === message.id)) return;
+          if (!current() || !messageIsFresh(message) || !message.outgoing && this.isBlocked(message.pubkey) || geohashStore.getState().messages.some(m => m.id === message.id)) return;
           mentionService.received(message, 'geo', hash, message.id, [geohashStore.getState().publicIdentity]);
           geohashStore.setState(state => {
-            const messages = [...state.messages, message].sort((a, b) => a.timestamp - b.timestamp || a.id.localeCompare(b.id)).slice(-500);
+            const messages = [...state.messages, message].sort((a, b) => a.timestamp - b.timestamp || a.id.localeCompare(b.id)).slice(-MESSAGE_WINDOW);
             return { messages };
           });
         },
@@ -206,14 +207,14 @@ class GeohashService {
       get: async id => { const row = await historyOperation(() => platform.history.get(`geo-private:${hash}`, id)); return row ? JSON.parse(row) : null; },
       save: message => saveMessage(`geo-private:${hash}`, message.id + message.peer, message),
       blocked: (sender, aliases = []) => [sender, ...aliases].some(key => this.isBlocked(key)),
-      received: message => { if (current()) privateMessageAlerts.received(message, 'geo', hash); },
+      received: message => { if (current() && messageIsFresh(message)) privateMessageAlerts.received(message, 'geo', hash); },
       changed: message => {
-        if (!current()) return;
+        if (!current() || !messageIsFresh(message)) return;
         geohashStore.setState(state => {
           const peer = message.channelThread ?? (message.outgoing ? message.recipient! : message.peer);
           const messages = state.privateMessages.filter(m => m.id !== message.id || m.peer !== message.peer);
           messages.push(message); messages.sort((a, b) => a.timestamp - b.timestamp || a.id.localeCompare(b.id));
-          return { privateMessages: messages.slice(-500), privatePeers: state.privatePeers.includes(peer) ? state.privatePeers : [...state.privatePeers, peer] };
+          return { privateMessages: messages.slice(-MESSAGE_WINDOW), privatePeers: state.privatePeers.includes(peer) ? state.privatePeers : [...state.privatePeers, peer] };
         });
       },
       connection: count => { if (current()) geohashStore.setState({ privateConnected: count }); },
@@ -237,7 +238,7 @@ class GeohashService {
     const page = await loadMessages<BitchatMessage>(`geo-private:${hash}`, this.privateBefore);
     if (version !== this.historyVersion || hash !== geohashStore.getState().hash) return;
     this.privateBefore = page.before;
-    geohashStore.setState(state => { const entries = new Map(state.privateMessages.map(m => [m.id + m.peer, m])); for (const m of page.messages) if (!entries.has(m.id + m.peer)) entries.set(m.id + m.peer, m); return { privateMessages: [...entries.values()].sort((a, b) => a.timestamp - b.timestamp).slice(0, 500) }; });
+    geohashStore.setState(state => { const entries = new Map(state.privateMessages.map(m => [m.id + m.peer, m])); for (const m of page.messages) if (!entries.has(m.id + m.peer)) entries.set(m.id + m.peer, m); return { privateMessages: [...entries.values()].sort((a, b) => a.timestamp - b.timestamp).slice(0, MESSAGE_WINDOW) }; });
   }
   private privateBefore?: number;
   async send(content: string): Promise<void> {

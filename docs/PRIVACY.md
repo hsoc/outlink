@@ -152,3 +152,9 @@ DMs only; no mint connection is made. Copying exports the token to the OS clipbo
 and an external wallet. That wallet may contact its mint and expose its own network
 metadata. Full quick erase destroys Outlink's tokens; deleting chat history does
 not. Keep recovery copies securely until external redemption.
+
+Chat-history content expires after six hours locally, with cleanup on startup,
+periodically while the app can run, and on resume. Up to 512 messages are loaded
+at once; the count is not a global disk limit. Pending sends, Cashu tokens, drafts
+and contact/group records have separate retention. Expiry timing is indexed
+metadata; message bodies remain encrypted. Remote copies are not deleted.

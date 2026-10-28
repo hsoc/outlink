@@ -112,3 +112,12 @@ notifications, logs and UI stores. Preserve encrypted durable assembly, local
 proof-overlap protection, explicit export confirmation and full-wipe draining.
 Never interpret Bluetooth receipts, token amounts or structural parsing as payment
 settlement. Do not add mint connections or wallet custody without explicit scope.
+
+# Message retention
+
+Chat history uses `MESSAGE_WINDOW` (512) and six-hour timestamp-based expiration.
+Keep indexed storage expiry, bounded/resumable migration, foreground/timer cleanup,
+loaded views (including group pages) and replay/status guards consistent. Expiry
+must never delete Cashu tokens, protected outboxes, contacts, drafts or group keys.
+Do not reset deadlines on delivery/read updates or claim remote erasure or instant
+filesystem shrinking. See [local storage](docs/security/local-storage.md).

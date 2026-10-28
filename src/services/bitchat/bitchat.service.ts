@@ -1,3 +1,4 @@
+import { MESSAGE_WINDOW, messageIsFresh } from '@/lib/message-retention';
 import { cashuTransfers } from '@/services/cashu/transfers';
 import { CASHU_PREFIX, tokenParts } from '@/services/cashu/token';
 import { sessionIntent } from '@/services/history/lifecycle';
@@ -92,6 +93,7 @@ class BitchatService {
     remove: (peer, id) => removeRecord(`outbox:${peer}`, id),
   }, message => this.mergeMessage(message));
   private mergeMessage(message: BitchatMessage, checked = false) {
+    if (!messageIsFresh(message)) return;
     // Cashu frames use only live Noise DMs, never chat history, relay mail, or courier storage.
     if (message.content.startsWith(CASHU_PREFIX)) return;
     const peer = message.recipient ? message.outgoing ? message.recipient : message.peer : undefined;
@@ -114,7 +116,7 @@ class BitchatService {
       let low = 0, high = messages.length;
       while (low < high) { const middle = low + high >> 1; if (messages[middle].timestamp <= message.timestamp) low = middle + 1; else high = middle; }
       messages.splice(low, 0, message);
-      return { messages: messages.slice(-500) };
+      return { messages: messages.slice(-MESSAGE_WINDOW) };
     });
     // The subscription persists visible updates. Older messages still need durable receipts.
     if (!bitchatSessionStore.getState().messages.some(m => m.id === message.id && m.peer === message.peer)) {
@@ -395,7 +397,7 @@ class BitchatService {
       bitchatSessionStore.setState(state => {
         const messages = new Map(page.messages.map(message => [message.id + message.peer, message]));
         for (const message of state.messages) messages.set(message.id + message.peer, message);
-        return { messages: [...messages.values()].sort((a, b) => a.timestamp - b.timestamp).slice(-500) };
+        return { messages: [...messages.values()].sort((a, b) => a.timestamp - b.timestamp).slice(-MESSAGE_WINDOW) };
       });
     })().finally(() => { if (this.deletions.get(peer) === operation) this.deletions.delete(peer); });
     this.deletions.set(peer, operation); return this.track(operation);
@@ -416,7 +418,7 @@ class BitchatService {
     const page = await loadMessages<BitchatMessage>('mesh', this.before);
     if (version !== this.historyVersion) return;
     this.before = page.before;
-    bitchatSessionStore.setState(state => ({ messages: [...page.messages, ...state.messages].slice(0, 500) }));
+    bitchatSessionStore.setState(state => ({ messages: [...page.messages, ...state.messages].slice(0, MESSAGE_WINDOW) }));
   }
   private session?: BitchatSession;
   private account?: string;
@@ -670,18 +672,19 @@ class BitchatService {
     }
   }
   private async storeGroupMessage(message: GroupMessage) {
+    if (!messageIsFresh(message)) return;
     if (blockedUsers.has('mesh:' + message.sender.slice(0, 16))) return;
     if (contactsStore.getState().contacts.some(c => c.fingerprint === message.sender && c.blocked)) return;
     await historyOperation(async () => {
       const room = `group:${message.group}`, id = `${message.sender}:${message.id}`;
       if (await platform.history.get(room, id)) return;
       await platform.history.save(room, id, JSON.stringify(message));
-      meshGroupsStore.setState(state => ({ messages: [...state.messages, message].sort((a, b) => a.timestamp - b.timestamp).slice(-500) }));
+      meshGroupsStore.setState(state => ({ messages: [...state.messages, message].sort((a, b) => a.timestamp - b.timestamp).slice(-MESSAGE_WINDOW) }));
     });
   }
   async groupHistory(id: string, before?: number) {
     const rows = await historyOperation(() => platform.history.load(`group:${id}`, before));
-    return { messages: rows.map(row => JSON.parse(row.value) as GroupMessage), before: rows[0]?.sequence };
+    return { messages: rows.map(row => JSON.parse(row.value) as GroupMessage).filter(message => messageIsFresh(message)), before: rows[0]?.sequence };
   }
   createGroup(name: string) { return this.track((async () => { const groups = this.groups; if (!groups) throw new Error('Join Bluetooth first'); return groups.create(name, await ensureNickname()); })()); }
   acceptGroup(id: string) { const groups = this.groups; if (!groups) return Promise.reject(new Error('Join Bluetooth first')); return this.track(groups.accept(id).then(() => this.replayGroups(id))); }

@@ -14,8 +14,8 @@ jest.mock('@/services/bitchat/bitchat-session', () => ({ BitchatSession: jest.fn
 })) }));
 it('leaving Bluetooth keeps saved public and private conversations and settles interrupted sends', async () => {
   const messages = [
-    { id: 'a', peer: 'bob', name: 'Bob', content: 'public', timestamp: 1, outgoing: false, delivery: 'sent' as const },
-    { id: 'b', peer: 'self', recipient: 'bob', name: 'Alice', content: 'private', timestamp: 2, outgoing: true, delivery: 'sending' as const },
+    { id: 'a', peer: 'bob', name: 'Bob', content: 'public', timestamp: Date.now() - 2, outgoing: false, delivery: 'sent' as const },
+    { id: 'b', peer: 'self', recipient: 'bob', name: 'Alice', content: 'private', timestamp: Date.now() - 1, outgoing: true, delivery: 'sending' as const },
   ];
   bitchatSessionStore.setState({ messages });
   await bitchatService.stop();
@@ -25,12 +25,12 @@ it('leaving Bluetooth keeps saved public and private conversations and settles i
   expect(platform.history.save).toHaveBeenCalledWith('mesh', 'bself', expect.stringContaining('failed'));
 });
 it('leaving a location channel retains its timeline and selection', () => {
-  geohashStore.setState({ hash: 'ezs42', messages: [{ id: 'event', pubkey: 'key', name: 'Alice', content: 'hello', timestamp: 1, outgoing: true, delivery: 'sending' }] });
+  geohashStore.setState({ hash: 'ezs42', messages: [{ id: 'event', pubkey: 'key', name: 'Alice', content: 'hello', timestamp: Date.now() - 2, outgoing: true, delivery: 'sending' }] });
   geohashService.stop();
   expect(geohashStore.getState()).toMatchObject({ active: false, hash: 'ezs42', messages: [expect.objectContaining({ content: 'hello', delivery: 'failed' })] });
 });
 it('restores history without opening a Bluetooth transport', async () => {
-  jest.mocked(platform.history.load).mockResolvedValueOnce([{ sequence: 1, value: JSON.stringify({ id: 'persisted', peer: 'bob', name: 'Bob', content: 'saved', timestamp: 1, outgoing: false, delivery: 'read' }) }]);
+  jest.mocked(platform.history.load).mockResolvedValueOnce([{ sequence: 1, value: JSON.stringify({ id: 'persisted', peer: 'bob', name: 'Bob', content: 'saved', timestamp: Date.now() - 2, outgoing: false, delivery: 'read' }) }]);
   await bitchatService.latest();
   expect(bitchatSessionStore.getState().messages[0].content).toBe('saved');
   expect(bitchatSessionStore.getState().active).toBe(false);

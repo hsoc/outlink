@@ -110,3 +110,6 @@ scope and intentionally retained native compatibility paths.
 The searchable [Contacts menu](docs/protocols/contact-retention.md) separates live
 mesh peers, explicitly saved contacts, and recent conversations. Ordinary
 discoveries expire instead of being saved permanently.
+
+Chat histories expire locally after six hours; conversation windows load up to
+512 messages. Cashu tokens and pending delivery records are kept separately.

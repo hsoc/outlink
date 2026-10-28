@@ -16,13 +16,15 @@ function compiled(path, imports = {}) {
   vm.runInNewContext(code, { exports, TextEncoder, TextDecoder, setTimeout, require: name => imports[name] ?? require(name) });
   return exports;
 }
+const retention = compiled('../src/lib/message-retention.ts');
 const crypto = compiled('../src/lib/local-cipher.ts');
-const { createEncryptedStorage } = compiled('../src/platform/expo/encrypted-storage.ts', { '@/lib/local-cipher': crypto });
+const { createEncryptedStorage } = compiled('../src/platform/expo/encrypted-storage.ts', { '@/lib/local-cipher': crypto, '@/lib/message-retention': retention });
 function fixture() {
   const directory = mkdtempSync(join(tmpdir(), 'outlink-history-'));
   const keys = new Map(), legacyValues = new Map();
   const secrets = { async getItem(key) { return keys.get(key) ?? null; }, async setItem(key, value) { keys.set(key, value); }, async deleteItem(key) { keys.delete(key); } };
   const legacy = { async getItem(key) { return legacyValues.get(key) ?? null; }, async setItem(key, value) { legacyValues.set(key, value); }, async deleteItem(key) { legacyValues.delete(key); } };
+  let clock = Date.now();
   let failSequence, failCompaction = false, compactions = 0;
   function open() {
     const connections = [];
@@ -48,14 +50,14 @@ function fixture() {
     }, secrets, legacy, async () => {
       compactions++;
       if (failCompaction) { failCompaction = false; throw new Error('compaction interrupted'); }
-    });
+    }, () => clock);
     return { ...storage, close() { connections.forEach(db => { if (db.isOpen) db.close(); }); } };
   }
   function raw(task) {
     const db = new DatabaseSync(join(directory, 'history.db'));
     try { return task(db); } finally { db.close(); }
   }
-  return { open, raw, directory, keys, secrets, legacy, legacyValues, interruptAt(sequence) { failSequence = sequence; },
+  return { open, raw, directory, keys, advance(ms) { clock += ms; }, now: () => clock, secrets, legacy, legacyValues, interruptAt(sequence) { failSequence = sequence; },
     interruptCompaction() { failCompaction = true; }, compactions: () => compactions,
     cleanup() { rmSync(directory, { recursive: true }); } };
 }
@@ -267,5 +269,39 @@ test('conversation deletion rolls back content erasure if any encrypted row is c
     raw.exec("UPDATE encrypted_messages SET value = 'corrupt' WHERE sequence = 1"); raw.close();
     await assert.rejects(adapter.history.deleteConversation('mesh', 'bob'), /format/i);
     assert.equal(JSON.parse(await adapter.history.get('mesh', 'healthy')).content, 'keep on failure');
+  } finally { adapter.close(); f.cleanup(); }
+});
+
+test('six-hour expiry removes content without touching Cashu, outbox or contacts and status updates cannot extend it', async () => {
+  const f = fixture(); const adapter = f.open();
+  try {
+    const timestamp = f.now();
+    await adapter.history.save('mesh', 'old', JSON.stringify({ timestamp, content: 'expire me', delivery: 'sent' }));
+    for (const scope of ['cashu-transfers', 'outbox:peer', 'contacts']) await adapter.records.set(scope, 'protected', 'keep me');
+    f.advance(5 * 60 * 60 * 1000);
+    await adapter.history.save('mesh', 'old', JSON.stringify({ timestamp: f.now(), content: 'status update', delivery: 'read' }));
+    assert.equal((await adapter.history.load('mesh')).length, 1);
+    f.advance(60 * 60 * 1000);
+    assert.equal((await adapter.history.load('mesh')).length, 0);
+    assert.equal(await adapter.history.get('mesh', 'old'), null);
+    await adapter.history.prune();
+    assert.equal(f.raw(db => db.prepare('SELECT count(*) AS n FROM encrypted_messages').get().n), 0);
+    for (const scope of ['cashu-transfers', 'outbox:peer', 'contacts']) assert.equal(await adapter.records.get(scope, 'protected'), 'keep me');
+    await adapter.history.save('mesh', 'old', JSON.stringify({ timestamp, content: 'late replay' }));
+    assert.equal((await adapter.history.load('mesh')).length, 0);
+  } finally { adapter.close(); f.cleanup(); }
+});
+
+test('expiry migration assigns existing encrypted rows a deadline and does not reset it on reopen', async () => {
+  const f = fixture(); let adapter = f.open();
+  try {
+    await adapter.history.save('geo:area', 'retained', JSON.stringify({ timestamp: f.now(), content: 'existing' }));
+    f.raw(db => db.exec('UPDATE encrypted_messages SET expires_at = NULL'));
+    adapter.close(); f.advance(5 * 60 * 60 * 1000); adapter = f.open();
+    assert.equal((await adapter.history.load('geo:area')).length, 1);
+    adapter.close(); f.advance(60 * 60 * 1000); adapter = f.open();
+    assert.equal((await adapter.history.load('geo:area')).length, 0);
+    await adapter.history.prune();
+    assert.equal(f.raw(db => db.prepare('SELECT count(*) AS n FROM encrypted_messages').get().n), 0);
   } finally { adapter.close(); f.cleanup(); }
 });

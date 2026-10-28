@@ -1,3 +1,4 @@
+import { messageDeadline } from '@/lib/message-retention';
 import type { SQLiteDatabase } from 'expo-sqlite';
 import type { RecordsPort } from '../ports/records';
 import type { HistoryPort } from '../ports/history';
@@ -13,7 +14,13 @@ export function createEncryptedStorage(
   secrets: Pick<SecureStoragePort, 'getItem' | 'setItem' | 'deleteItem'>,
   legacy: PreferencesPort,
   compactLegacyPreferences?: () => Promise<void>,
+  now: () => number = Date.now,
 ) {
+  const deadlineFor = (value: string) => {
+    let message: { timestamp?: number } = {};
+    try { message = JSON.parse(value) ?? {}; } catch { /* Legacy opaque values start their local retention window at migration. */ }
+    return messageDeadline(message, now());
+  };
   let initialized: Promise<{ db: SQLiteDatabase; cipher: ReturnType<typeof localCipher> }> | undefined;
   async function initialize() {
     const db = await open();
@@ -86,6 +93,23 @@ export function createEncryptedStorage(
         await compactLegacyPreferences();
         await db.runAsync('DELETE FROM local_meta WHERE name = ?', 'preferences-cleanup');
       }
+      const retentionColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(encrypted_messages)');
+      if (!retentionColumns.some(column => column.name === 'expires_at')) await db.execAsync('ALTER TABLE encrypted_messages ADD COLUMN expires_at INTEGER');
+      await db.execAsync('CREATE INDEX IF NOT EXISTS encrypted_message_expiry ON encrypted_messages(expires_at)');
+      // Backfill old encrypted rows in bounded, resumable transactions before exposing history.
+      while (true) {
+        let count = 0;
+        await db.withExclusiveTransactionAsync(async tx => {
+          const rows = await tx.getAllAsync<Row>('SELECT sequence, room, id, value FROM encrypted_messages WHERE expires_at IS NULL LIMIT 100');
+          for (const row of rows) {
+            const value = activeCipher.open(row.value, `message:${row.room}:${row.id}`);
+            await tx.runAsync('UPDATE encrypted_messages SET expires_at = ? WHERE sequence = ?', deadlineFor(value), row.sequence);
+          }
+          count = rows.length;
+        });
+        if (!count) break;
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
       return { db, cipher };
     } catch (error) {
       cipher?.destroy(); await db.closeAsync().catch(() => {}); throw error;
@@ -95,12 +119,12 @@ export function createEncryptedStorage(
   const history: HistoryPort = {
     async get(input, messageId) {
       const { db, cipher } = await get(), room = cipher.index(`room:${input}`), id = cipher.index(`id:${input}:${messageId}`);
-      const row = await db.getFirstAsync<{ value: string }>('SELECT value FROM encrypted_messages WHERE room = ? AND id = ?', room, id);
+      const row = await db.getFirstAsync<{ value: string }>('SELECT value FROM encrypted_messages WHERE room = ? AND id = ? AND expires_at > ?', room, id, now());
       return row ? cipher.open(row.value, `message:${room}:${id}`) : null;
     },
     async load(input, before = Number.MAX_SAFE_INTEGER) {
       const { db, cipher } = await get(), room = cipher.index(`room:${input}`);
-      const rows = await db.getAllAsync<Row>('SELECT sequence, room, id, value FROM encrypted_messages WHERE room = ? AND deleted = 0 AND sequence < ? ORDER BY sequence DESC LIMIT 200', room, before);
+      const rows = await db.getAllAsync<Row>('SELECT sequence, room, id, value FROM encrypted_messages WHERE room = ? AND deleted = 0 AND sequence < ? AND expires_at > ? ORDER BY sequence DESC LIMIT 200', room, before, now());
       const messages: { sequence: number; value: string }[] = [];
       for (const [index, row] of rows.reverse().entries()) {
         messages.push({ sequence: row.sequence, value: cipher.open(row.value, `message:${room}:${row.id}`) });
@@ -111,7 +135,9 @@ export function createEncryptedStorage(
     async save(input, messageId, value) {
       const { db, cipher } = await get();
       const room = cipher.index(`room:${input}`), id = cipher.index(`id:${input}:${messageId}`);
-      await db.runAsync('INSERT INTO encrypted_messages(room, id, value) VALUES (?, ?, ?) ON CONFLICT(room, id) DO UPDATE SET value = excluded.value WHERE encrypted_messages.deleted = 0', room, id, cipher.seal(value, `message:${room}:${id}`));
+      const deadline = deadlineFor(value);
+      if (deadline <= now()) return;
+      await db.runAsync('INSERT INTO encrypted_messages(room, id, value, expires_at) VALUES (?, ?, ?, ?) ON CONFLICT(room, id) DO UPDATE SET value = excluded.value, expires_at = MIN(encrypted_messages.expires_at, excluded.expires_at) WHERE encrypted_messages.deleted = 0 AND encrypted_messages.expires_at > ?', room, id, cipher.seal(value, `message:${room}:${id}`), deadline, now());
     },
     async deleteConversation(input, peer, pendingIds = []) {
       const { db, cipher } = await get(), room = cipher.index(`room:${input}`);
@@ -136,9 +162,18 @@ export function createEncryptedStorage(
         }
         for (const messageId of pendingIds) {
           const id = cipher.index(`id:${input}:${messageId}`), value = cipher.seal(JSON.stringify({ deleted: true, delivery: 'delivered' }), `message:${room}:${id}`);
-          await tx.runAsync('INSERT INTO encrypted_messages(room, id, value, deleted) VALUES (?, ?, ?, 1) ON CONFLICT(room, id) DO UPDATE SET value = excluded.value, deleted = 1', room, id, value);
+          await tx.runAsync('INSERT INTO encrypted_messages(room, id, value, deleted, expires_at) VALUES (?, ?, ?, 1, ?) ON CONFLICT(room, id) DO UPDATE SET value = excluded.value, deleted = 1', room, id, value, messageDeadline({}, now()));
         }
       });
+      await db.execAsync('PRAGMA wal_checkpoint(TRUNCATE)');
+    },
+    async prune() {
+      const { db } = await get();
+      while (true) {
+        const result = await db.runAsync('DELETE FROM encrypted_messages WHERE sequence IN (SELECT sequence FROM encrypted_messages WHERE expires_at <= ? LIMIT 200)', now());
+        if (result.changes < 200) break;
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
       await db.execAsync('PRAGMA wal_checkpoint(TRUNCATE)');
     },
     async clear() {

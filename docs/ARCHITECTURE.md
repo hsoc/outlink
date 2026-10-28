@@ -42,8 +42,9 @@ The platform port confirms native service state; failure falls back to pausing.
 Internet-only sessions and iOS use the default pause/resume path.
 See [background lifecycle](protocols/background-connectivity.md). Cold launch restores history and selections without
 opening a transport until Join. History uses an asynchronous SQLite platform port,
-indexed by keyed room/message identifiers and insertion sequence, with 200-record pages and a 500-record
-visible window. Writes are incremental and serialized with reads and deletion.
+indexed by keyed room/message identifiers and insertion sequence, with 200-record pages and a 512-record
+visible window. Chat-history rows expire after six hours; indexed cleanup and
+read-time exclusion are separate from protected delivery/payment records. Writes are incremental and serialized with reads and deletion.
 Drafts are keyed per public/private mesh conversation or geohash. Settings provides
 explicit deletion. The adapter encrypts message payloads and private preferences
 with a device-secured independent key and authenticated, versioned records.

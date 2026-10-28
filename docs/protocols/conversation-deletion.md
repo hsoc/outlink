@@ -26,8 +26,9 @@ bounded 200-row pages, yields during processing, and updates matches in an exclu
 transaction. It erases message content and retains only encrypted minimal replay
 markers at the existing keyed room/message indexes. Read markers can still answer
 replayed delivery; they never appear in normal history pages. Later status writes
-cannot overwrite a marker and resurrect its content. Full history clearing or
-identity erasure removes the markers too.
+cannot overwrite a marker and resurrect its content. Full history clearing, six-hour history expiration, or
+identity erasure removes the markers too. Expired message timestamps are rejected
+from history on late writes.
 
 Private-message outbox invalidation is scoped to the selected peer; unrelated
 queues keep running. The service invalidates outstanding history loads, serializes

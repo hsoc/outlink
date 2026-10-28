@@ -1,3 +1,4 @@
+import { pruneChatHistory } from '@/services/history/maintenance';
 import { privateMessageAlerts } from '@/services/mentions/private-messages';
 import { mentionService } from '@/services/mentions/mentions';
 import i18n from '@/i18n/core';
@@ -39,8 +40,11 @@ export default function Layout() {
     const unsubscribeStop = platform.backgroundConnectivity.onStop(() => {
       if (bitchatService.connection && workspaceStore.getState().keepBackground) workspaceStore.setState({ keepBackground: false });
     });
-    const remove = platform.appState.addChangeListener(state => { void lifecycle.change(state).catch(() => {}); });
-    return () => { i18n.off('languageChanged', privateCopy); i18n.off('languageChanged', mentionCopy); alive = false; remove(); unsubscribePreference(); unsubscribeMesh(); unsubscribeStop(); lifecycle.dispose(); };
+    const cleanupHistory = () => { void pruneChatHistory().catch(() => bitchatSessionStore.setState({ error: true })); };
+    cleanupHistory();
+    const historyTimer = setInterval(cleanupHistory, 60000);
+    const remove = platform.appState.addChangeListener(state => { if (state === 'active') cleanupHistory(); void lifecycle.change(state).catch(() => {}); });
+    return () => { i18n.off('languageChanged', privateCopy); i18n.off('languageChanged', mentionCopy); alive = false; clearInterval(historyTimer); remove(); unsubscribePreference(); unsubscribeMesh(); unsubscribeStop(); lifecycle.dispose(); };
   }, []);
   return <GestureHandlerRootView style={{ flex: 1 }}><SafeAreaProvider><KeyboardProvider><SystemColorSchemeProvider>
     {ready ? <Stack screenOptions={{ headerShown: false }} /> : <AppScreen><AppText>Outlink</AppText></AppScreen>}

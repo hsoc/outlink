@@ -1,3 +1,5 @@
+import { historyClock } from '@/services/history/maintenance';
+import { MESSAGE_WINDOW, messageIsFresh } from '@/lib/message-retention';
 import { blockedUsersStore } from '@/services/moderation/blocked-users';
 import { displayNickname, duplicateNicknames, nicknameKey } from '@/lib/nicknames';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -30,6 +32,7 @@ export default function Groups() {
 }
 function GroupScreen() {
   const { t } = useTranslation(), c = useThemeColors(), top = useScreenHeaderClearance();
+  const now = useStore(historyClock, state => state.now);
   const state = useStore(meshGroupsStore), mesh = useStore(bitchatSessionStore), contacts = useStore(contactsStore, s => s.contacts);
   const ownName = useStore(nicknameStore, s => s.name);
   const blocked = useStore(blockedUsersStore, s => s.users);
@@ -41,6 +44,7 @@ function GroupScreen() {
   const [members, setMembers] = useState(false), [busy, setBusy] = useState(false), [failed, setFailed] = useState(false);
   const [older, setOlder] = useState<GroupMessage[]>([]), [before, setBefore] = useState<number>();
   const [loadedFor, setLoadedFor] = useState('');
+  const [browsingOlder, setBrowsingOlder] = useState(false);
   const historyKey = `${selected}:${state.self}:${state.historyEpoch}`;
   const composerRef = useRef<TextInput>(null);
   const working = useRef(false), revision = useRef(0);
@@ -51,7 +55,7 @@ function GroupScreen() {
     let alive = true; ++revision.current;
     void (async () => {
       const result = selected ? await bitchatService.groupHistory(selected) : { messages: [], before: undefined };
-      if (alive) { setOlder(result.messages); setBefore(result.before); setLoadedFor(historyKey); }
+      if (alive) { setBrowsingOlder(false); setOlder(result.messages); setBefore(result.before); setLoadedFor(historyKey); }
     })().catch(() => { if (alive) setFailed(true); });
     return () => { alive = false; };
   }, [selected, historyKey]);
@@ -59,8 +63,9 @@ function GroupScreen() {
     const map = new Map((loadedFor === historyKey ? older : []).map(m => [m.sender + ':' + m.id, m]));
     for (const m of state.messages) if (m.group === selected) map.set(m.sender + ':' + m.id, m);
     const hidden = new Set(blocked.map(user => user.key));
-    return [...map.values()].filter(message => !hidden.has('mesh:' + message.sender.slice(0, 16))).sort((a, b) => a.timestamp - b.timestamp).reverse();
-  }, [older, state.messages, selected, loadedFor, historyKey, blocked]);
+    const visible = [...map.values()].filter(message => messageIsFresh(message, now) && !hidden.has('mesh:' + message.sender.slice(0, 16))).sort((a, b) => a.timestamp - b.timestamp);
+    return (browsingOlder ? visible.slice(0, MESSAGE_WINDOW) : visible.slice(-MESSAGE_WINDOW)).reverse();
+  }, [older, state.messages, selected, loadedFor, historyKey, blocked, now, browsingOlder]);
   async function act(task: () => Promise<unknown>) {
     if (working.current) return;
     working.current = true; setBusy(true); setFailed(false);
@@ -131,7 +136,7 @@ function GroupScreen() {
             if (await platform.confirmationDialog.confirm(t('groups.remove'), t('groups.remove_hint'), t('mobile.cancel'), t('groups.remove'))) await bitchatService.removeGroupMember(group.id, item.fingerprint);
           })} />}</View>} /> : <>
         <FlatList style={{ flex: 1, minHeight: 0 }} data={messages} inverted keyExtractor={m => m.sender + ':' + m.id} contentContainerStyle={{ gap: spacing.sm }}
-          ListFooterComponent={loadedFor === historyKey && before !== undefined ? <AppButton label={t('groups.older')} variant="text" disabled={busy} onPress={() => void act(async () => { const version = revision.current, page = await bitchatService.groupHistory(group.id, before); if (revision.current === version) { setOlder(old => [...page.messages, ...old]); setBefore(page.before); } })} /> : null}
+          ListFooterComponent={loadedFor === historyKey && before !== undefined ? <AppButton label={t('groups.older')} variant="text" disabled={busy} onPress={() => void act(async () => { const version = revision.current, page = await bitchatService.groupHistory(group.id, before); if (revision.current === version) { setBrowsingOlder(true); setOlder(old => [...page.messages, ...old].slice(0, MESSAGE_WINDOW)); setBefore(page.before); } })} /> : null}
           renderItem={({ item }) => <View style={{ alignSelf: item.outgoing ? 'flex-end' : 'flex-start', maxWidth: uiDensity.messageBubbleMaxWidth,
             paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.xs, borderRadius: radius.xl,
             borderEndStartRadius: item.outgoing ? radius.xl : radius.xs, borderEndEndRadius: item.outgoing ? radius.xs : radius.xl,

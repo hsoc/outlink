@@ -77,3 +77,38 @@ the authenticated encrypted protected-record store. Group conversations use
 separate encrypted history rooms and workspace drafts. No group key is exposed
 in UI stores. Full wipe removes them with the database/key; Clear history retains
 membership and protocol gossip. See [private groups](../protocols/private-groups.md).
+
+## Six-hour message retention
+
+Chat content in Nearby public/private, Location public/private and Bluetooth group
+histories expires six hours after its message timestamp. The visible loaded window
+is 512 entries, independent of database pagination (200 rows) or total stored count.
+This is not a 512-row disk cap: all unexpired history remains pageable.
+
+An indexed `expires_at` scheduling column stores the deadline; it exposes message
+expiry timing in addition to the existing count/size/index metadata. Message text,
+identities and replay markers stay encrypted. Future clocks over one minute ahead
+are rejected; smaller future skew cannot extend the persisted deadline beyond six
+local hours. Missing legacy timestamps receive six hours starting at migration.
+Existing rows are backfilled in resumable transactions of at most 100 entries,
+using the expiry index to avoid repeated full-table scans. Unreadable ciphertext
+fails migration and is preserved instead of silently reset.
+
+History reads exclude expired rows immediately and expired arrivals/status writes
+cannot revive old content. Updates preserve the earlier stored deadline. Deleted
+conversation replay markers retain their original expiry, or six hours for newly
+inserted markers without a timestamp. Expired content/markers are physically deleted
+in indexed batches of 200. Cleanup runs at startup, every minute while JavaScript
+can run, and on foreground resumption; OS suspension can delay physical cleanup.
+Loaded lists are trimmed too, including older group pages. A storage error does
+not keep expired loaded messages visible. Time is based on the device clock.
+
+Retention touches only chat-history rows, not Cashu transfers, contacts, group
+membership/keys, drafts, gossip, or pending delivery/courier records. A queued
+message can remain eligible for delivery under its separate policy; a message
+already older than six hours is excluded from displayed history. Local expiration
+does not erase remote copies, relay storage, clipboard text or backups.
+
+Cleanup checkpoints/truncates the WAL. SQLite reuses freed database pages; it does
+not promise to shrink the main file immediately. Full erasure still compacts the
+database. No minute-by-minute full VACUUM is introduced.

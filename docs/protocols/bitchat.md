@@ -216,7 +216,7 @@ frames per second per admitted link. Outbound link writes are paced to 48 frames
 per rolling second; stop/disconnect cancels waiting writes. Losing an authenticated
 peer's ingress invalidates its ephemeral cipher until a fresh handshake. Invalid inbound radio traffic is discarded
 without injecting it into the user timeline. Local history persists until explicitly deleted in Settings. The visible
-timeline is bounded to 500 messages; older records are loaded in indexed
+timeline is bounded to 512 messages; older records are loaded in indexed
 200-message pages. Closing a room releases transport/session keys without
 deleting its history.
 

@@ -54,7 +54,7 @@ acceptance means sent; only an authenticated recipient acknowledgment means
 delivered/read. History commits before receive dedup and acknowledgment. Read
 status never regresses to delivered. Failed receipts persist encrypted and retry
 on reconnect, every thirty seconds, or on the next join. Recipient history is
-paged and capped to 500 visible entries. Clear history retains delivery records;
+paged and capped to 512 visible entries. Clear history retains delivery records;
 identity wipe waits for writes and removes them with identity keys.
 
 Mesh-favorite internet reception now also commits history and queues a durable

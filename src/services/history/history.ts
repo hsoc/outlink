@@ -1,3 +1,4 @@
+import { messageIsFresh } from '@/lib/message-retention';
 import { platform } from '@/platform';
 /** Serialize writes, hydration, and explicit deletion so stale writes cannot undo deletion. */
 let pending: Promise<unknown> = Promise.resolve();
@@ -13,6 +14,6 @@ export async function loadMessages<T extends { delivery: string }>(room: string,
   return { before: rows[0]?.sequence, messages: rows.map(row => {
     const message = JSON.parse(row.value) as T;
     return message.delivery === 'sending' ? { ...message, delivery: 'failed' } : message;
-  }) };
+  }).filter(message => messageIsFresh(message as { timestamp?: number })) };
 }
 export const clearHistory = () => historyOperation(() => platform.history.clear());

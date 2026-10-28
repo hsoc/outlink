@@ -49,7 +49,9 @@ membership requires an authenticated invitation. A malformed `/group` command
 fails locally and is never transmitted as chat text.
 
 Group conversations use the shared bubbles and saved nickname, keep separate
-encrypted drafts and history, and load older messages in pages. Signed roster
+encrypted drafts and history, and load older messages in pages within a 512-entry
+loaded window. Saved group chat content expires after six hours; group membership
+and keys are unaffected. Signed roster
 nicknames are used for incoming display because the protocol does not include the
 inner nickname in the sender signature. A roster nickname can therefore lag a
 member's latest Settings nickname; authorship always uses the pinned signing key.
