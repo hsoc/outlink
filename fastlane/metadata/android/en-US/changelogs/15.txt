@@ -1,0 +1,4 @@
+Add encrypted Nearby transfers for Cashu tokens prepared in an external wallet.
+Review tokens, retry interrupted transfers and copy received tokens for redemption.
+Move Location-channel explanations into an Info panel to free conversation space.
+Received tokens remain unverified until external redemption. Full erase destroys stored tokens.
