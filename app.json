@@ -2,7 +2,7 @@
   "expo": {
     "name": "Outlink",
     "slug": "outlink",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "outlink",
@@ -10,11 +10,11 @@
     "ios": {
       "icon": "./assets/images/icon.png",
       "bundleIdentifier": "io.github.hsoc.outlink",
-      "buildNumber": "15",
+      "buildNumber": "16",
       "supportsTablet": true
     },
     "android": {
-      "versionCode": 15,
+      "versionCode": 16,
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

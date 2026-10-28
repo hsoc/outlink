@@ -3,8 +3,8 @@
 Run the **Build Mobile Apps** workflow from the Actions tab. Android defaults to
 on; iOS is optional. There are no desktop build targets or desktop credentials.
 Both use the existing Outlink production application ID `io.github.hsoc.outlink`.
-Development builds use `.dev`. The public app version is `1.1.0`; changing it does not require a Git tag. Android version code and iOS
-build number are 15; keep increasing these counters even when changing the
+Development builds use `.dev`. The public app version is `1.1.1`; changing it does not require a Git tag. Android version code and iOS
+build number are 16; keep increasing these counters even when changing the
 public version scheme.
 
 ## Android
@@ -70,9 +70,9 @@ The runner/Xcode pairing follows the [runner image inventory](https://github.com
 
 Private Bluetooth groups require the updated application bundle. Automated
 validation includes independent group crypto checks and simulated multi-hop group
-invitation/message/backfill tests. The maintainer has explicitly omitted physical
-device testing; the physical release checks above remain unverified, rather than
-being implied by successful automated checks. See [private groups](protocols/private-groups.md).
+invitation/message/backfill tests. The maintainer reports physical-device testing and authorizes stable distribution
+starting with 1.1.1. A detailed cross-platform test matrix has not been recorded;
+automated checks alone must not be presented as physical validation. See [private groups](protocols/private-groups.md).
 
 ## Release notes and versioning
 

@@ -1,0 +1,4 @@
+Expire local chat history after six hours and load up to 512 messages at once.
+Reclaim unused database space after Clear local history.
+Preserve Cashu tokens, contacts, group membership and pending delivery records during automatic expiry.
+Stable release following maintainer-reported physical-device testing.
