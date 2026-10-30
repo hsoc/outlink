@@ -1,0 +1,4 @@
+Silence alerts for the conversation you are viewing.
+Show unread dots on Nearby, Location channels, DMs and Bluetooth groups.
+Optionally alert for all Nearby messages while Android background connectivity runs.
+Move Appearance below background connectivity settings.
