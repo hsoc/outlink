@@ -11,6 +11,7 @@ import { cancelScheduledNotificationAsync } from 'expo-notifications/build/cance
 import { AndroidImportance, AndroidNotificationVisibility } from 'expo-notifications/build/NotificationChannelManager.types';
 import type { MentionNotificationsPort } from '../ports/mention-notifications';
 const channel = 'outlink-mentions';
+const channelFor = (kind?: 'private' | 'nearby') => kind === 'nearby' ? 'outlink-nearby-messages' : kind === 'private' ? 'outlink-private-messages' : channel;
 setNotificationHandler({ handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }) });
 async function ensureChannel(name: string, id = channel) {
   if (Platform.OS === 'android') await setNotificationChannelAsync(id, {
@@ -20,20 +21,21 @@ async function ensureChannel(name: string, id = channel) {
 }
 export const mentionNotificationsAdapter: MentionNotificationsPort = {
   async requestPermission(channelName, kind) {
-    await ensureChannel(channelName, kind === 'private' ? 'outlink-private-messages' : channel);
+    await ensureChannel(channelName, channelFor(kind));
     return (await requestPermissionsAsync({ ios: { allowAlert: true, allowSound: true, allowBadge: false } })).granted;
   },
-  async show({ id, title, body, channelName, kind }) {
+  async show({ id, title, body, channelName, kind }, shouldShow) {
     if (!(await getPermissionsAsync()).granted) return;
-    const selectedChannel = kind === 'private' ? 'outlink-private-messages' : channel;
+    const selectedChannel = channelFor(kind);
     await ensureChannel(channelName, selectedChannel);
+    if (shouldShow && !shouldShow()) return;
     await scheduleNotificationAsync({ identifier: id, content: {
       title, body,
-      sound: 'default', data: kind === 'private' ? { outlinkPrivateMessage: true } : { outlinkMention: true },
+      sound: 'default', data: kind === 'nearby' ? { outlinkNearbyMessage: true } : kind === 'private' ? { outlinkPrivateMessage: true } : { outlinkMention: true },
     }, trigger: Platform.OS === 'android' ? { channelId: selectedChannel } : null });
   },
   async clear(kind) {
-    const marker = kind === 'private' ? 'outlinkPrivateMessage' : 'outlinkMention';
+    const marker = kind === 'nearby' ? 'outlinkNearbyMessage' : kind === 'private' ? 'outlinkPrivateMessage' : 'outlinkMention';
     for (const item of await getAllScheduledNotificationsAsync()) if (item.content.data?.[marker] === true) await cancelScheduledNotificationAsync(item.identifier);
     for (const item of await getPresentedNotificationsAsync()) if (item.request.content.data?.[marker] === true) await dismissNotificationAsync(item.request.identifier);
   },

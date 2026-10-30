@@ -1,3 +1,5 @@
+import { conversationActivity } from '@/services/mentions/conversation-activity';
+import { nearbyAlerts } from '@/services/mentions/nearby-alerts';
 import { configurePrivateInternet } from '@/services/preferences/internet-private';
 import { blockedUsers, blockedUsersStore } from '@/services/moderation/blocked-users';
 import { privateMessageAlerts } from '@/services/mentions/private-messages';
@@ -30,6 +32,7 @@ export default function Settings() {
   const [mentions, setMentions] = useState(false), [mentionBusy, setMentionBusy] = useState(false), [mentionError, setMentionError] = useState(false);
   const [privateAlertsReady, setPrivateAlertsReady] = useState(false);
   const [privateAlerts, setPrivateAlerts] = useState(false), [privateAlertBusy, setPrivateAlertBusy] = useState(false), [privateAlertError, setPrivateAlertError] = useState(false);
+  const [allNearby, setAllNearby] = useState(false), [nearbyReady, setNearbyReady] = useState(false), [nearbyBusy, setNearbyBusy] = useState(false), [nearbyError, setNearbyError] = useState(false);
   const [backgroundBusy, setBackgroundBusy] = useState(false);
   const blocks = useStore(blockedUsersStore, s => s.users);
   const blockRows = useMemo(() => [...new Map(blocks.map(entry => [entry.group ?? entry.key, entry])).values()], [blocks]);
@@ -44,7 +47,8 @@ export default function Settings() {
         setNameReady(true);
       }
     }).catch(() => { if (alive) setFailed(true); });
-    setPrivateAlertsReady(false);
+    setPrivateAlertsReady(false); setNearbyReady(false);
+    void nearbyAlerts.enabled().then(value => { if (alive) { setAllNearby(value); setNearbyReady(true); } }).catch(() => { if (alive) setNearbyError(true); });
     void blockedUsers.restore().catch(() => { if (alive) setFailed(true); });
     void privateMessageAlerts.enabled().then(enabled => { if (alive) { setPrivateAlerts(enabled); setPrivateAlertsReady(true); } }).catch(() => { if (alive) setPrivateAlertError(true); });
     void mentionService.enabled().then(enabled => { if (alive) setMentions(enabled); }).catch(() => { if (alive) setMentionError(true); });
@@ -106,11 +110,6 @@ export default function Settings() {
         label={t('mobile.unblock_user', { name: entry.name })}
         onPress={() => { setClearing(true); void blockedUsers.set(blocks.filter(user => (user.group ?? user.key) === (entry.group ?? entry.key)).map(user => user.key), entry.name, false).catch(() => setFailed(true)).finally(() => setClearing(false)); }} />)}
     </View>}
-    <AppText variant="subtitle">{t('mobile.appearance')}</AppText>
-    <View style={{ flexDirection: 'row', gap: spacing.sm }}>{(['system','light','dark'] as const).map(value => <AppButton key={value}
-      label={t(`mobile.${value}`)} variant="secondary" fullWidth={false} selected={preference === value} onPress={() => useThemeStore.getState().setPreference(value)} />)}</View>
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>{ACCENT_KEYS.map(value => <AppButton key={value} label={t(`appearance.colors.${value}`)} variant="secondary"
-      fullWidth={false} selected={accent === value} onPress={() => useThemeStore.getState().setAccent(value)} />)}</View>
     <View style={{ gap: spacing.sm }}>
       <AppText variant="subtitle">{t('mobile.background_connectivity')}</AppText>
       <Switch accessibilityLabel={t('mobile.background_connectivity')}
@@ -131,6 +130,23 @@ export default function Settings() {
       <AppText variant="caption" tone="muted">{t(platform.backgroundConnectivity.supported() ? 'mobile.background_hint' : 'mobile.background_unavailable')}</AppText>
       {workspace.backgroundError && <AppText variant="caption" tone="danger">{t('mobile.background_failed')}</AppText>}
     </View>
+    <View style={{ gap: spacing.sm }}>
+      <AppText variant="subtitle">{t('mobile.nearby_notifications')}</AppText>
+      <Switch accessibilityLabel={t('mobile.nearby_notifications')} value={allNearby}
+        disabled={!nearbyReady || !workspace.keepBackground || !platform.backgroundConnectivity.supported() || nearbyBusy || clearing || backgroundBusy}
+        trackColor={{ false: colors.surfaceMuted, true: colors.accent }} onValueChange={enabled => void (async () => {
+          setNearbyBusy(true); setNearbyError(false);
+          try { if (await nearbyAlerts.configure(enabled)) setAllNearby(enabled); else setNearbyError(true); }
+          catch { setNearbyError(true); } finally { setNearbyBusy(false); }
+        })()} />
+      <AppText variant="caption" tone="muted">{t('mobile.nearby_notifications_hint')}</AppText>
+      {nearbyError && <AppText variant="caption" tone="danger">{t('mobile.mention_permission_error')}</AppText>}
+    </View>
+    <AppText variant="subtitle">{t('mobile.appearance')}</AppText>
+    <View style={{ flexDirection: 'row', gap: spacing.sm }}>{(['system','light','dark'] as const).map(value => <AppButton key={value}
+      label={t(`mobile.${value}`)} variant="secondary" fullWidth={false} selected={preference === value} onPress={() => useThemeStore.getState().setPreference(value)} />)}</View>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>{ACCENT_KEYS.map(value => <AppButton key={value} label={t(`appearance.colors.${value}`)} variant="secondary"
+      fullWidth={false} selected={accent === value} onPress={() => useThemeStore.getState().setAccent(value)} />)}</View>
     <AppButton label={t('mobile.contacts')} variant="secondary" disabled={clearing || networkBusy || backgroundBusy} onPress={() => router.push('/contacts')} />
     <AppButton label={t('cashu.title')} variant="secondary" disabled={clearing} onPress={() => router.push('/payments')} />
     <NetworkSettings disabled={clearing} onBusyChange={setNetworkBusy} />
@@ -145,7 +161,7 @@ export default function Settings() {
     <AppButton label={t('mobile.clear_history')} variant="secondary" disabled={clearing || networkBusy} onPress={() => void (async () => {
       if (!await platform.confirmationDialog.confirm(t('mobile.clear_history'), t('mobile.clear_confirm'), t('mobile.cancel'), t('mobile.clear_history'))) return;
       setClearing(true); setFailed(false);
-      bitchatService.clearMessages(); geohashService.clearMessages();
+      bitchatService.clearMessages(); geohashService.clearMessages(); conversationActivity.clearUnread();
       workspaceStore.setState({ drafts: {} });
       try { await clearHistory(); } catch { setFailed(true); } finally { setClearing(false); }
     })()} />
@@ -153,7 +169,7 @@ export default function Settings() {
     <AppButton label={t('mobile.wipe_identity')} variant="secondary" disabled={clearing || networkBusy} onPress={() => void (async () => {
       if (!await platform.confirmationDialog.confirm(t('mobile.wipe_identity'), t('mobile.wipe_confirm'), t('mobile.cancel'), t('mobile.wipe_identity'))) return;
       setClearing(true); setFailed(false);
-      try { await panicWipe(); const fresh = await ensureNickname(); nameRef.current = fresh; ++edits.current; setName(fresh); setSavedName(fresh); setNameSaved(false); setMentions(false); setErased(true); } catch { setFailed(true); } finally { setClearing(false); }
+      try { await panicWipe(); const fresh = await ensureNickname(); nameRef.current = fresh; ++edits.current; setName(fresh); setSavedName(fresh); setNameSaved(false); setMentions(false); setPrivateAlerts(false); setAllNearby(false); setErased(true); } catch { setFailed(true); } finally { setClearing(false); }
     })()} />
     <AppText variant="caption" tone="muted">{t('mobile.quick_erase_settings')}</AppText>
     {erased && <AppText tone="muted">{t('mobile.wipe_done')}</AppText>}

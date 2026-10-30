@@ -50,3 +50,17 @@ it('keeps private DM alerts on their own local channel and clears them independe
   await mentionNotificationsAdapter.clear('private');
   expect(dismissNotificationAsync).toHaveBeenCalledWith('dm'); expect(dismissNotificationAsync).not.toHaveBeenCalledWith('mention');
 });
+it('rechecks eligibility after permission/channel work and isolates Nearby cleanup', async () => {
+  await mentionNotificationsAdapter.show({ ...alert, kind: 'nearby' }, () => false);
+  expect(scheduleNotificationAsync).not.toHaveBeenCalled();
+  await mentionNotificationsAdapter.show({ ...alert, kind: 'nearby' }, () => true);
+  expect(scheduleNotificationAsync).toHaveBeenCalledWith(expect.objectContaining({ content: expect.objectContaining({ data: { outlinkNearbyMessage: true } }), trigger: { channelId: 'outlink-nearby-messages' } }));
+  jest.mocked(getPresentedNotificationsAsync).mockResolvedValueOnce([
+    { request: { identifier: 'nearby', content: { data: { outlinkNearbyMessage: true } } } },
+    { request: { identifier: 'private', content: { data: { outlinkPrivateMessage: true } } } },
+    { request: { identifier: 'connectivity', content: { data: {} } } },
+  ] as never);
+  await mentionNotificationsAdapter.clear('nearby');
+  expect(dismissNotificationAsync).toHaveBeenCalledTimes(1);
+  expect(dismissNotificationAsync).toHaveBeenCalledWith('nearby');
+});

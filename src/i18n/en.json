@@ -249,7 +249,11 @@
     "edit_nickname": "@{{name}} — change nickname in Settings",
     "unknown_nickname": "Anonymous",
     "info": "Info",
-    "location_info": "Location channels information"
+    "location_info": "Location channels information",
+    "nearby_notifications": "Notify for all Nearby messages in background",
+    "nearby_notifications_hint": "With background connectivity running, alert for Public Mesh messages, Nearby DMs and joined Bluetooth group messages. Names and text stay private. Requires notification permission. Your separate DM and mention settings still apply outside this mode.",
+    "nearby_message_alert": "You received a message in Nearby.",
+    "unread_activity": "Unread messages"
   },
   "groups": {
     "title": "Private groups",

@@ -44,7 +44,9 @@ Tap received message text to mention its sender. Press and hold for Copy message
 Message user, Hug user, Slap user, or Block user; see [message actions](docs/protocols/message-actions.md). Enable **Notify when
 mentioned** in Settings for local alerts in mesh and location channels. A live
 connection and notification permission are required. See
-[mentions and notifications](docs/protocols/mentions.md).
+[mentions and notifications](docs/protocols/mentions.md). Viewed conversations stay
+silent; unread dots identify other activity. Android can optionally notify for all
+Nearby messages while background connectivity is running.
 
 Nearby DMs appear in an unread sender strip and in Contacts; tap the sender to
 open the private thread. Optional **Notify for private messages** in

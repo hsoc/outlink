@@ -47,6 +47,17 @@ Android can still kill the process, stop Bluetooth, throttle scans, or restrict
 networking under Doze/vendor battery policies. This feature improves continuity;
 it cannot guarantee delivery, uninterrupted radios, or wake-ups after a kill.
 
+## Message alerts
+
+The ongoing service notification describes connectivity; it is separate from
+message alerts. **Notify for all Nearby messages in background** is an additional
+opt-in setting beneath this switch, followed by Appearance. With the app in the
+background and the native service running, it alerts for ordinary Public Mesh
+messages, Nearby DMs and joined Bluetooth group messages. Otherwise the separate
+mention and private-message preferences apply. The focused foreground conversation
+is silent and unread dots identify activity elsewhere. See
+[notifications](mentions.md) for filtering, bounds and platform limits.
+
 ## iOS
 
 The switch is unavailable on iOS, with an explanation. Core Bluetooth background

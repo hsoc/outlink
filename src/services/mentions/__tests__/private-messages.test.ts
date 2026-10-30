@@ -30,7 +30,9 @@ it('defaults off and leaves the preference unchanged on permission denial', asyn
 it('cancels an alert whose preference load races identity erasure', async () => {
   let release!: (value: string) => void;
   jest.mocked(platform.preferences.getItem).mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
-  privateMessageAlerts.received(message()); await Promise.resolve(); await Promise.resolve();
+  privateMessageAlerts.received(message());
+  for (let i = 0; i < 20 && !release; i++) await Promise.resolve();
+  expect(release).toBeDefined();
   invalidateSessionIntent(); release('true'); await privateMessageAlerts.clear();
   expect(platform.mentionNotifications.show).not.toHaveBeenCalled(); expect(platform.mentionNotifications.clear).toHaveBeenLastCalledWith('private');
 });
@@ -61,7 +63,9 @@ it('scopes duplicate IDs by transport and location channel', async () => {
 it('rechecks blocks after asynchronous preference loading', async () => {
   let release!: (value: string) => void;
   jest.mocked(platform.preferences.getItem).mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
-  privateMessageAlerts.received(message()); await Promise.resolve(); await Promise.resolve();
+  privateMessageAlerts.received(message());
+  for (let i = 0; i < 20 && !release; i++) await Promise.resolve();
+  expect(release).toBeDefined();
   const check = jest.spyOn(blockedUsers, 'has').mockReturnValue(true);
   try { release('true'); await privateMessageAlerts.idle(); expect(platform.mentionNotifications.show).not.toHaveBeenCalled(); }
   finally { check.mockRestore(); }

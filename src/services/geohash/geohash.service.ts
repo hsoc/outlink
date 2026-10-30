@@ -1,3 +1,4 @@
+import { conversationActivity, conversationScope } from '@/services/mentions/conversation-activity';
 import { MESSAGE_WINDOW, messageIsFresh } from '@/lib/message-retention';
 import { blockedUsers } from '@/services/moderation/blocked-users';
 import { mentionService } from '@/services/mentions/mentions';
@@ -119,6 +120,7 @@ class GeohashService {
       this.session = new GeohashSession(hash, key, name, relays, {
         message: message => {
           if (!current() || !messageIsFresh(message) || !message.outgoing && this.isBlocked(message.pubkey) || geohashStore.getState().messages.some(m => m.id === message.id)) return;
+          if (!message.outgoing) conversationActivity.received(conversationScope('geo', hash), message.timestamp);
           mentionService.received(message, 'geo', hash, message.id, [geohashStore.getState().publicIdentity]);
           geohashStore.setState(state => {
             const messages = [...state.messages, message].sort((a, b) => a.timestamp - b.timestamp || a.id.localeCompare(b.id)).slice(-MESSAGE_WINDOW);

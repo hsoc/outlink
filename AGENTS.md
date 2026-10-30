@@ -121,3 +121,13 @@ loaded views (including group pages) and replay/status guards consistent. Expiry
 must never delete Cashu tokens, protected outboxes, contacts, drafts or group keys.
 Do not reset deadlines on delivery/read updates or claim remote erasure or instant
 filesystem shrinking. See [local storage](docs/security/local-storage.md).
+
+# Notification visibility
+
+Read [notifications](docs/protocols/mentions.md) before changing alerts or unread
+indicators. Silence only the focused foreground conversation, rechecking after
+asynchronous work. Keep visual indicators independent of OS permission. All-Nearby
+alerts require a background app and running native connectivity service, use their
+own cleanup category, and never include Cashu payloads or private previews. Wipe
+must invalidate/drain every alert pipeline; public/group dots are bounded transient
+arrival state, while DM unread status remains persisted and view-scoped.

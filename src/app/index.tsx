@@ -1,3 +1,4 @@
+import { conversationActivity, conversationActivityStore, conversationScope } from '@/services/mentions/conversation-activity';
 import { LocationInfo } from '@/components/common/LocationInfo';
 import { configurePrivateInternet } from '@/services/preferences/internet-private';
 import { MessageActions, type MessageAction } from '@/components/common/MessageActions';
@@ -51,6 +52,7 @@ export default function Chats() {
   }, [blocked, savedContacts, geo.privateThreads]);
   const unread = useMemo(() => unreadPrivateMessages(mesh.messages, new Set([...blockedKeys].filter(key => key.startsWith('mesh:')).map(key => key.slice(5)))), [mesh.messages, blockedKeys]);
   const geoUnread = useMemo(() => unreadLocationMessages(geo.privateMessages.filter(message => !blockedKeys.has(messageUserKey(message))), geo.privateThreads), [geo.privateMessages, geo.privateThreads, blockedKeys]);
+  const activity = useStore(conversationActivityStore, s => s.unread);
   const workspace = useStore(workspaceStore);
   const { mode, hash, precision, relays, recipient } = workspace;
   const setMode = (mode: 'mesh' | 'geo') => workspaceStore.setState({ mode });
@@ -60,6 +62,9 @@ export default function Chats() {
   const [privateTarget, setPrivateTarget] = useState<{ hash: string; pubkey: string }>();
   const geoRecipient = privateTarget?.hash === geo.hash ? geohashService.privatePeer(privateTarget.pubkey) : undefined;
   const geoThread = geo.privateThreads.find(thread => thread.peer === geoRecipient);
+  const visibleConversation = conversationScope(mode, geo.hash, mode === 'mesh' ? recipient : geoRecipient);
+  const meshDot = unread.size > 0 || Object.keys(activity).some(key => JSON.parse(key)[0] === 'mesh');
+  const geoDot = geoUnread.size > 0 || Object.keys(activity).some(key => JSON.parse(key)[0] === 'geo');
   const draftKey = mode === 'mesh' ? `mesh:${recipient ?? 'public'}` : `geo:${hash.trim().toLowerCase().replace(/^#/, '')}${geoRecipient ? ':private:' + geoRecipient : ''}`;
   const draft = workspace.drafts[draftKey] ?? '';
   const setDraft = (value: string) => workspaceStore.setState(state => ({ drafts: { ...state.drafts, [draftKey]: value } }));
@@ -221,6 +226,8 @@ export default function Chats() {
   const groupAction = mode === 'mesh' && /^\/group(?:\s|$)/i.test(draft.trim());
   const canSendPublicMesh = groupAction && mesh.active || hasMeshPeers || (workspace.bridge && !workspace.nearbyOnly);
   const isComposing = active || (mode === 'mesh' ? mesh.messages.length > 0 || savedContacts.length > 0 || !!recipient : geo.messages.length > 0 || geo.privateMessages.length > 0 || geo.privatePeers.length > 0);
+  const showingConversation = ready && isComposing && !wiping && !(mode === 'geo' && editingArea);
+  useFocusEffect(useCallback(() => showingConversation ? conversationActivity.focus(visibleConversation) : undefined, [showingConversation, visibleConversation]));
   const transportHint = mode === 'mesh'
     ? `Bluetooth · ${mesh.active ? (hasMeshPeers ? t('mobile.mesh_connected', { count: onlinePeerCount }) : t('mobile.mesh_searching')) : t('mobile.disconnected')}`
     : `Internet · ${geo.connected > 0 ? t('mobile.relays_connected', { count: geo.connected }) : t('mobile.relays_disconnected')}`;
@@ -236,7 +243,7 @@ export default function Chats() {
     </View> : <KeyboardAvoidingView behavior="padding" style={{ flex: 1, paddingTop: top, paddingHorizontal: spacing.lg, gap: spacing.sm, minHeight: 0 }}>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm }}>
         {(['mesh', 'geo'] as const).map(value => <View key={value} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-          <AppButton label={t(`mobile.${value}`)} variant="secondary"
+          <AppButton unread={value === 'mesh' ? meshDot : geoDot} accessibilityHint={value === 'mesh' ? meshDot ? t('mobile.unread_activity') : undefined : geoDot ? t('mobile.unread_activity') : undefined} label={t(`mobile.${value}`)} variant="secondary"
             fullWidth={false} selected={mode === value} disabled={busy} onPress={() => { setMode(value); setLocationInfo(false); setActionError(null); }} />
           {value === 'geo' && mode === 'geo' && <AppButton label={t('mobile.info')} accessibilityLabel={t('mobile.location_info')} variant="text" fullWidth={false} size="sm" onPress={() => { Keyboard.dismiss(); setLocationInfo(true); }} />}
         </View>)}
@@ -244,7 +251,7 @@ export default function Chats() {
       {unread.size > 0 && <View style={{ gap: spacing.xs }}>
         <AppText variant="caption" tone="accent" accessibilityLiveRegion="polite">{t('mobile.unread_private_messages')}</AppText>
         <ScrollView horizontal keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: spacing.sm }}>
-          {[...unread].map(([id, entry]) => <AppButton key={id} variant="secondary" fullWidth={false}
+          {[...unread].map(([id, entry]) => <AppButton key={id} unread accessibilityHint={t('mobile.unread_activity')} variant="secondary" fullWidth={false}
             label={t('mobile.unread_private_sender', { name: displayNickname(entry.name, id, nearbyDuplicates.has(nicknameKey(entry.name))), count: entry.count })}
             onPress={() => { setMode('mesh'); setRecipient(id); }} />)}
         </ScrollView>
@@ -252,7 +259,7 @@ export default function Chats() {
       {geoUnread.size > 0 && <View style={{ gap: spacing.xs }}>
         <AppText variant="caption" tone="accent" accessibilityLiveRegion="polite">{t('mobile.unread_location_messages')}</AppText>
         <ScrollView horizontal keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: spacing.sm }}>
-          {[...geoUnread].map(([id, entry]) => <AppButton key={id} variant="secondary" fullWidth={false}
+          {[...geoUnread].map(([id, entry]) => <AppButton key={id} unread accessibilityHint={t('mobile.unread_activity')} variant="secondary" fullWidth={false}
             label={t('mobile.unread_private_sender', { name: entry.name, count: entry.count })}
             onPress={() => { workspaceStore.setState(state => ({ mode: 'geo', hash: geo.hash, precision: state.hash === geo.hash ? state.precision : 0 })); setPrivateTarget({ hash: geo.hash, pubkey: id }); setEditingArea(false); }} />)}
         </ScrollView>
@@ -279,9 +286,9 @@ export default function Chats() {
       </ScrollView> : null}
       {isComposing && !(mode === 'geo' && editingArea) && <>
         {mode === 'mesh' && <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-          <AppButton label={t('bitchat.public')} variant="secondary" fullWidth={false} selected={!recipient} onPress={() => setRecipient(undefined)} />
-          {recipient && <AppButton label={`${displayNickname(selectedName ?? t('mobile.unknown_nickname'), recipient ?? '', duplicates.has(nicknameKey(selectedName ?? '')))} · ${t(selectedOnline ? 'mobile.mesh_online' : 'mobile.mesh_offline')}`} labelNumberOfLines={1} variant="secondary" fullWidth={false} selected onPress={() => router.push('/contacts')} />}
-          <AppButton label={t('groups.title')} variant="text" fullWidth={false} onPress={() => router.push('/groups')} />
+          <AppButton unread={!!activity[conversationScope('mesh')]} label={t('bitchat.public')} variant="secondary" fullWidth={false} selected={!recipient} onPress={() => setRecipient(undefined)} />
+          {recipient && <AppButton unread={unread.has(recipient)} label={`${displayNickname(selectedName ?? t('mobile.unknown_nickname'), recipient ?? '', duplicates.has(nicknameKey(selectedName ?? '')))} · ${t(selectedOnline ? 'mobile.mesh_online' : 'mobile.mesh_offline')}`} labelNumberOfLines={1} variant="secondary" fullWidth={false} selected onPress={() => router.push('/contacts')} />}
+          <AppButton unread={Object.keys(activity).some(key => JSON.parse(key)[1] === 'group')} label={t('groups.title')} variant="text" fullWidth={false} onPress={() => router.push('/groups')} />
           <AppButton label={t('mobile.contacts')} variant="text" fullWidth={false} onPress={() => router.push('/contacts')} />
         </View>}
         {mode === 'geo' && <View style={{ gap: spacing.xs }}>
@@ -291,8 +298,8 @@ export default function Chats() {
         </View>}
         {mode === 'mesh' && recipient && (!selectedOnline || !savedContact) && <AppText variant="caption" tone="muted">{t(savedContact?.blocked ? 'mobile.contact_blocked' : savedContact ? 'mobile.mesh_offline_hint' : 'mobile.contact_reconnect_hint')}</AppText>}
         {mode === 'geo' && <FlatList horizontal data={geo.privatePeers} keyExtractor={key => key} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm }}
-          ListHeaderComponent={<AppButton label={`#${geo.hash}`} accessibilityLabel={`${t('mobile.public_channel')} · #${geo.hash}`} labelNumberOfLines={1} accessibilityHint={t('mobile.change_area')} variant="secondary" fullWidth={false} selected={!geoRecipient} disabled={busy} onPress={() => { setPrivateTarget(undefined); setEditingArea(true); }} />}
-          renderItem={({ item: key }) => <AppButton label={geoUnread.has(key) ? t('mobile.unread_private_sender', { name: key.slice(0, 8), count: geoUnread.get(key)!.count }) : key.slice(0, 8)} variant="secondary" fullWidth={false} selected={geoRecipient === key} onPress={() => setPrivateTarget({ hash: geo.hash, pubkey: key })} />} />}
+          ListHeaderComponent={<AppButton unread={!!activity[conversationScope('geo', geo.hash)]} label={`#${geo.hash}`} accessibilityLabel={`${t('mobile.public_channel')} · #${geo.hash}`} labelNumberOfLines={1} accessibilityHint={t('mobile.change_area')} variant="secondary" fullWidth={false} selected={!geoRecipient} disabled={busy} onPress={() => { setPrivateTarget(undefined); setEditingArea(true); }} />}
+          renderItem={({ item: key }) => <AppButton unread={geoUnread.has(key)} label={geoUnread.has(key) ? t('mobile.unread_private_sender', { name: key.slice(0, 8), count: geoUnread.get(key)!.count }) : key.slice(0, 8)} variant="secondary" fullWidth={false} selected={geoRecipient === key} onPress={() => setPrivateTarget({ hash: geo.hash, pubkey: key })} />} />}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
           <AppText variant="caption" tone="muted">{transportHint}</AppText>
           {active ? <AppButton label={t('bitchat.leave')} variant="text" fullWidth={false} size="sm" disabled={busy} onPress={() => void operate(async () => {

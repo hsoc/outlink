@@ -10,7 +10,7 @@ import { InteractivePressable as Pressable } from '@/components/common/Interacti
 
 import { AppText } from './AppText';
 import { InteractionOverlay } from './InteractionOverlay';
-import { radius, uiDensity, useThemeColors, type FontWeight } from '@/theme';
+import { radius, spacing, uiDensity, useThemeColors, type FontWeight } from '@/theme';
 
 type Variant =
   | 'primary'
@@ -28,6 +28,7 @@ type Props = Omit<PressableProps, 'children' | 'style'> & {
    * that carries a chevron + an occasional count); pass `accessibilityLabel`
    * for that case. */
   label?: string;
+  unread?: boolean;
   variant?: Variant;
   size?: Size;
   loading?: boolean;
@@ -65,6 +66,7 @@ const COMPACT_INSET = 8;
 
 export function AppButton({
   label,
+  unread = false,
   variant = 'primary',
   size: sizeProp,
   loading,
@@ -280,6 +282,7 @@ export function AppButton({
             ) : null}
             {iconRight ? <View style={{ flexShrink: 0 }}>{iconRight}</View> : null}
           </View>
+          {unread && <View pointerEvents="none" style={{ position: 'absolute', top: spacing.xs, end: spacing.xs, width: spacing.sm, height: spacing.sm, borderRadius: radius.full, backgroundColor: c.notification }} />}
           {loading ? (
             <View
               style={[StyleSheet.absoluteFill, styles.loadingIndicator, { pointerEvents: 'none' }]}

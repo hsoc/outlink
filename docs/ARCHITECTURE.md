@@ -99,7 +99,7 @@ virtualized rows and bounded loaded-history data; see [contact retention](protoc
 plain-text messages. New-message callbacks feed a bounded notification service;
 history hydration does not. The notification port isolates OS permission and
 local scheduling from protocol code. Wipe invalidates/drains alert work and
-attempts to clear mention and private-message notifications before deleting local data.
+attempts to clear mention, private-message and background Nearby notifications before deleting local data.
 
 [Private Bluetooth groups](protocols/private-groups.md) reuse the BLE bearer,
 Noise control sessions, authenticated protected storage and opaque gossip cache.
@@ -155,3 +155,11 @@ The live Nearby Noise-DM path dispatches reserved frames to durable assembly;
 private mail, public channels and groups cannot import them. UI state contains
 only bounded metadata. No mint client is created and no mint network request is
 made. Full erasure drains Cashu writes before deleting the local store.
+
+Conversation visibility uses a transient scope store plus current OS lifecycle and
+identity epoch, never just mounted-screen state. Public/group activity dots use
+bounded in-memory arrival timestamps and retention maintenance; DM unread state
+continues to derive from persisted read/delivery status. The optional all-Nearby
+alert policy requires both background state and a running native connected-device
+service. It reuses accepted message callbacks and the local notification port,
+with a separate native cleanup category; it adds no transport or remote push.

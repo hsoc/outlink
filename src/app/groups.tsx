@@ -1,11 +1,13 @@
+import { conversationActivity, conversationActivityStore } from '@/services/mentions/conversation-activity';
+import { groupConversationScope } from '@/services/mentions/nearby-alerts';
 import { historyClock } from '@/services/history/maintenance';
 import { MESSAGE_WINDOW, messageIsFresh } from '@/lib/message-retention';
 import { blockedUsersStore } from '@/services/moderation/blocked-users';
 import { displayNickname, duplicateNicknames, nicknameKey } from '@/lib/nicknames';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, View, type TextInput } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useStore } from 'zustand';
 import { useTranslation } from 'react-i18next';
 import { Users } from 'lucide-react-native';
@@ -38,6 +40,7 @@ function GroupScreen() {
   const blocked = useStore(blockedUsersStore, s => s.users);
   const params = useLocalSearchParams<{ id?: string }>();
   const [selected, setSelected] = useState<string | undefined>(params.id), [name, setName] = useState('');
+  const activity = useStore(conversationActivityStore, s => s.unread);
   const draftKey = `group:${selected ?? ''}`;
   const draft = useStore(workspaceStore, s => s.drafts[draftKey] ?? '');
   const setDraft = (value: string) => workspaceStore.setState(s => ({ drafts: { ...s.drafts, [draftKey]: value } }));
@@ -49,6 +52,7 @@ function GroupScreen() {
   const composerRef = useRef<TextInput>(null);
   const working = useRef(false), revision = useRef(0);
   const group = state.groups.find(g => g.id === selected), creator = group?.creator === state.self;
+  useFocusEffect(useCallback(() => selected && group?.status === 'joined' && !members ? conversationActivity.focus(groupConversationScope(selected)) : undefined, [selected, group?.status, members]));
   const duplicates = useMemo(() => duplicateNicknames(mesh.active ? (group?.members ?? []).filter(m => m.fingerprint === state.self || mesh.peers.some(p => p.fingerprint === m.fingerprint && p.lastSeen > 0)).map(m => ({ name: m.nickname, identity: m.fingerprint })) : []), [mesh.active, mesh.peers, group, state.self]);
   const nearbyDuplicates = useMemo(() => duplicateNicknames(mesh.active ? [...mesh.peers.filter(p => p.lastSeen > 0).map(p => ({ name: p.name, identity: p.id })), { name: ownName, identity: mesh.id }] : []), [mesh.active, mesh.peers, ownName, mesh.id]);
   useEffect(() => {
@@ -115,7 +119,7 @@ function GroupScreen() {
           onPress={() => void act(async () => { setSelected(await bitchatService.createGroup(name)); setName(''); })} />
       </View>}
       ListEmptyComponent={<View style={{ gap: spacing.sm }}><Users size={uiDensity.iconButtonSize} color={c.textMuted} /><AppText variant="subtitle">{t('groups.empty')}</AppText><AppText tone="muted">{t('groups.empty_hint')}</AppText></View>}
-      renderItem={({ item }) => <AppButton variant="secondary" label={`${item.name} · ${item.members.length}${item.status === 'invited' ? ' · ' + t('groups.invitation') : ''}`} onPress={() => { setSelected(item.id); setMembers(false); }} />} /> : <KeyboardAvoidingView behavior="padding" style={{ flex: 1, padding: spacing.lg, paddingTop: top, gap: spacing.sm }}>
+      renderItem={({ item }) => <AppButton unread={!!activity[groupConversationScope(item.id)]} accessibilityHint={activity[groupConversationScope(item.id)] ? t('mobile.unread_activity') : undefined} variant="secondary" label={`${item.name} · ${item.members.length}${item.status === 'invited' ? ' · ' + t('groups.invitation') : ''}`} onPress={() => { setSelected(item.id); setMembers(false); }} />} /> : <KeyboardAvoidingView behavior="padding" style={{ flex: 1, padding: spacing.lg, paddingTop: top, gap: spacing.sm }}>
       <AppButton label={t('groups.all')} variant="text" fullWidth={false} onPress={() => setSelected(undefined)} />
       {controls}
       <AppText variant="subtitle">{group.name} · {group.members.length}</AppText>

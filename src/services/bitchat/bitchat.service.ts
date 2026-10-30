@@ -1,3 +1,5 @@
+import { nearbyAlerts } from '@/services/mentions/nearby-alerts';
+import { conversationActivity, conversationScope } from '@/services/mentions/conversation-activity';
 import { MESSAGE_WINDOW, messageIsFresh } from '@/lib/message-retention';
 import { cashuTransfers } from '@/services/cashu/transfers';
 import { CASHU_PREFIX, tokenParts } from '@/services/cashu/token';
@@ -106,8 +108,11 @@ class BitchatService {
     }
     if (!message.outgoing && (blockedUsers.has('mesh:' + message.peer) || message.bridge && (blockedUsers.has('nostr:' + message.bridge.pubkey) || geohashService.isBlocked?.(message.bridge.pubkey)))) return;
     const known = bitchatSessionStore.getState().messages.some(m => m.id === message.id && m.peer === message.peer);
-    if (!known && !contactsService.get(message.peer)?.blocked) privateMessageAlerts.received(message);
-    if (!known) mentionService.received(message, 'mesh', 'public', message.bridge?.radioHint ?? meshStableId(message.peer, message.timestamp, message.content), [this.session?.id ?? '', this.bridgeIdentity]);
+    if (!known && !message.outgoing && !contactsService.get(message.peer)?.blocked) {
+      if (!message.recipient) conversationActivity.received(conversationScope('mesh'), message.timestamp);
+      privateMessageAlerts.received(message);
+    }
+    if (!known && !contactsService.get(message.peer)?.blocked) mentionService.received(message, 'mesh', 'public', message.bridge?.radioHint ?? meshStableId(message.peer, message.timestamp, message.content), [this.session?.id ?? '', this.bridgeIdentity]);
     bitchatSessionStore.setState(state => {
       const previous = state.messages.find(m => m.id === message.id && m.peer === message.peer);
       if (previous?.delivery === 'read' || previous?.delivery === 'delivered' && !['read', 'delivered'].includes(message.delivery)) return state;
@@ -679,6 +684,7 @@ class BitchatService {
       const room = `group:${message.group}`, id = `${message.sender}:${message.id}`;
       if (await platform.history.get(room, id)) return;
       await platform.history.save(room, id, JSON.stringify(message));
+      nearbyAlerts.group(message);
       meshGroupsStore.setState(state => ({ messages: [...state.messages, message].sort((a, b) => a.timestamp - b.timestamp).slice(-MESSAGE_WINDOW) }));
     });
   }

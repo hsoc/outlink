@@ -154,3 +154,9 @@ Settings entry for received/recovery records. Review shows the stated amount, mi
 and recipient identity before sending. Never label offline tokens Paid or Redeemed.
 Keep token secrets out of chat bubbles; copying bearer money requires confirmation.
 Explain external redemption, double-spend risk and full-erasure loss before use.
+
+System alerts stay silent for the focused foreground conversation. Red unread dots
+sit at the logical top end of Nearby, Location, public/area, DM and group controls,
+use the notification theme token, and remain independent of OS permissions. Viewing
+a conversation clears its activity indicator. Android's optional all-Nearby alerts
+are subordinate to active background connectivity; Appearance follows these settings.

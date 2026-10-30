@@ -1,3 +1,5 @@
+import { nearbyAlerts } from '@/services/mentions/nearby-alerts';
+import { conversationActivity } from '@/services/mentions/conversation-activity';
 import { cashuTransfers } from '@/services/cashu/transfers';
 import { blockedUsers } from '@/services/moderation/blocked-users';
 import { resetNickname } from '@/services/preferences/nickname';
@@ -14,7 +16,7 @@ import { resetMobileIdentity } from './mobile-identity';
 let wiping: Promise<void> | undefined;
 export function panicWipe(): Promise<void> {
   return wiping ??= (async () => {
-    invalidateSessionIntent(); resetNickname(); cashuTransfers.reset();
+    invalidateSessionIntent(); conversationActivity.reset(); resetNickname(); cashuTransfers.reset();
     await cashuTransfers.idle();
     workspaceStore.setState({ keepBackground: false, backgroundError: false });
     // Native notification/service cleanup must not prevent transport shutdown and key deletion.
@@ -24,6 +26,7 @@ export function panicWipe(): Promise<void> {
     workspaceStore.setState({ ready: false, keepBackground: false, backgroundError: false, drafts: {}, recipient: undefined, internet: false, autoAreaRelays: true, gateway: false, bridge: false, bridgeCell: '', nearbyOnly: false, mode: 'mesh', hash: '' });
     await privateMessageAlerts.clear().catch(() => {});
     await mentionService.clear().catch(() => {});
+    await nearbyAlerts.clear().catch(() => {});
     await historyOperation(async () => {
       await platform.wipeLocalData();
       await resetMobileIdentity();

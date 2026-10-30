@@ -14,7 +14,9 @@ establishes a Noise-authenticated connection and confirms the signing identity.
 Invitations appear in Private groups; inspect their roster, then **Accept
 invitation** to participate, or **Leave group** to decline. These invitations do
 not create OS notifications in this implementation. Existing public mention alerts
-do not apply to group messages.
+do not apply to group messages. The optional Android all-Nearby background setting
+can alert for accepted messages in joined groups, with generic previews; viewing
+the group suppresses alerts and clears its unread dot. See [notifications](mentions.md).
 
 Only the creator manages membership. **Remove member** rotates the group key and
 sends updates to remaining reachable members. Offline members receive updates

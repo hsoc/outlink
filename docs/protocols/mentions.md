@@ -96,8 +96,8 @@ read/outgoing/public messages and duplicates do not create alerts. The DM queue
 is bounded to 32 candidates, 512 deduplication keys and one alert per ten seconds;
 additional messages remain unread without extra alerts. OS failures do not affect
 message storage. Disabling DM alerts clears only that category; full identity
-erasure invalidates and drains both categories before clearing local data.
-Private groups do not gain OS alerts here.
+erasure invalidates and drains all categories before clearing local data.
+The separate background Nearby option below also covers joined private groups.
 
 Location DMs have an **Unread Location messages** sender strip visible from either
 main tab, plus unread counts on Location private-conversation buttons. A shortcut
@@ -119,3 +119,54 @@ collide. Location notifications enter only through the new authenticated incomin
 message hook, after persistence; receipt/status updates and history restoration
 do not notify. Existing location internet consent and platform lifecycle limits
 remain: notifications do not start a connection or wake a stopped application.
+
+## Conversation visibility and unread dots
+
+OS alerts are suppressed for the exact conversation currently focused in the
+foreground: Public Mesh, the selected location public channel, or the selected
+Nearby/Location DM. Group background alerts obey the same rule for an open joined
+group conversation. A mounted screen in the background is not visible. Other
+conversations can still alert according to their preferences while the app is
+open. Arrival queues recheck visibility after asynchronous preference reads and
+again before native scheduling; opening Settings does not mark a chat read.
+
+Red dots on Nearby and Location channels aggregate unread activity. Public Mesh,
+area, DM sender and group buttons identify the affected conversation. Public/group
+dots track accepted incoming arrivals in memory for the running session, are bounded
+to 128 scopes, expire with six-hour message retention, and clear when that conversation
+is viewed in the foreground. They do not rebuild unread public history on cold
+launch. DM counts and dots retain the existing persisted delivery/read behavior.
+Visual indicators work without notification permission or alert preferences.
+Clear local history clears these transient dots; identity erasure resets visibility
+and indicators as well as notification preferences.
+
+## All Nearby alerts in background
+
+Android Settings offers **Notify for all Nearby messages in background** under
+**Keep connectivity active while in background**; Appearance follows these controls.
+The option defaults off, requests OS notification permission, and can be changed
+only with background connectivity enabled on a supported Android native build.
+Its preference is remembered if connectivity is temporarily disabled, but it takes
+effect only while the app is backgrounded and the native connectivity service is
+actually running. It never starts that service or joins a mesh by itself.
+
+While effective, ordinary incoming Public Mesh messages, Nearby DMs (including
+internet delivery to a mesh contact), and messages in joined Bluetooth groups
+produce generic local alerts even with the separate mention/DM switches off.
+Cashu frames, outgoing messages, duplicate messages, history hydration, blocked
+senders and group invitations do not generate these alerts. Public messages keep
+the existing 90-second freshness filter against replay; delayed private/group
+messages follow their existing accepted-delivery/history freshness bounds.
+Location channels retain their own mention/DM preferences; this is not an all-public
+location alert switch. A public mention produces one Nearby alert, not two.
+
+This mode uses a third Android channel and native cleanup category. Previews omit
+names, content, contact keys, group names and area codes. Ordinary mention/DM alerts
+retain their ten-second sound limit; all-Nearby mode removes that time limit while
+retaining bounded 32-item queues and 512-key deduplication per pipeline. Under an
+extreme burst, alerts may be dropped without discarding messages or unread state.
+OS presentation policies and background process/radio limits still apply. Full
+identity erasure drains all queues and attempts cleanup of all three categories;
+it preserves no all-Nearby preference. Automated checks cover visibility, background
+service gating, opt-out, groups, generic previews and wipe cancellation; no new
+physical-device notification test was performed for this change.
