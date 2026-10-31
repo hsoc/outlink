@@ -1,3 +1,4 @@
+import { messageTime } from '@/lib/message-time';
 import { conversationActivity, conversationActivityStore } from '@/services/mentions/conversation-activity';
 import { groupConversationScope } from '@/services/mentions/nearby-alerts';
 import { historyClock } from '@/services/history/maintenance';
@@ -144,7 +145,7 @@ function GroupScreen() {
           renderItem={({ item }) => <View style={{ alignSelf: item.outgoing ? 'flex-end' : 'flex-start', maxWidth: uiDensity.messageBubbleMaxWidth,
             paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.xs, borderRadius: radius.xl,
             borderEndStartRadius: item.outgoing ? radius.xl : radius.xs, borderEndEndRadius: item.outgoing ? radius.xs : radius.xl,
-            backgroundColor: item.outgoing ? c.accentSoft : c.surfaceElevated }}><AppText variant="caption" tone="muted">{displayNickname(item.name, item.sender, duplicates.has(nicknameKey(item.name)))}</AppText><AppText selectable accessibilityHint={!item.outgoing ? t('mobile.mention_name', { name: displayNickname(item.name, item.sender, duplicates.has(nicknameKey(item.name))) }) : undefined}
+            backgroundColor: item.outgoing ? c.accentSoft : c.surfaceElevated }}><AppText variant="caption" tone="muted">{displayNickname(item.name, item.sender, duplicates.has(nicknameKey(item.name)))}{' '}{messageTime(item.timestamp)}</AppText><AppText selectable accessibilityHint={!item.outgoing ? t('mobile.mention_name', { name: displayNickname(item.name, item.sender, duplicates.has(nicknameKey(item.name))) }) : undefined}
               onPress={!item.outgoing ? () => { setDraft(appendMention(workspaceStore.getState().drafts[draftKey] ?? '', displayNickname(item.name, item.sender, duplicates.has(nicknameKey(item.name))))); composerRef.current?.focus(); } : undefined}>{item.content}</AppText></View>} />
         <AppInput ref={composerRef} label={t('groups.message')} value={draft} multiline compactMultiline maxLength={65000} editable={!busy} onChangeText={setDraft} />
         <AppButton label={t('bitchat.send')} disabled={busy || !mesh.active || !draft.trim() || new TextEncoder().encode(draft).length > 65000} onPress={() => void act(submit)} />

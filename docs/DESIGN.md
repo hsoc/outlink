@@ -160,3 +160,8 @@ sit at the logical top end of Nearby, Location, public/area, DM and group contro
 use the notification theme token, and remain independent of OS permissions. Viewing
 a conversation clears its activity indicator. Android's optional all-Nearby alerts
 are subordinate to active background connectivity; Appearance follows these settings.
+
+Message bubble headers show the sender nickname followed by `[HH:mm:ss]`, using
+24-hour device-local time from the original message timestamp. Keep timestamps
+out of mention text and message-copy content; they describe message time, not delivery.
+Apply this consistently to Nearby, Location public/private chats and Bluetooth groups.

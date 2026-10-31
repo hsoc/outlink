@@ -1,3 +1,4 @@
+import { messageTime } from '@/lib/message-time';
 import { conversationActivity, conversationActivityStore, conversationScope } from '@/services/mentions/conversation-activity';
 import { LocationInfo } from '@/components/common/LocationInfo';
 import { configurePrivateInternet } from '@/services/preferences/internet-private';
@@ -350,6 +351,7 @@ export default function Chats() {
             const canMention = !item.outgoing;
             const displayName = displayNickname(item.name, 'pubkey' in item ? item.pubkey : item.bridge?.pubkey ?? item.peer, duplicates.has(nicknameKey(item.name)));
             const mentionName = displayName;
+            const time = messageTime(item.timestamp);
             const isMentioned = publicChat && canMention && mentioned(item.content);
             const openMenu = () => { if (busy) return; menuConsumed.current = false; longPressed.current = true; Keyboard.dismiss(); setMessageMenu({ message: item, name: displayName, scope: draftKey, epoch: sessionIntent() }); };
             const insertMention = () => { if (longPressed.current) return; setDraft(appendMention(workspaceStore.getState().drafts[draftKey] ?? '', mentionName)); composerRef.current?.focus(); };
@@ -364,8 +366,8 @@ export default function Chats() {
           }}>
             <AppText variant="caption" tone={canMention ? 'accent' : 'muted'} selectable={!canMention}
               accessibilityRole={canMention ? 'button' : undefined}
-              accessibilityLabel={(canMention ? t('mobile.mention_name', { name: mentionName }) : displayName) + ('pubkey' in item ? ' · ' + item.pubkey : '')}
-              onPressIn={() => { longPressed.current = false; }} onPress={canMention ? insertMention : undefined}>{displayName}</AppText>
+              accessibilityLabel={(canMention ? t('mobile.mention_name', { name: mentionName }) : displayName) + ' ' + time + ('pubkey' in item ? ' · ' + item.pubkey : '')}
+              onPressIn={() => { longPressed.current = false; }} onPress={canMention ? insertMention : undefined}>{displayName}{' '}{time}</AppText>
             {isMentioned && <AppText variant="caption" tone="accent">{t('mobile.mentioned_you')}</AppText>}
             <AppText selectable={false} onPressIn={() => { longPressed.current = false; }}
               onLongPress={openMenu}
