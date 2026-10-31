@@ -11,7 +11,7 @@ import { refreshAreaRelays } from '../relay-refresh';
 import { platform } from '@/platform';
 import { eraseChannelIdentities, CHANNEL_ROTATION_MS } from '../channel-identities';
 import { areaRelays } from '../relay-directory';
-import type { GeoSocket } from '../geohash-session';
+import { GeohashSession, type GeoSocket } from '../geohash-session';
 jest.mock('@/services/mentions/private-messages', () => ({ privateMessageAlerts: { received: jest.fn() } }));
 jest.mock('../private-session', () => {
   const actual = jest.requireActual('../private-session');
@@ -179,4 +179,19 @@ it('suppresses public messages and mentions from blocked known location aliases'
     expect(geohashStore.getState().messages.some(message => message.id === event.id)).toBe(false);
     expect(mentionService.received).not.toHaveBeenCalled();
   } finally { check.mockRestore(); }
+});
+
+it('expands Location public and private actions using the saved sender nickname', async () => {
+  await geohashService.join('u4pruy', 'Alice', ['wss://one.example']);
+  const publicSend = jest.spyOn(GeohashSession.prototype, 'send').mockResolvedValue();
+  try {
+    await saveNickname('Bob');
+    await geohashService.send('/slap @quattro');
+    expect(publicSend).toHaveBeenCalledWith('* 🐟 Bob slaps quattro around a bit with a large trout *');
+    await geohashService.enableInternet(true);
+    const privateSession = jest.mocked(GeoPrivateSession).mock.results.at(-1)!.value;
+    const privateSend = jest.spyOn(privateSession, 'send').mockResolvedValue(undefined);
+    await geohashService.sendPrivate('a'.repeat(64), '/me waves');
+    expect(privateSend).toHaveBeenCalledWith('a'.repeat(64), '* Bob waves *', 'Bob');
+  } finally { publicSend.mockRestore(); }
 });

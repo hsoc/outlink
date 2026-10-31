@@ -232,3 +232,13 @@ it('assembles incoming Noise DM frames outside chat history and ignores public o
   callback({ id: 'blocked-cashu', peer: carrierId, recipient: bitchatSessionStore.getState().id, content: tokenParts(encoded())[0], outgoing: false });
   await cashuTransfers.idle(); expect(cashuStore.getState().transfers).toEqual([]);
 });
+
+it('expands actions before mesh public send and private outbox persistence, enforcing expanded byte limits', async () => {
+  await bitchatService.start(root, 'Alice');
+  await saveNickname('Bob');
+  await bitchatService.send('/hug @quattro');
+  expect(jest.mocked(BitchatSession).mock.results.at(-1)!.value.sendPublic).toHaveBeenLastCalledWith('* 🫂 Bob hugs quattro *', false);
+  await bitchatService.send('/me waves', peerId(recipientKey));
+  expect(bitchatSessionStore.getState().messages.find(m => m.id === 'outgoing-one')?.content).toBe('* Bob waves *');
+  await expect(bitchatService.send('/me ' + 'x'.repeat(248))).rejects.toThrow('255');
+});

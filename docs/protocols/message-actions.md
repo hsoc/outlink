@@ -14,18 +14,20 @@ backdrop; assistive technology can invoke the Message actions long-press action.
   offers an explicit Enable/Reconnect private messaging action when needed. Opening
   the conversation alone does not enable internet messaging. A bridged Nostr sender
   cannot be assumed to be a Bluetooth contact: an explanation offers Contacts instead.
-- **Hug user:** immediately posts `/me gives Alice a warm hug 🫂` to the current
-  conversation, using the sender's displayed nickname in place of Alice.
-- **Slap user:** immediately posts `/me slaps Alice around a bit with a large
-  trout 🐟`, with the same nickname substitution. Whitespace in a nickname is
-  collapsed to keep the generated action on one line.
+- **Hug user:** posts `* 🫂 YourName hugs Alice *` to the current conversation.
+- **Slap user:** posts `* 🐟 YourName slaps Alice around a bit with a large trout *`.
+  Alice is the target's displayed nickname, with whitespace collapsed.
 - **Block user:** persistently hides received messages from that identity and
   suppresses future received-message alerts. **Settings → Blocked users** offers
   Unblock. Nearby contacts' pre-existing contact-block setting still applies
   independently and can be changed in Contacts.
 
-Hug and slap use ordinary chat text starting with `/me`; no new protocol field or
-command interpretation is required, and other clients may show the literal text.
+Hug and slap use Bitchat's ordinary `* ... *` action text with no new protocol
+field. `/me text`, `/hug name` and `/slap name` expand at the service send boundary
+for Nearby and Location public/private conversations, before size checks, signing,
+persistence and local echo. The sender uses the current base nickname. Incoming
+Bitchat actions retain their wire text. Legacy `/me text` history displays as
+`* Sender text *` without rewriting received content or the exact Copy value.
 They post in the pressed public/private conversation and preserve any draft.
 Normal send limits, consent, route availability and errors apply. Hug and slap
 are disabled when their route is unavailable; Message user is only disabled while busy. Menus are dismissed

@@ -1,3 +1,4 @@
+import { actionMessage } from '@/lib/message-actions';
 import { conversationActivity, conversationScope } from '@/services/mentions/conversation-activity';
 import { MESSAGE_WINDOW, messageIsFresh } from '@/lib/message-retention';
 import { blockedUsers } from '@/services/moderation/blocked-users';
@@ -231,7 +232,7 @@ class GeohashService {
     if (!session) throw new Error('Private channel stopped');
     const name = await ensureNickname();
     if (this.privateSession !== session) throw new Error('Private channel changed');
-    await session.send(peer, content, name);
+    await session.send(peer, actionMessage(content, name), name);
   }
   async readPrivate(peer: string, id: string, sender?: string) { await this.privateSession?.read(peer, id, sender); }
   async olderPrivate() {
@@ -250,7 +251,7 @@ class GeohashService {
     const name = await ensureNickname();
     if (this.session !== session) throw new Error('Location channel changed');
     this.rename(name);
-    await session.send(content);
+    await session.send(actionMessage(content, name));
   }
   stop(): void {
     this.connection = undefined;
