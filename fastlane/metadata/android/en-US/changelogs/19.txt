@@ -1,0 +1,2 @@
+Show local [HH:mm:ss] timestamps beside nicknames in all conversation bubbles, including older loaded messages.
+Improve Bitchat hug, slap and /me action compatibility across Nearby and Location public/private chat.
