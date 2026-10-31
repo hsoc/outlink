@@ -1,3 +1,4 @@
+import { actionMessage } from '@/lib/message-actions';
 import { nearbyAlerts } from '@/services/mentions/nearby-alerts';
 import { conversationActivity, conversationScope } from '@/services/mentions/conversation-activity';
 import { MESSAGE_WINDOW, messageIsFresh } from '@/lib/message-retention';
@@ -606,13 +607,14 @@ class BitchatService {
   }
   send(content: string, peer?: string, nearbyOnly = false): Promise<void> { return this.track(this.sendInternal(content, peer, nearbyOnly)); }
   private async sendInternal(content: string, peer?: string, nearbyOnly = false): Promise<void> {
+    const session = this.session;
     const conversationVersion = peer ? this.conversationVersions.get(peer) ?? 0 : 0;
     if (peer && this.deletions.has(peer)) throw new Error('Conversation is being deleted');
+    const name = await ensureNickname();
+    content = actionMessage(content, name);
     if (!content.trim() || bytes(content).length > 255) throw new Error('Message must fit 255 UTF-8 bytes');
     if (!peer) {
-      const session = this.session;
       if (!session) throw new Error('Bitchat is stopped');
-      const name = await ensureNickname();
       if (this.session !== session) throw new Error('Mesh session changed');
       this.rename(name);
       const message = await session.sendPublic(content, !!this.network?.config.bridge && !nearbyOnly);
@@ -626,7 +628,6 @@ class BitchatService {
     const identity = await this.localIdentity();
     const own = peerId(identity.noisePublicKey); identity.noiseSeed.fill(0); identity.signingSeed.fill(0);
     await contactsService.keepForDelivery(peer);
-    const name = await ensureNickname();
     this.rename(name);
     const id = await platform.deviceCrypto.randomUUID();
     if (this.deletions.has(peer) || conversationVersion !== (this.conversationVersions.get(peer) ?? 0)) throw new Error('Conversation was deleted');

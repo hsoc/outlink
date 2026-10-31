@@ -2,7 +2,7 @@ import { conversationActivity, conversationActivityStore, conversationScope } fr
 import { LocationInfo } from '@/components/common/LocationInfo';
 import { configurePrivateInternet } from '@/services/preferences/internet-private';
 import { MessageActions, type MessageAction } from '@/components/common/MessageActions';
-import { messageUserKey, socialMessage, privateMessageTarget } from '@/lib/message-actions';
+import { actionDisplay, messageUserKey, socialMessage, privateMessageTarget } from '@/lib/message-actions';
 import { blockedUsers, blockedUsersStore } from '@/services/moderation/blocked-users';
 import { displayNickname, duplicateNicknames, nicknameKey, nicknameMentionLabels, nicknameBase } from '@/lib/nicknames';
 import { unreadPrivateMessages, unreadLocationMessages } from '@/lib/unread-messages';
@@ -372,7 +372,7 @@ export default function Chats() {
               accessibilityRole="button" accessibilityActions={[{ name: 'longpress', label: t('mobile.message_actions') }]}
               onAccessibilityAction={event => { if (event.nativeEvent.actionName === 'longpress') openMenu(); }}
               onPress={canMention ? insertMention : undefined}
-              accessibilityHint={t(item.outgoing ? 'mobile.own_message_menu_hint' : 'mobile.message_menu_hint')}>{item.content}</AppText>
+              accessibilityHint={t(item.outgoing ? 'mobile.own_message_menu_hint' : 'mobile.message_menu_hint')}>{actionDisplay(item.content, displayName)}</AppText>
             {'bridge' in item && item.bridge && <AppText variant="caption" tone="muted">{t('mobile.via_bridge')}</AppText>}
             {item.outgoing && <AppText variant="caption" tone="muted" align="end">{t(mode === 'geo' && item.delivery === 'sent' ? 'mobile.relay_accepted' : `bitchat.${item.delivery}`)}</AppText>}
           </View>; }}
