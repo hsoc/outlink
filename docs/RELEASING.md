@@ -113,3 +113,8 @@ can distinguish a native configuration stall from a slow but progressing build.
 
 The failed 1.1.1 tag is retained as provenance; the corrected stable release is
 1.1.2/build 17. Existing published release assets are never replaced.
+
+App configuration or artwork updates that retain an already-published version
+still build Android artifacts on master. Publication is skipped when that version's
+release exists; existing tags and release assets are preserved. Bump the app version
+and native counters to distribute those changes as a new release.

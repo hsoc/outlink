@@ -165,3 +165,9 @@ Message bubble headers show the sender nickname followed by `[HH:mm:ss]`, using
 24-hour device-local time from the original message timestamp. Keep timestamps
 out of mention text and message-copy content; they describe message time, not delivery.
 Apply this consistently to Nearby, Location public/private chats and Bluetooth groups.
+
+App branding uses the maintainer-approved supplied blue chat-bubble artwork,
+including its original white “bitchat” lettering and white canvas. Preserve the
+artwork when generating platform sizes. Use a white launch-screen background and
+keep the complete mark within Android adaptive-icon masks; do not retain a retired
+monochrome symbol. The header and quick-erase control share the configured app icon.

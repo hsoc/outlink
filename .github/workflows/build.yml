@@ -147,6 +147,12 @@ jobs:
             "v$VERSION"|"v$VERSION-beta."[0-9]*) ;;
             *) echo 'Release tag does not match app version'; exit 1 ;;
           esac
+          # Asset/config updates can keep the published app version unchanged.
+          # Build their artifacts without attempting to republish that version.
+          if [[ "$GITHUB_REF" == 'refs/heads/master' ]] && gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release already published; keeping existing assets: $RELEASE_TAG"
+            exit 0
+          fi
           NOTES="docs/releases/$VERSION.md"
           test -s "$NOTES"
           mkdir -p release/apk release/aab
