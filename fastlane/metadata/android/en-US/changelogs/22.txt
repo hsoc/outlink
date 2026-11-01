@@ -1,0 +1,4 @@
+New app icon, in-app logo and white launch screen using the supplied artwork.
+Remove the retired Bluetooth protocol while retaining Bitchat mesh connectivity.
+Clean up unused helpers and desktop-only metadata; preserve required build-tool notices.
+Channel identity rotation remains included.
