@@ -1,0 +1,2 @@
+New app icon and in-app logo using the supplied blue chat-bubble artwork, with its original lettering preserved.
+Matching white launch screen and updated Android adaptive launcher artwork.
