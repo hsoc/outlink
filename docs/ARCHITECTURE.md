@@ -163,3 +163,8 @@ continues to derive from persisted read/delivery status. The optional all-Nearby
 alert policy requires both background state and a running native connected-device
 service. It reuses accepted message callbacks and the local notification port,
 with a separate native cleanup category; it adds no transport or remote push.
+
+The native BLE adapter is Bitchat-only. It transports one MTU-bounded raw frame
+per mailbox write/notification; the Bitchat session owns protocol fragmentation
+and reassembly. Do not restore a GATT profile characteristic, alternate service
+UUIDs, private native chunk headers or native profile/role compatibility APIs.

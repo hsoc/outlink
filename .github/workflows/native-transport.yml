@@ -1,0 +1,61 @@
+name: Native Bluetooth transport checks
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths: ['modules/expo-proximity/**', '.github/workflows/native-transport.yml']
+  pull_request:
+    paths: ['modules/expo-proximity/**', '.github/workflows/native-transport.yml']
+permissions:
+  contents: read
+concurrency:
+  group: native-transport-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;27.1.12297006' 'ndk;27.0.12077973' 'cmake;3.22.1'
+      - run: npm ci
+      - run: npm run android:prebuild
+      - name: Compile the native module and run its unit tests
+        working-directory: android
+        run: ./gradlew :expo-proximity:testDebugUnitTest --no-daemon --no-parallel --max-workers=1 --console=plain --stacktrace
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: native-bluetooth-android-tests
+          path: modules/expo-proximity/android/build/reports/tests/
+          if-no-files-found: ignore
+  ios:
+    runs-on: macos-26
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: sudo xcode-select --switch /Applications/Xcode_26.4.app/Contents/Developer
+      - run: npm ci
+      - run: EXPO_PUBLIC_APP_ENV=production npx expo prebuild --platform ios --clean --no-install
+      - run: pod install --project-directory=ios
+      - name: Compile the iOS simulator app without signing
+        run: xcodebuild -workspace ios/Outlink.xcworkspace -scheme Outlink -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build > /tmp/native-ios-build.log 2>&1
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: native-bluetooth-ios-build-log
+          path: /tmp/native-ios-build.log
+          if-no-files-found: ignore

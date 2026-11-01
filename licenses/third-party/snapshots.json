@@ -1,13 +1,11 @@
 {
   "reviewed": "2026-09-12",
   "versions": {
-    "electron": "43.7.11",
     "sharp": "0.35.4",
     "sharp-libvips-posix": "1.3.3",
     "sharp-win32": "0.35.4",
     "@solar-icons/react-native": "1.1.1",
-    "expo-sqlite": "57.0.3",
-    "better-sqlite3": "13.0.3"
+    "expo-sqlite": "57.0.3"
   },
   "files": [
     {
@@ -21,12 +19,7 @@
       "sha256": "055cc14f0eca227d9af49d408e3c5d3407fb688158e123b28f67177e1ec5f7d8"
     },
     {
-      "path": "desktop/electron-MIT.txt",
-      "source": "node_modules/electron/dist/LICENSE",
-      "sha256": "5154e165bd6c2cc0cfbcd8916498c7abab0497923bafcd5cb07673fe8480087d"
-    },
-    {
-      "path": "desktop/sharp-Apache-2.0.txt",
+      "path": "build-tools/sharp-Apache-2.0.txt",
       "source": "node_modules/sharp/LICENSE",
       "sha256": "73ba74dfaa520b49a401b5d21459a8523a146f3b7518a833eea5efa85130bf68"
     },
@@ -46,17 +39,17 @@
       "sha256": "e9d186e1fa5984a3f10d47427e891cf870faaf505498cf457a437d50a1f4d225"
     },
     {
-      "path": "desktop/sharp-libvips-posix.txt",
+      "path": "build-tools/sharp-libvips-posix.txt",
       "source": "Upstream source files and URLs are recorded verbatim in this notice collection.",
       "sha256": "4c39e39eef3a3b2de2dc0bf51e27dc9c40d09a7fb16c3b5f2783a3fa7bca3c4e"
     },
     {
-      "path": "desktop/sharp-libvips-windows.txt",
+      "path": "build-tools/sharp-libvips-windows.txt",
       "source": "Upstream source files and URLs are recorded verbatim in this notice collection.",
       "sha256": "3ea076aad6e38fe7a591c482f238f4484f861a192698f7876f2c28ac62280e20"
     },
     {
-      "path": "desktop/librsvg-rust.txt",
+      "path": "build-tools/librsvg-rust.txt",
       "source": "Upstream source files and URLs are recorded verbatim in this notice collection.",
       "sha256": "33197033e2136938d37df4065568fb7038055105abcfe761d3c094f5cd1e7d59"
     },
@@ -66,7 +59,7 @@
       "sha256": "a45dc1140533b540629213c18d0967e9db7aae9f64a685dd5bbf309a3d54fa63"
     },
     {
-      "path": "desktop/dependency-sources.json",
+      "path": "build-tools/dependency-sources.json",
       "source": "Reviewed upstream native library and Rust source locations and checksums.",
       "sha256": "6c4344bd8cc566aff3011908cb3e1b1c915f34a284f870c681dd2dc963372213"
     },

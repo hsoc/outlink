@@ -7,7 +7,7 @@
 export type ProximityTransportSubscription = { remove(): void };
 
 export interface ProximityTransportPort {
-  /** Select Bitchat mode before starting the native transport. */
+  /** Validate Bitchat support before starting the native transport; no alternative protocol is selectable. */
   configureProtocolAsync?(protocol: 'bitchat'): Promise<void>;
   /** Negotiated GATT value size, excluding ATT overhead. */
   maximumFrameSizeAsync?(endpointId: string): Promise<number>;
@@ -21,8 +21,8 @@ export interface ProximityTransportPort {
    * fine location below); other platforms need nothing and resolve granted.
    */
   requestPermissions(): Promise<boolean>;
-  /** Start advertising the given binary peer profile. */
-  startAdvertisingAsync(profile: Uint8Array): Promise<void>;
+  /** Advertise the Bitchat service; signed presence is sent over the mailbox. */
+  startAdvertisingAsync(): Promise<void>;
   /** Tear down one endpoint without suppressing its future rediscovery. */
   disconnectAsync?(endpointId: string): Promise<void>;
   /** Scan for nearby peers for `scanDurationMs`. */

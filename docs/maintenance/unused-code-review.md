@@ -5,6 +5,30 @@ callers, build configuration, assets, and the retained Android/iOS BLE adapter.
 It is a focused cleanup, not proof that every exported helper or design token
 is necessary in every execution path.
 
+## Current follow-up — 2026-11-01
+
+The retired native Nearby protocol is now removed from Android and iOS: old
+service/mailbox/profile UUIDs, GATT profile reads/notifications, custom 12-byte
+framing/reassembly, counters and unused profile/role APIs. Bitchat service and
+mailbox UUIDs, raw frames, negotiated MTU checks, generations, scan/advertise,
+connection scheduling, compression and notification backpressure remain. The
+configuration entry point validates Bitchat only. Advertising has no profile
+argument; peer events carry route metadata rather than a legacy profile payload.
+Bitchat fragmentation/reassembly remains in the protocol/session layer.
+
+Removed the uncalled `pushOnce()` helper, Electron-only notice snapshot and stale
+desktop catalog/version entries. The remaining sharp/libvips attribution and
+source manifests belong to Expo image/build tooling and are retained byte for
+byte under `licenses/third-party/build-tools`, with the integrity-checked refresh
+path updated. This is source cleanup, not a measured APK-size claim.
+
+Native Android unit/compilation and unsigned iOS simulator build checks run through
+the native transport workflow. Physical-device/radio testing is still omitted;
+compilation and simulated messaging do not prove device interoperability.
+
+The dated retained-native-mode discussion below describes the earlier review;
+it no longer applies to the current code.
+
 ## Removed
 
 - Desktop typography, density, window/pane geometry, scrollbar occlusion, and

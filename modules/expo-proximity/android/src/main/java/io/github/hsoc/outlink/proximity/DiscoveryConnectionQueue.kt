@@ -43,13 +43,6 @@ internal class DiscoveryConnectionQueue(
     schedule(attempt.timer, delayMs)
   }
 
-  /** The peer is already reading our service; reuse its connection now. */
-  fun promote(endpoint: String) {
-    val attempt = pending.remove(endpoint) ?: return
-    cancel(attempt.timer)
-    attempt.connect()
-  }
-
   /** Let an incoming link finish service discovery before the fallback runs. */
   fun defer(endpoint: String, delayMs: Long) {
     val attempt = pending.remove(endpoint) ?: return

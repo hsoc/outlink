@@ -115,7 +115,7 @@ export class BitchatSession {
       }),
     ];
     try {
-      await this.transport.startAdvertisingAsync(new Uint8Array());
+      await this.transport.startAdvertisingAsync();
       await this.transport.startScanAsync(0);
       this.tick();
     } catch (error) { await this.stop(); throw error; }

@@ -24,23 +24,13 @@ class DiscoveryConnectionQueueTest {
   }
 
   @Test
-  fun incomingProfilePromotesDiscoveryWithoutASecondConnection() {
-    queue.enqueue("peer", 3_000) { connected.add("peer") }
-    queue.promote("peer")
-    queue.promote("peer")
-    tasks.single().run()
-    assertEquals(listOf("peer"), connected)
-    assertEquals(1, cancelled.size)
-  }
-
-  @Test
-  fun incomingConnectionGetsTimeToFinishItsProfileRead() {
+  fun incomingConnectionGetsTimeToFinishMailboxDiscovery() {
     queue.enqueue("peer", 3_000) { connected.add("peer") }
     queue.defer("peer", 10_000)
     tasks.first().run()
     assertEquals(emptyList<String>(), connected)
     assertEquals(listOf(3_000L, 10_000L), delays)
-    queue.promote("peer")
+    assertEquals(1, cancelled.size)
     tasks.last().run()
     assertEquals(listOf("peer"), connected)
   }
@@ -80,13 +70,12 @@ class DiscoveryConnectionQueueTest {
   }
 
   @Test
-  fun incomingDiscoveryCanDeferAndPromoteAfterTheRadioStops() {
+  fun incomingDiscoveryCanDeferAfterTheRadioStops() {
     queue.enqueue("peer", 3_000) { connected.add("peer") }
     queue.stopScan()
     queue.defer("peer", 10_000)
     tasks.first().run()
     assertEquals(emptyList<String>(), connected)
-    queue.promote("peer")
     tasks.last().run()
     assertEquals(listOf("peer"), connected)
   }
@@ -98,7 +87,6 @@ class DiscoveryConnectionQueueTest {
     queue.stopScan()
     queue.stopSession()
     tasks.forEach { it.run() }
-    queue.promote("peer")
     assertEquals(emptyList<String>(), connected)
   }
 
@@ -107,7 +95,6 @@ class DiscoveryConnectionQueueTest {
     queue.enqueue("peer", 3_000) { connected.add("peer") }
     queue.remove("peer")
     tasks.single().run()
-    queue.promote("peer")
     assertEquals(emptyList<String>(), connected)
   }
 
@@ -117,7 +104,7 @@ class DiscoveryConnectionQueueTest {
     queue.enqueue("two", 3_000) { connected.add("two") }
     queue.enqueue("three", 3_000) { connected.add("three") }
     assertEquals(2, tasks.size)
-    queue.promote("one")
+    tasks.first().run()
     queue.enqueue("three", 3_000) { connected.add("three") }
     assertEquals(3, tasks.size)
   }

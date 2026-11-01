@@ -8,7 +8,7 @@ import { refreshInventory, reviewedLibvipsNotice } from './refresh.mjs';
 
 test('libvips notices require the reviewed version and exact nonempty snapshot', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'libvips-notices-'));
-  const file = 'desktop/sharp-libvips-posix.txt';
+  const file = 'build-tools/sharp-libvips-posix.txt';
   const destination = path.join(root, 'licenses/third-party', file);
   const text = 'Original copyright and license text.\n';
   const snapshots = { versions: { 'sharp-libvips-posix': '1.3.3' }, files: [{ path: file, sha256: sha256(text) }] };

@@ -111,7 +111,7 @@ export async function reviewedLibvipsNotice(root, pkg, snapshots, texts) {
   if (pkg.version !== version) {
     throw new Error(`Review sharp-libvips ${pkg.version} notices and update snapshots.json (currently ${version}).`);
   }
-  return reviewedSnapshotNotice(root, pkg, snapshots, texts, 'desktop/sharp-libvips-posix.txt', 'https://github.com/lovell/sharp-libvips');
+  return reviewedSnapshotNotice(root, pkg, snapshots, texts, 'build-tools/sharp-libvips-posix.txt', 'https://github.com/lovell/sharp-libvips');
 }
 
 async function reviewedSnapshotNotice(root, pkg, snapshots, texts, file, repository) {

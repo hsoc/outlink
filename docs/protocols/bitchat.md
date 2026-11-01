@@ -45,11 +45,13 @@ application security. Rebuild native modules/helpers before using this feature.
 | Service | `F47B5E2D-4A9E-4C5A-9B3F-8E1D2C3A4B5C` | Advertise/scan |
 | Packet characteristic | `A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D` | Write, notify |
 
-Each GATT value contains an entire Bitchat packet or Bitchat fragment. The
-Outlink Nearby transport's separate 12-byte chunk framing is **not** used.
-Packets are fragmented against the negotiated value size, excluding ATT
-headers; a link too small for a fragment header is rejected. The normal Nearby
-UUIDs, profile exchange, framing, and authentication remain a separate mode.
+Each GATT value contains an entire Bitchat packet or Bitchat fragment. The native
+adapter is Bitchat-only: the retired Nearby UUIDs, GATT profile characteristic and
+12-byte native chunk framing/reassembly have been removed. The session fragments
+packets against the negotiated value size, excluding ATT headers; a link too small
+for a Bitchat fragment header is rejected. Scanning, advertising, subscriptions,
+connection generations and notification backpressure remain in the native bearer.
+A fresh native application build is required for the updated advertising interface.
 
 ## Packet bytes
 

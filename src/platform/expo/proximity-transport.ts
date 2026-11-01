@@ -17,7 +17,7 @@ type ExpoProximityModule = {
   configureProtocolAsync?(protocol: string): Promise<void>;
   maximumFrameSizeAsync?(endpointId: string): Promise<number>;
   inflateRawAsync?(bytes: string, size: number): Promise<string>;
-  startAdvertisingAsync(profile: string): Promise<void>;
+  startAdvertisingAsync(): Promise<void>;
   disconnectAsync?(endpointId: string): Promise<void>;
   startScanAsync(scanDurationMs: number): Promise<void>;
   stopScanAsync(): Promise<void>;
@@ -76,8 +76,7 @@ export const proximityTransportAdapter: ProximityTransportPort = {
     );
   },
 
-  startAdvertisingAsync: (profile) =>
-    load()?.startAdvertisingAsync(base64.encode(profile)) ?? Promise.resolve(),
+  startAdvertisingAsync: () => load()?.startAdvertisingAsync() ?? Promise.resolve(),
   disconnectAsync: (endpointId) => load()?.disconnectAsync?.(endpointId) ?? Promise.resolve(),
   startScanAsync: (scanDurationMs) => load()?.startScanAsync(scanDurationMs) ?? Promise.resolve(),
   stopScanAsync: () => load()?.stopScanAsync() ?? Promise.resolve(),
@@ -86,10 +85,6 @@ export const proximityTransportAdapter: ProximityTransportPort = {
     load()?.sendAsync(endpointId, base64.encode(payload)) ?? Promise.resolve(),
   addListener: (name, listener) =>
     load()?.addListener(name, (event) => {
-      if (name === 'onPeer' && typeof event.profile === 'string') {
-        listener({ ...event, profile: base64.decode(event.profile) });
-        return;
-      }
       if (name === 'onMessage' && typeof event.payload === 'string') {
         listener({ ...event, payload: base64.decode(event.payload) });
         return;
