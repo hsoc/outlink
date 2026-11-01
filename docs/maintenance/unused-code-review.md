@@ -22,9 +22,19 @@ source manifests belong to Expo image/build tooling and are retained byte for
 byte under `licenses/third-party/build-tools`, with the integrity-checked refresh
 path updated. This is source cleanup, not a measured APK-size claim.
 
-Native Android unit/compilation and unsigned iOS simulator build checks run through
-the native transport workflow. Physical-device/radio testing is still omitted;
-compilation and simulated messaging do not prove device interoperability.
+Validation passed for the cleanup:
+
+- 328 Jest tests across 57 suites; TypeScript and lint.
+- 21 mobile configuration/real SQLite checks and 5 license-tooling tests.
+- All 741 generated mobile notices and original snapshot hashes verified.
+- Android and iOS project generation and app bundle exports.
+- Native Android Kotlin compilation and module unit tests, plus a complete unsigned
+  iOS simulator build: [native workflow run](https://github.com/hsoc/outlink/actions/runs/41309513461).
+
+The native workflow now repeats compilation checks for adapter/interface changes.
+Physical-device/radio testing is still omitted; compilation and simulated messaging
+do not prove device interoperability. A new native APK/IPA is required to use the
+updated transport interface; no release is published by this cleanup.
 
 The dated retained-native-mode discussion below describes the earlier review;
 it no longer applies to the current code.
