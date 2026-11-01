@@ -1,0 +1,1 @@
+Add an optional Support Outlink button in Settings for Lightning donations, with a reusable Lightning Address and copy action. Add donation information to the project documentation. No payment is required to use Outlink.

@@ -3,8 +3,8 @@
 Run the **Build Mobile Apps** workflow from the Actions tab. Android defaults to
 on; iOS is optional. There are no desktop build targets or desktop credentials.
 Both use the existing Outlink production application ID `io.github.hsoc.outlink`.
-Development builds use `.dev`. The public app version is `1.1.4`; changing it does not require a Git tag. Android version code and iOS
-build number are 19; keep increasing these counters even when changing the
+Development builds use `.dev`. The public app version is `1.1.5`. Android version code and iOS
+build number are 20; keep increasing these counters even when changing the
 public version scheme.
 
 ## Android
@@ -25,14 +25,16 @@ the APK is for direct installation and testing. Google Play App Signing should
 be configured before production release. When using Google-generated app signing
 keys, the upload key and the Play-distributed signing key differ.
 A manual branch build without any signing secrets produces a testing APK with
-the generated development signature and does **not** generate a Play Store AAB. Partial credentials fail. Tag builds
+the generated development signature and does **not** generate a Play Store AAB. Partial credentials fail. Automated release builds
 require signing credentials. Keep independent backups of the keystore/passwords.
 
-Tag builds publish a GitHub Release only after checks and the signed Android build
+Release builds publish a GitHub Release only after checks and the signed Android build
 succeed. Tags containing a hyphen are prereleases. No Play Store upload is performed.
 An AAB is available only for signed builds; keep signing credentials backed up.
-Before each release, increment `expo.android.versionCode` in `app.json`. Tag
-runs build Android artifacts; use manual dispatch to request an iOS build.
+Before each release, increment `expo.android.versionCode` in `app.json`. Version changes on
+`master` automatically run signed Android checks/builds and publish the matching
+stable tag and GitHub Release after success. Explicit tag pushes are still supported;
+use manual dispatch to request an iOS build.
 
 ## iOS
 
@@ -80,9 +82,11 @@ Update app.json, package.json and the root package-lock.json version together;
 increment both native build counters. Write concise user-facing notes in
 `docs/releases/<app-version>.md` and the Android changelog matching the version code.
 Do not claim physical interoperability or real-fund testing from automated checks.
-Push the version commit to master, then a matching `v<app-version>` or
-`v<app-version>-beta.<number>` tag. The release job validates tag/version agreement,
-uses only that run's APK/AAB artifacts, and refuses to overwrite an existing release.
+Push the complete version commit to `master`, including `app.json`, to trigger
+an automated stable `v<app-version>` tag and release after successful checks and
+signed build. Alternatively push a matching `v<app-version>-beta.<number>` tag
+for a prerelease. The release job validates tag/version agreement, uses only that
+run's APK/AAB artifacts, and refuses to overwrite an existing release or tag.
 It adds SHA-256 checksums and the source/build-run links to the published notes.
 iOS remains an optional manually requested build; tag releases do not attach an IPA.
 The historical first-beta workflow is retained only for its original release.
