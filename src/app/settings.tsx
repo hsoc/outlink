@@ -39,6 +39,7 @@ export default function Settings() {
   const workspace = useStore(workspaceStore);
   const [erased, setErased] = useState(false), [networkBusy, setNetworkBusy] = useState(false);
   const [clearing, setClearing] = useState(false), [failed, setFailed] = useState(false);
+  const [donationError, setDonationError] = useState(false), [donationCopied, setDonationCopied] = useState(false);
   useFocusEffect(useCallback(() => {
     let alive = true; const revision = edits.current;
     void ensureNickname().then(value => {
@@ -174,6 +175,21 @@ export default function Settings() {
     <AppText variant="caption" tone="muted">{t('mobile.quick_erase_settings')}</AppText>
     {erased && <AppText tone="muted">{t('mobile.wipe_done')}</AppText>}
     {failed && <AppText tone="danger">{t('mobile.failed')}</AppText>}
+    <View style={{ gap: spacing.sm }}>
+      <AppText variant="subtitle">{t('mobile.support_outlink')}</AppText>
+      <AppText variant="caption" tone="muted">{t('mobile.donation_hint')}</AppText>
+      <AppButton label={t('mobile.donate_lightning')} variant="secondary" onPress={() => void (async () => {
+        setDonationError(false);
+        if (!await platform.urlOpener.openExternalUrl('https://coinos.io/hsoc')) setDonationError(true);
+      })()} />
+      <AppText variant="caption" tone="muted">hsoc@coinos.io</AppText>
+      <AppButton label={t('mobile.copy_lightning_address')} variant="text" onPress={() => void (async () => {
+        try { await platform.clipboard.writeText('hsoc@coinos.io'); setDonationCopied(true); setDonationError(false); }
+        catch { setDonationError(true); }
+      })()} />
+      {donationCopied && <AppText variant="caption" tone="muted" accessibilityLiveRegion="polite">{t('mobile.donation_copied')}</AppText>}
+      {donationError && <AppText variant="caption" tone="danger">{t('mobile.donation_error')}</AppText>}
+    </View>
     <AppButton label={t('mobile.source')} variant="text" onPress={() => void platform.urlOpener.openExternalUrl('https://github.com/hsoc/outlink')} />
     <AppButton label={t('mobile.licenses')} variant="text" onPress={() => router.push('/licenses')} />
   </ScrollView><ScreenHeader title={t('mobile.settings')} /></AppScreen>;
