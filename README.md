@@ -56,6 +56,20 @@ Use **Delete conversation** on a Nearby contact card to remove its local message
 and draft and cancel queued sends while retaining the contact. See
 [conversation deletion](docs/protocols/conversation-deletion.md).
 
+## Support development
+
+Outlink is free and open source. If you'd like to support its continued
+development, you can send a voluntary Bitcoin Lightning donation:
+
+**Lightning Address:** `hsoc@coinos.io`  
+**[Donate via Coinos](https://coinos.io/hsoc)**
+
+Open the link to choose an amount and pay with a compatible Lightning wallet,
+or paste the reusable Lightning Address into your wallet. Unlike a one-time
+BOLT11 invoice, the address can be reused. Donations are optional, do not
+unlock features, and are processed outside Outlink by the wallet/provider.
+The app does not collect payment details or verify donation completion.
+
 ## Build
 
 Use Node.js 24 and npm, then:
