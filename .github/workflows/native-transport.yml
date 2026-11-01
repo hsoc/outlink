@@ -3,9 +3,9 @@ on:
   workflow_dispatch:
   push:
     branches: [master]
-    paths: ['modules/expo-proximity/**', '.github/workflows/native-transport.yml']
+    paths: ['modules/expo-proximity/**', 'src/platform/expo/proximity-transport.ts', 'src/platform/ports/proximity-transport.ts', '.github/workflows/native-transport.yml']
   pull_request:
-    paths: ['modules/expo-proximity/**', '.github/workflows/native-transport.yml']
+    paths: ['modules/expo-proximity/**', 'src/platform/expo/proximity-transport.ts', 'src/platform/ports/proximity-transport.ts', '.github/workflows/native-transport.yml']
 permissions:
   contents: read
 concurrency:

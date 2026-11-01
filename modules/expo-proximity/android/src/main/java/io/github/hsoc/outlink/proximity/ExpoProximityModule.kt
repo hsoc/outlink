@@ -59,7 +59,6 @@ class ExpoProximityModule : Module() {
   private val mailboxes = mutableMapOf<String, BluetoothGattCharacteristic>()
   private val subscribedDevices = mutableMapOf<String, android.bluetooth.BluetoothDevice>()
   private val mtuByEndpoint = mutableMapOf<String, Int>()
-  private val rssiByEndpoint = mutableMapOf<String, Int>()
   private val signalEmittedAtByEndpoint = mutableMapOf<String, Long>()
   private val writeQueues = mutableMapOf<String, ArrayDeque<ByteArray>>()
   private val writePromises = mutableMapOf<String, Promise>()
@@ -192,7 +191,6 @@ class ExpoProximityModule : Module() {
         subscribedDevices.clear()
         serverMailbox = null
         mtuByEndpoint.clear()
-        rssiByEndpoint.clear()
         signalEmittedAtByEndpoint.clear()
         activeConnectionEndpoints.clear()
         gattServer?.close()
@@ -477,7 +475,6 @@ class ExpoProximityModule : Module() {
 
   private fun recordSignal(endpoint: String, rssi: Int) {
     if (rssi == 127) return
-    rssiByEndpoint[endpoint] = rssi
     val now = SystemClock.elapsedRealtime()
     val lastEmission = signalEmittedAtByEndpoint[endpoint]
     if (lastEmission != null && now - lastEmission < 1_000) return
