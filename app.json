@@ -93,7 +93,8 @@
           "barcodeScannerEnabled": true
         }
       ],
-      "./plugins/with-local-notifications"
+      "./plugins/with-local-notifications",
+      "./plugins/with-android-optimization"
     ],
     "experiments": {
       "typedRoutes": false,

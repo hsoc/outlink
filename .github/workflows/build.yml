@@ -30,6 +30,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: node --test scripts/android-gradle.test.mjs
+      - run: python3 scripts/android-r8-report.test.py
       - run: npm run check:mobile
       - run: npx tsc --noEmit
       - run: npm run lint
@@ -82,6 +83,16 @@ jobs:
             node_modules/react-native-worklets/android/.cxx/**/logs/**
           if-no-files-found: ignore
           retention-days: 7
+      - name: Preserve R8 mappings and optimization reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-r8-reports
+          path: |
+            android/app/build/outputs/mapping/release/
+            release/android-r8-report.json
+          if-no-files-found: ignore
+          retention-days: 90
       - uses: actions/upload-artifact@v7
         with:
           name: android-apk
@@ -95,6 +106,36 @@ jobs:
           name: android-aab
           path: release/Outlink-android.aab
           if-no-files-found: error
+          retention-days: 14
+  android-smoke:
+    needs: android
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v8
+        with:
+          name: android-apk
+          path: release/
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Check the optimized release app starts
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          script: bash scripts/android-release-smoke.sh release/Outlink-android.apk
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: android-release-smoke
+          path: release/android-smoke/
+          if-no-files-found: ignore
           retention-days: 14
   ios:
     needs: checks
@@ -123,7 +164,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
   release:
-    needs: android
+    needs: [android, android-smoke]
     if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/master')
     runs-on: ubuntu-24.04
     timeout-minutes: 15

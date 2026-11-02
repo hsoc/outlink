@@ -21,6 +21,7 @@ const input=folder+(signing==='signed'?'app-release-unsigned.apk':'app-release.a
 if(!existsSync(input))throw new Error('APK output missing');
 mkdirSync('release',{recursive:true});
 signAndroid(input,'release/Outlink-android.apk');
+run('python3', ['scripts/android-r8-report.py', '--apk', 'release/Outlink-android.apk', '--mapping', 'android/app/build/outputs/mapping/release', '--output', 'release/android-r8-report.json']);
 if(signing==='signed') {
   const bundle='android/app/build/outputs/bundle/release/app-release.aab';
   if(!existsSync(bundle))throw new Error('AAB output missing');

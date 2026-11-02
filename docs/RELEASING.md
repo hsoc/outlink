@@ -118,3 +118,13 @@ App configuration or artwork updates that retain an already-published version
 still build Android artifacts on master. Publication is skipped when that version's
 release exists; existing tags and release assets are preserved. Bump the app version
 and native counters to distribute those changes as a new release.
+
+## Android R8 and release smoke check
+
+Android release APKs/AABs use R8 shrinking, optimization and obfuscation plus
+resource shrinking. The build requires actual R8 output and records DEX metrics.
+The signed APK must pass an API 36 emulator startup check before automatic release
+publication. Archive **android-r8-reports** mappings for crash debugging; Actions
+retains these artifacts for 90 days. See [Android optimization](security/android-optimization.md)
+for scope, measurements and device-testing limitations. Local Android build
+reporting also requires Python 3 (standard library only).
