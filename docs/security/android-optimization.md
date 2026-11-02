@@ -53,3 +53,34 @@ The published v1.1.7 universal APK is 141,211,247 bytes. Its five DEX files tota
 52,889,412 uncompressed bytes (18,876,939 compressed bytes) and 42,446 class
 definitions. Native libraries total 109,368,396 uncompressed bytes across all ABIs.
 The baseline was read from the published APK, not estimated from source counts.
+
+## Measured optimized build — 2026-11-02
+
+[Build 41423211468](https://github.com/hsoc/outlink/actions/runs/41423211468), source
+`26a0580`, produced signed optimized APK/AAB artifacts and passed the API 36 x86_64
+release startup smoke check. The emulator rendered Nearby/Location controls and
+remained running without an app crash. All release checks passed, including the
+328 app tests and the three DEX/mapping-report tests.
+
+| Metric | Published v1.1.7 | Optimized build |
+| --- | ---: | ---: |
+| Universal APK bytes | 141,211,247 | 127,275,263 |
+| Uncompressed DEX bytes | 52,889,412 | 11,990,972 |
+| Compressed DEX bytes | 18,876,939 | 5,333,259 |
+| DEX files | 5 | 2 |
+| Final DEX class definitions | 42,446 | 12,699 |
+| Uncompressed native-library bytes | 109,368,396 | 109,368,396 |
+
+Uncompressed DEX is 77.3% smaller; the universal APK is 9.9% smaller. The mapping
+contains 12,796 original class entries with changed names (this can include
+classes merged by the optimizer). This verifies native-code obfuscation; it is
+not a runtime speed measurement. The native libraries and four-ABI support remain.
+Expo's Metro asset exporter generates `res/raw/keep.xml` for referenced images and
+license files, so their resource preservation reuses the existing asset pipeline.
+
+The **android-apk** artifact is the optimized test installer. **android-r8-reports**
+contains its mapping/configuration and measured JSON; **android-release-smoke**
+contains the startup screenshot, UI dump and logs. The previously published
+v1.1.7 downloads were not replaced, and no new version/tag was published by this
+optimization change. Physical Bluetooth/background/private-message validation
+on the optimized APK remains outstanding.
