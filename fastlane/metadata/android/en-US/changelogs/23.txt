@@ -1,0 +1,4 @@
+Optimize and shrink Android release code and resources with R8, including class/member obfuscation.
+Validation measured 77% less uncompressed DEX code and a 10% smaller universal APK.
+Add release startup checks and retain crash-debugging mappings.
+Channel identity rotation remains included.
