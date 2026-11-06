@@ -77,6 +77,14 @@ function GroupScreen() {
     try { await task(); } catch { setFailed(true); } finally { working.current = false; setBusy(false); }
   }
   function live(fingerprint: string) { return mesh.active && mesh.peers.some(p => p.fingerprint === fingerprint && p.lastSeen > 0); }
+  async function invite(groupId: string, peer: { id: string; name: string; fingerprint: string }) {
+    const identity = t('bitchat.fingerprint', { value: peer.fingerprint });
+    if (!await platform.confirmationDialog.confirm(t('groups.invite'), `${peer.name}
+${identity}`, t('mobile.cancel'), t('groups.invite'))) return;
+    if (!bitchatSessionStore.getState().peers.some(current => current.id === peer.id && current.fingerprint === peer.fingerprint && current.lastSeen > 0))
+      throw new Error('Group invite recipient changed');
+    await bitchatService.inviteGroup(groupId, peer.id);
+  }
   async function leave() {
     if (!group || !await platform.confirmationDialog.confirm(t('groups.leave'), t(creator ? 'groups.creator_leave_hint' : 'groups.leave_hint'), t('mobile.cancel'), t('groups.leave'))) return;
     await bitchatService.leaveGroup(group.id); setSelected(undefined);
@@ -95,7 +103,7 @@ function GroupScreen() {
           if (command.action === 'invite') {
             const peers = mesh.peers.filter(p => p.id === target || p.fingerprint === target || p.name === target || displayNickname(p.name, p.fingerprint, true) === target);
             if (peers.length !== 1) throw new Error('Use an unambiguous peer identity');
-            await bitchatService.inviteGroup(group.id, peers[0].id);
+            await invite(group.id, peers[0]);
           } else {
             const matches = group.members.filter(m => m.fingerprint === target || m.nickname === target || displayNickname(m.nickname, m.fingerprint, true) === target);
             if (matches.length !== 1) throw new Error('Use an unambiguous member identity');
@@ -132,7 +140,7 @@ function GroupScreen() {
       {(members || group.status === 'invited') ? <FlatList style={{ flex: 1, minHeight: 0 }}
         data={group.members} keyExtractor={m => m.fingerprint} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: spacing.md }}
         ListFooterComponent={creator ? <View style={{ gap: spacing.sm }}><AppText variant="subtitle">{t('groups.invite')}</AppText>
-          {mesh.peers.filter(p => p.lastSeen > 0 && !!(p.capabilities! & 8) && !contacts.some(contact => contact.id === p.id && contact.blocked) && !group.members.some(m => m.fingerprint === p.fingerprint)).map(peer => <AppButton key={peer.id} label={displayNickname(peer.name, peer.fingerprint, nearbyDuplicates.has(nicknameKey(peer.name)))} variant="secondary" disabled={busy || !mesh.active} onPress={() => void act(() => bitchatService.inviteGroup(group.id, peer.id))} />)}
+          {mesh.peers.filter(p => p.lastSeen > 0 && !!(p.capabilities! & 8) && !contacts.some(contact => contact.id === p.id && contact.blocked) && !group.members.some(m => m.fingerprint === p.fingerprint)).map(peer => <AppButton key={peer.id} label={displayNickname(peer.name, peer.fingerprint, nearbyDuplicates.has(nicknameKey(peer.name)))} variant="secondary" disabled={busy || !mesh.active} onPress={() => void act(() => invite(group.id, peer))} />)}
           <AppText tone="muted">{t('groups.invite_hint')}</AppText></View> : null}
         renderItem={({ item }) => <View style={{ gap: spacing.xs }}><AppText>{displayNickname(item.nickname, item.fingerprint, duplicates.has(nicknameKey(item.nickname)))}{item.fingerprint === group.creator ? ' · ' + t('groups.creator') : ''}</AppText>
           <AppText variant="caption" tone="muted">{t(item.fingerprint === state.self ? 'groups.you' : live(item.fingerprint) ? 'mobile.mesh_online' : 'mobile.mesh_offline')}</AppText>

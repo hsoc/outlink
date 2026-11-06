@@ -139,6 +139,9 @@ rows, including Cancel, use matching full-width framed button heights and center
 labels; ordinary actions use neutral secondary styling and Block keeps its danger
 styling.
 
+Private group invites show the recipient’s full fingerprint in a confirmation
+before granting membership.
+
 Contact cards keep per-person conversation management alongside contact actions.
 Delete conversation is a distinct destructive action at the end, with a
 confirmation describing local deletion, draft clearing and queued-send cancellation.

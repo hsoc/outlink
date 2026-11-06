@@ -237,3 +237,21 @@ it('does not send local rotation proofs to unsolicited private senders', async (
   expect(await a.records.get('geo-migrations', `proof:${oldB}`)).toBeNull();
   expect(await b.records.get('geo-peers', oldA)).toMatchObject({ head: oldA });
 });
+
+it('limits unsolicited thread records while leaving capacity for locally started conversations', async () => {
+  const hub = relay(), state = storage(), own = getPublicKey(new Uint8Array(32).fill(1));
+  for (let n = 2; n <= 33; n++) {
+    const peer = getPublicKey(new Uint8Array(32).fill(n));
+    await state.records.put('geo-peers', peer, { peer, head: peer, keys: [peer], local: own, incomingSince: Date.now() });
+  }
+  const a = client(1, hub, state);
+  const payload = embeddedPrivate({ kind: 'message', id: 'overflow', content: 'hello', senderId: '', timestamp: Date.now() });
+  hub.inject(createPrivateEnvelope(payload, new Uint8Array(32).fill(34), a.session.pubkey));
+  // Wait for the relay's subscription and the serialized receive queue.
+  await new Promise(resolve => setTimeout(resolve, 50));
+  await a.session.idle();
+  expect(a.history.size).toBe(0);
+  expect(await a.records.list('geo-peers', 100)).toHaveLength(32);
+  await a.session.send(getPublicKey(new Uint8Array(32).fill(35)), 'locally started');
+  expect(await a.records.list('geo-peers', 100)).toHaveLength(33);
+});

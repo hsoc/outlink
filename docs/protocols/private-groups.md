@@ -18,7 +18,8 @@ do not apply to group messages. The optional Android all-Nearby background setti
 can alert for accepted messages in joined groups, with generic previews; viewing
 the group suppresses alerts and clears its unread dot. See [notifications](mentions.md).
 
-Only the creator manages membership. **Remove member** rotates the group key and
+Only the creator manages membership. Inviting from the member list or the
+command composer requires confirming the recipient’s full fingerprint. **Remove member** rotates the group key and
 sends updates to remaining reachable members. Offline members receive updates
 when they reconnect to the creator, including through intermediate mesh devices.
 The removed member receives a signed removal notice containing a separate dummy

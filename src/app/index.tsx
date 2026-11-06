@@ -391,7 +391,10 @@ export default function Chats() {
       {actionError && <AppText variant="caption" tone="danger" accessibilityLiveRegion="polite">
         {t(actionError === 'send' ? 'mobile.send_failed' : actionError === 'join' ? (mode === 'mesh' ? 'mobile.mesh_join_failed' : 'mobile.geo_join_failed') : 'mobile.operation_failed')}
       </AppText>}
-      {!actionError && workspace.error && <AppText variant="caption" tone="danger">{t('mobile.storage_failed')}</AppText>}
+      {!actionError && workspace.error && <AppText variant="caption" tone="danger" accessibilityLiveRegion="polite">{t('mobile.storage_failed')}</AppText>}
+      {!actionError && !workspace.error && (mesh.error || geo.error) && <AppText variant="caption" tone="danger" accessibilityLiveRegion="polite">
+        {t('mobile.operation_failed')}
+      </AppText>}
       {wipeStatus === 'done' && <AppText variant="caption" tone="muted" accessibilityLiveRegion="polite">{t('mobile.wipe_done')}</AppText>}
     </KeyboardAvoidingView>}
     <ScreenHeader back={false} left={<View><QuickEraseButton onErase={quickErase} busy={wiping} /></View>} right={<AppButton label={t('mobile.settings')} variant="text" disabled={wiping} onPress={() => router.push('/settings')} />} />
