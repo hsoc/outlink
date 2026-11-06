@@ -1,6 +1,8 @@
+import { ImagePlus, Mic, Send, X } from 'lucide-react-native';
+import { ComposerAction } from './ComposerAction';
 import { LivePushToTalk } from './LivePushToTalk';
 import { liveVoiceStore } from '@/services/bitchat/live-voice';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { Image, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from 'expo-router';
@@ -23,7 +25,7 @@ import { sessionIntent } from '@/services/history/lifecycle';
 const recordingOptions = { ...RecordingPresets.HIGH_QUALITY, sampleRate: 24000, numberOfChannels: 1, bitRate: 24000 };
 const remove = (file?: File) => { if (file?.exists) file.delete(); };
 
-export function MeshAttachments({ peer, canSend, joined, onOpenPeer }: { peer?: string; canSend: boolean; joined: boolean; onOpenPeer(id: string): void }) {
+export function MeshAttachments({ peer, canSend, joined, onOpenPeer, input, send }: { peer?: string; canSend: boolean; joined: boolean; onOpenPeer(id: string): void; input: ReactNode; send: ReactNode }) {
   const { t } = useTranslation();
   const voice = useStore(liveVoiceStore);
   const voiceActive = voice.listening || voice.talking;
@@ -152,11 +154,11 @@ export function MeshAttachments({ peer, canSend, joined, onOpenPeer }: { peer?: 
       setPreview({ file: accepted, image: media.mime.startsWith('image/') });
     } finally { media.data.fill(0); }
   });
-  if (!joined && !picked) return null;
+  const showActions = joined || !!picked;
   return <View style={{ gap: spacing.xs }}>
-    {!peer && [...new Map(offers.filter(offer => offer.privateMessage).map(offer => [offer.peer, offer])).values()].map(offer =>
+    {joined && !peer && [...new Map(offers.filter(offer => offer.privateMessage).map(offer => [offer.peer, offer])).values()].map(offer =>
       <AppButton key={offer.peer} size="sm" variant="secondary" label={t('mesh_media.private_offer', { name: offer.name })} onPress={() => onOpenPeer(offer.peer)} />)}
-    {offers.filter(offer => peer ? offer.privateMessage && offer.peer === peer : !offer.privateMessage).map(offer =>
+    {joined && offers.filter(offer => peer ? offer.privateMessage && offer.peer === peer : !offer.privateMessage).map(offer =>
       <View key={offer.id} style={{ gap: spacing.xs }}>
         <AppText variant="caption">{t(offer.mime.startsWith('image/') ? 'mesh_media.image_offer' : 'mesh_media.voice_offer', { name: offer.name, size: Math.ceil(offer.size / 1024) })}</AppText>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
@@ -170,16 +172,26 @@ export function MeshAttachments({ peer, canSend, joined, onOpenPeer }: { peer?: 
       <AppButton size="sm" variant="text" label={t('mesh_media.close')} onPress={close} />
     </View>}
     {!peer && canSend && <AppText variant="caption" tone="muted">{t('mesh_media.public_notice')}</AppText>}
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-      {!recording && <AppButton size="sm" fullWidth={false} variant="text" label={t(picked ? 'mesh_media.send_image' : 'mesh_media.choose_image')} disabled={!canSend || busy} onPress={() => {
-        if (!picked) { void chooseImage(); return; }
-        void operate(async valid => { try { await sendImage(picked, valid); } finally { clearSelection(); } });
-      }} />}
-      {picked && <AppButton size="sm" fullWidth={false} variant="text" label={t('mobile.cancel')} disabled={busy} onPress={clearSelection} />}
-      <AppButton size="sm" fullWidth={false} variant="text" label={t(recording ? 'mesh_media.send_voice' : 'mesh_media.record')} disabled={!canSend || busy || voiceActive} onPress={() => void (recording ? finish(true) : record())} />
-      {recording && <AppButton size="sm" fullWidth={false} variant="text" label={t('mobile.cancel')} disabled={busy} onPress={() => void finish(false)} />}
+    {joined && voice.speaker && <AppText variant="caption" accessibilityLiveRegion="polite">{t('live_voice.speaker', { name: voice.speaker })}</AppText>}
+    {joined && voice.error && <AppText variant="caption" tone="danger" accessibilityLiveRegion="polite">{t('live_voice.failed')}</AppText>}
+    {joined && !peer && <AppText variant="caption" tone="muted">{t('live_voice.public_notice')}</AppText>}
+    {input}
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+      <View style={{ flex: 1, minWidth: 0 }}>{send}</View>
+      {showActions && (recording
+        ? <ComposerAction icon={X} label={t('mobile.cancel')} disabled={busy} onPress={() => void finish(false)} />
+        : <ComposerAction icon={picked ? Send : ImagePlus} selected={!!picked}
+            label={t(picked ? 'mesh_media.send_image' : 'mesh_media.choose_image')} disabled={!canSend || busy} onPress={() => {
+              if (!picked) { void chooseImage(); return; }
+              void operate(async valid => { try { await sendImage(picked, valid); } finally { clearSelection(); } });
+            }} />)}
+      {showActions && (picked
+        ? <ComposerAction icon={X} label={t('mobile.cancel')} disabled={busy} onPress={clearSelection} />
+        : <ComposerAction icon={recording ? Send : Mic} variant={recording ? 'danger' : 'secondary'}
+            label={t(recording ? 'mesh_media.send_voice' : 'mesh_media.record')} disabled={!canSend || busy || voiceActive}
+            onPress={() => void (recording ? finish(true) : record())} />)}
+      {joined && <LivePushToTalk peer={peer} canTalk={canSend} disabled={recording || busy} />}
     </View>
-    {joined && <LivePushToTalk peer={peer} canTalk={canSend} disabled={recording || busy} />}
     {status && <AppText variant="caption" tone={status === 'failed' ? 'danger' : 'muted'} accessibilityLiveRegion="polite">{t(`mesh_media.${status}`)}</AppText>}
   </View>;
 }

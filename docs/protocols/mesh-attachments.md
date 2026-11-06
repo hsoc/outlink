@@ -1,7 +1,8 @@
 # Nearby images and voice notes
 
-Choose an image, then send it to the selected Nearby conversation. To send a
-voice note, record up to 15 seconds and tap **Send voice note**. The microphone
+Tap the image icon beside **Send**, choose an image, then tap the same control
+when it changes to a send icon. Tap the microphone icon to record a voice note
+of up to 15 seconds, then tap its send icon. The microphone
 is requested only when recording starts. Accepted voice notes play on demand.
 Outlink accepts JPEG, PNG, WebP and MPEG-4 audio. The current limit is 96 KiB per
 attachment. Large images are resized and converted to JPEG before sending.

@@ -1,19 +1,17 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { View } from 'react-native';
+import { Radio, Headphones, HeadphoneOff } from 'lucide-react-native';
 import { useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useStore } from 'zustand';
 import { requestRecordingPermissionsAsync } from 'expo-audio';
-import { AppButton } from '@/components/common/AppButton';
-import { AppText } from '@/components/common/AppText';
+import { ComposerAction } from './ComposerAction';
 import { platform } from '@/platform';
 import { bitchatService } from '@/services/bitchat/bitchat.service';
 import { liveVoice, liveVoiceStore } from '@/services/bitchat/live-voice';
-import { spacing } from '@/theme';
 
 export function LivePushToTalk({ peer, canTalk, disabled }: { peer?: string; canTalk: boolean; disabled: boolean }) {
   const { t } = useTranslation();
-  const { listening, talking, speaker, error } = useStore(liveVoiceStore);
+  const { listening, talking } = useStore(liveVoiceStore);
   const held = useRef<object | undefined>(undefined);
   const sender = useRef<ReturnType<typeof bitchatService.voiceSender> | undefined>(undefined);
   const start = async () => {
@@ -47,17 +45,12 @@ export function LivePushToTalk({ peer, canTalk, disabled }: { peer?: string; can
     return () => { unsubscribe(); clear(); };
   }, []));
   if (!platform.liveVoice?.available()) return null;
-  return <View style={{ gap: spacing.xs }}>
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-      <AppButton size="sm" variant="secondary" fullWidth={false} selected={listening} disabled={disabled || talking}
-        label={t(listening ? 'live_voice.stop_listening' : 'live_voice.listen')}
-        onPress={() => liveVoice.listen(listening ? undefined : peer ?? null)} />
-      <AppButton size="sm" variant={talking ? 'danger' : 'secondary'} fullWidth={false}
-        label={t(talking ? 'live_voice.talking' : 'live_voice.hold')}
-        disabled={!canTalk || disabled} onPressIn={() => void start()} onPressOut={release} />
-    </View>
-    {speaker && <AppText variant="caption" accessibilityLiveRegion="polite">{t('live_voice.speaker', { name: speaker })}</AppText>}
-    {error && <AppText variant="caption" tone="danger" accessibilityLiveRegion="polite">{t('live_voice.failed')}</AppText>}
-    {!peer && <AppText variant="caption" tone="muted">{t('live_voice.public_notice')}</AppText>}
-  </View>;
+  return <>
+    <ComposerAction icon={listening ? HeadphoneOff : Headphones} selected={listening} disabled={disabled || talking}
+      label={t(listening ? 'live_voice.stop_listening' : 'live_voice.listen')}
+      onPress={() => liveVoice.listen(listening ? undefined : peer ?? null)} />
+    <ComposerAction icon={Radio} variant={talking ? 'danger' : 'secondary'}
+      label={t(talking ? 'live_voice.talking' : 'live_voice.hold')}
+      disabled={!canTalk || disabled} onPressIn={() => void start()} onPressOut={release} />
+  </>;
 }

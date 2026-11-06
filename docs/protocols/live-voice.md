@@ -1,8 +1,8 @@
 # Nearby live voice
 
-In Public Mesh or a Nearby DM, tap **Listen to live voice** to hear bursts in
+In Public Mesh or a Nearby DM, tap the headphones icon beside **Send** to hear bursts in
 that conversation. Listening starts off and resets when you switch conversations,
-leave the screen, or background the app. Hold **Hold to talk** while speaking and
+leave the screen, or background the app. Hold the radio icon while speaking and
 release to stop. The first hold requests microphone permission if needed. Hold
 again if the permission dialog interrupts the gesture. A burst lasts at most
 15 seconds. The app pauses live playback while you talk.
