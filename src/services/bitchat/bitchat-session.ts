@@ -118,7 +118,7 @@ export class BitchatSession {
         const rate = this.rates.get(endpoint) ?? { at: now, count: 0 };
         if (now - rate.at >= 1000) { rate.at = now; rate.count = 0; }
         this.rates.set(endpoint, rate);
-        if (rate.count++ >= 64 || this.queued >= 128 || queued >= 32 || e.payload.length > 128 * 1024 + 512) return;
+        if (rate.count++ >= 64 || this.queued >= 128 || queued >= 64 || e.payload.length > 128 * 1024 + 512) return;
         const wire = e.payload.slice();
         this.queued++; this.queuedByLink.set(endpoint, queued + 1);
         this.queue = this.queue.then(async () => { await new Promise(resolve => setTimeout(resolve, 0)); if (this.running && this.links.has(endpoint)) await this.receive(wire, endpoint); })
