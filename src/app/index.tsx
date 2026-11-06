@@ -107,11 +107,39 @@ export default function Chats() {
   const listRef = useRef<FlatList<BitchatMessage | GeoMessage>>(null);
   const atLatest = useRef(true);
   const userScrolling = useRef(false);
+  const layout = useRef({ viewport: 0, content: 0, lastTarget: -1 });
+  const pendingFollow = useRef<number | undefined>(undefined);
+  const setConversationList = useCallback((list: FlatList<BitchatMessage | GeoMessage> | null) => {
+    if (pendingFollow.current !== undefined) cancelAnimationFrame(pendingFollow.current);
+    pendingFollow.current = undefined;
+    listRef.current = list;
+    atLatest.current = true;
+    userScrolling.current = false;
+    layout.current = { viewport: 0, content: 0, lastTarget: -1 };
+  }, []);
+  const followLatest = (force = false) => {
+    if (force) {
+      atLatest.current = true;
+      userScrolling.current = false;
+      layout.current.lastTarget = -1;
+    }
+    if (!atLatest.current || userScrolling.current || pendingFollow.current !== undefined) return;
+    pendingFollow.current = requestAnimationFrame(() => {
+      pendingFollow.current = undefined;
+      if (!atLatest.current || userScrolling.current || !listRef.current) return;
+      const measured = layout.current;
+      if (!measured.viewport || !measured.content) return;
+      const offset = Math.max(0, measured.content - measured.viewport);
+      // Layout and virtualized row measurements can report the same bottom repeatedly.
+      if (Math.abs(measured.lastTarget - offset) < 1) return;
+      measured.lastTarget = offset;
+      listRef.current.scrollToOffset({ offset, animated: false });
+    });
+  };
   const recordScrollPosition = (event: NativeScrollEvent) => {
     const { layoutMeasurement, contentOffset, contentSize } = event;
     atLatest.current = isChatAtLatest(layoutMeasurement.height, contentOffset.y, contentSize.height, spacing.xl);
   };
-  useEffect(() => { atLatest.current = true; userScrolling.current = false; }, [mode, recipient, geoRecipient, geo.hash]);
   const privateMeshMessages = useMemo(() => mesh.threadPeer === recipient ? mesh.threadMessages : [], [mesh.threadPeer, mesh.threadMessages, recipient]);
   useEffect(() => {
     void bitchatService.showThread(mode === 'mesh' ? recipient : undefined).catch(() => setActionError('other'));
@@ -217,9 +245,7 @@ export default function Chats() {
   }
   async function send() {
     if (/^(?:cashu:)?cashu[AB]|^OLC1:/.test(draft.trim())) throw new Error('Use Cashu transfers for tokens');
-    atLatest.current = true;
-    userScrolling.current = false;
-    listRef.current?.scrollToEnd({ animated: false });
+    followLatest(true);
     const command = mode === 'mesh' ? groupCommand(draft) : null;
     if (command) {
       if (command.action === 'create') { const id = await bitchatService.createGroup(command.argument); router.push({ pathname: '/groups', params: { id } }); }
@@ -340,10 +366,10 @@ export default function Chats() {
         </AppText>}
         {mode === 'mesh' && recipient && savedContact?.verified && <AppText variant="caption" tone="muted">{t('mobile.verified')}</AppText>}
         {mode === 'mesh' && recipient && fingerprint ? <AppText variant="caption" selectable tone="muted">{t('bitchat.fingerprint', { value: fingerprint })}</AppText> : null}
-        <FlatList<BitchatMessage | GeoMessage> ref={listRef} key={draftKey} data={messages} keyExtractor={m => m.id + ('peer' in m ? m.peer : m.pubkey)} keyboardShouldPersistTaps="handled"
+        <FlatList<BitchatMessage | GeoMessage> ref={setConversationList} key={mode === 'mesh' ? draftKey : `geo:${geo.hash}:${geoRecipient ?? 'public'}`} data={messages} keyExtractor={m => m.id + ('peer' in m ? m.peer : m.pubkey)} keyboardShouldPersistTaps="handled"
           style={{ flex: 1, minHeight: 0 }}
           scrollEventThrottle={100}
-          onScrollBeginDrag={() => { userScrolling.current = true; }}
+          onScrollBeginDrag={() => { userScrolling.current = true; layout.current.lastTarget = -1; }}
           onScrollEndDrag={({ nativeEvent }) => { recordScrollPosition(nativeEvent); userScrolling.current = false; }}
           onMomentumScrollBegin={() => { userScrolling.current = true; }}
           onMomentumScrollEnd={({ nativeEvent }) => { recordScrollPosition(nativeEvent); userScrolling.current = false; }}
@@ -352,12 +378,12 @@ export default function Chats() {
             if (!userScrolling.current) return;
             recordScrollPosition(nativeEvent);
           }}
-          onContentSizeChange={() => { if (atLatest.current) listRef.current?.scrollToEnd({ animated: false }); }}
-          onLayout={() => { if (atLatest.current) listRef.current?.scrollToEnd({ animated: false }); }}
+          onContentSizeChange={(_width, height) => { layout.current.content = height; followLatest(); }}
+          onLayout={({ nativeEvent }) => { layout.current.viewport = nativeEvent.layout.height; followLatest(); }}
           contentContainerStyle={{ gap: spacing.sm, paddingBottom: spacing.md, flexGrow: 1 }}
           ListHeaderComponent={messages.length > 0 ? <View style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap' }}>
             <AppButton label={t('mobile.older')} variant="text" size="sm" disabled={busy} onPress={() => void operate(async () => { atLatest.current = false; await (mode === 'mesh' ? recipient ? bitchatService.showThread(recipient, true) : bitchatService.older() : geoRecipient ? geohashService.olderPrivate() : geohashService.older()); })} />
-            <AppButton label={t('mobile.latest')} variant="text" size="sm" disabled={busy} onPress={() => void operate(async () => { atLatest.current = true; await (mode === 'mesh' ? recipient ? bitchatService.showThread(recipient) : bitchatService.latest() : geohashService.restore(geo.hash)); listRef.current?.scrollToEnd({ animated: true }); })} />
+            <AppButton label={t('mobile.latest')} variant="text" size="sm" disabled={busy} onPress={() => void operate(async () => { atLatest.current = true; await (mode === 'mesh' ? recipient ? bitchatService.showThread(recipient) : bitchatService.latest() : geohashService.restore(geo.hash)); followLatest(true); })} />
           </View> : null}
           renderItem={({ item }) => {
             const publicChat = mode === 'mesh' ? !recipient : !geoRecipient;
