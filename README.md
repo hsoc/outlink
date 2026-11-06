@@ -29,7 +29,8 @@ mode to retain a joined Bluetooth mesh and open relay connections in the backgro
 It is off by default; iOS and internet-only sessions pause and reconnect on return.
 [Nearby attachments](docs/protocols/mesh-attachments.md) support images and
 recorded voice notes in Public Mesh and encrypted Nearby DMs. Recipients choose
-whether to open each attachment.
+whether to open each attachment. [Live voice](docs/protocols/live-voice.md)
+uses opt-in listening and hold-to-talk in either Nearby conversation.
 
 See [background connectivity](docs/protocols/background-connectivity.md). Messages, drafts,
 and channel selections survive restarts. Chat history expires after six hours

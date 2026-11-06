@@ -1,3 +1,4 @@
+import { liveVoice } from './live-voice';
 import { meshAttachments } from './mesh-attachments';
 import { nearbyAlerts } from '@/services/mentions/nearby-alerts';
 import { conversationActivity } from '@/services/mentions/conversation-activity';
@@ -24,6 +25,7 @@ export function panicWipe(): Promise<void> {
     invalidateSessionIntent(); conversationActivity.reset(); resetNickname(); cashuTransfers.reset();
     await platform.secureStorage.setItem(WIPE_MARKER, '1');
     meshAttachments.clear();
+    await liveVoice.clear();
     await cashuTransfers.idle();
     workspaceStore.setState({ keepBackground: false, backgroundError: false });
     // Native notification/service cleanup must not prevent transport shutdown and key deletion.

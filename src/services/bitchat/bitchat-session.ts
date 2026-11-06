@@ -1,3 +1,4 @@
+import { decodeVoice, type VoiceBurst } from './compatibility/voice';
 import { decodeMeshMedia, encodeMeshMedia, PRIVATE_MEDIA_CAPABILITY, type MeshMedia } from './compatibility/media';
 import { groupEnvelope } from './compatibility/group-protocol';
 import { MeshRouting, nextRoute, selectFanout, relayTiming } from './compatibility/routing';
@@ -21,7 +22,7 @@ export type BitchatMessage = { id: string; peer: string; recipient?: string; nam
 type KnownPeer = BitchatPeer & { ingress: string; noiseKey: Uint8Array; signingKey: Uint8Array };
 type Negotiation = { handshake: BitchatHandshake; at: number; ingress?: string; candidate?: { cipher: BitchatCipher; link?: string }; promise: Promise<void>;
   resolve: () => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> };
-type Callbacks = { media?(peer: BitchatPeer, attachment: MeshMedia, privateMessage: boolean): void; groupState?(peer: BitchatPeer, payload: Uint8Array, invite: boolean): Promise<void>; extension?(packet: BitchatPacket, context: ExtensionContext): Promise<boolean>; peer: (peer: BitchatPeer) => void; message: (message: BitchatMessage) => void | false | Promise<void | false>;
+type Callbacks = { voice?(peer: BitchatPeer, packet: VoiceBurst, privateMessage: boolean): void; media?(peer: BitchatPeer, attachment: MeshMedia, privateMessage: boolean): void; groupState?(peer: BitchatPeer, payload: Uint8Array, invite: boolean): Promise<void>; extension?(packet: BitchatPacket, context: ExtensionContext): Promise<boolean>; peer: (peer: BitchatPeer) => void; message: (message: BitchatMessage) => void | false | Promise<void | false>;
   receipt: (id: string, sender: string, status: 'sent' | 'delivered' | 'read' | 'failed') => void; error: (error: Error) => void };
 
 /** MIT implementation of the Bitchat bearer/session rules, with bounded ephemeral state. */
@@ -241,7 +242,7 @@ export class BitchatSession {
     this.syncRequests.set(endpoint, Date.now() + 30_000);
     await this.broadcast(packet, undefined, endpoint);
   }
-  private async broadcast(packet: BitchatPacket, exclude?: string, only?: string): Promise<void> {
+  private async broadcast(packet: BitchatPacket, exclude?: string, only?: string, live?: 'control' | 'data'): Promise<void> {
     if (!this.running) throw new Error('Bitchat is stopped');
     if (!only && packet.sender === this.id && !isBroadcast(packet) && packet.ttl > 1 && !packet.rsr && packet.type !== BitchatType.sync && !this.directLink(packet.recipient!) && this.routing.canRoute(packet.recipient!)) {
       const route = this.routing.route(this.id, packet.recipient!);
@@ -257,6 +258,12 @@ export class BitchatSession {
       const seenPeers = new Set<string>();
       if (packet.type !== BitchatType.announce) targets = targets.sort((a, b) => Number(a.startsWith('p:')) - Number(b.startsWith('p:'))).filter(link => { const peer = this.directHints.get(link); if (!peer) return true; if (seenPeers.has(peer)) return false; seenPeers.add(peer); return true; });
       targets = selectFanout(targets, packet, packetId(packet));
+    }
+    if (live) {
+      const available = () => targets.filter(endpoint => this.links.has(endpoint) && !this.sends.has(endpoint));
+      if (live === 'control') for (let attempt = 0; this.running && !available().length && attempt < 12; attempt++)
+        await new Promise(resolve => setTimeout(resolve, 20));
+      targets = available();
     }
     if (!targets.length && packet.sender === this.id && packet.type !== BitchatType.announce)
       throw new Error('No Bitchat peers are connected');
@@ -351,6 +358,16 @@ export class BitchatSession {
     try {
       await Promise.all([response, this.broadcast(this.packet(BitchatType.encrypted, cipher.seal(join(Uint8Array.of(0x10), encodeTlv([[1, bytes(noiseKey)], [2, nonce]]))), peer))]);
     } finally { clearTimeout(timer); this.verificationWaits.delete(peer); nonce.fill(0); }
+  }
+  async prepareVoice(peer: string): Promise<void> { await this.ensureCipher(peer); }
+  async sendVoice(payload: Uint8Array, peer?: string): Promise<void> {
+    if (!this.running || !this.links.size) throw new Error('No Bluetooth route');
+    const live = payload[10] ? 'control' : 'data';
+    if (peer) {
+      const cipher = this.ciphers.get(peer)?.cipher;
+      if (!cipher) throw new Error('Private voice session unavailable');
+      await this.broadcast(this.packet(BitchatType.encrypted, cipher.seal(join(Uint8Array.of(8), payload)), peer), undefined, undefined, live);
+    } else await this.broadcast(signPacket(this.packet(BitchatType.voice, payload), this.identity.signingSeed), undefined, undefined, live);
   }
   async sendMedia(mime: string, data: Uint8Array, peer?: string): Promise<void> {
     if (!this.running || !this.links.size) throw new Error('No Bluetooth route');
@@ -486,6 +503,10 @@ export class BitchatSession {
           peer: packet.sender, name: known.name, content, timestamp: packet.timestamp, outgoing: false, delivery: 'sent' });
       } else { known.lastSeen = 0; known.secure = false; this.callbacks.peer(known);
         this.ciphers.get(packet.sender)?.cipher.destroy(); this.ciphers.delete(packet.sender); }
+    } else if (packet.type === BitchatType.voice) {
+      const peer = this.peers.get(packet.sender);
+      if (!peer || !isBroadcast(packet) || solicited || Math.abs(Date.now() - packet.timestamp) > 30_000 || !verifyPacket(packet, peer.signingKey)) return;
+      this.callbacks.voice?.(peer, decodeVoice(packet.payload), false);
     } else if (packet.type === BitchatType.file) {
       const peer = this.peers.get(packet.sender);
       if (!peer || !isBroadcast(packet) || Math.abs(Date.now() - packet.timestamp) > 300_000 || !verifyPacket(packet, peer.signingKey)) return;
@@ -640,6 +661,9 @@ export class BitchatSession {
         this.remember(this.privateSeen, key);
       }
       await this.broadcast(this.packet(BitchatType.encrypted, cipher.seal(join(Uint8Array.of(3), bytes(messageId))), peer.id));
+    } else if (plain[0] === 8 && !oldSession) {
+      try { this.callbacks.voice?.(peer, decodeVoice(plain.subarray(1)), true); }
+      finally { plain.fill(0); }
     } else if (plain[0] === 0x20 && !oldSession) {
       try { this.callbacks.media?.(peer, decodeMeshMedia(plain.subarray(1)), true); }
       finally { plain.fill(0); }

@@ -1,3 +1,4 @@
+import { liveVoice } from './live-voice';
 import { PRIVATE_MEDIA_CAPABILITY } from './compatibility/media';
 import { meshAttachments } from './mesh-attachments';
 import { actionMessage } from '@/lib/message-actions';
@@ -511,6 +512,10 @@ class BitchatService {
         });
         this.groups = groups; await groups.restore();
         this.session = new BitchatSession(platform.proximityTransport, this.identity, name, {
+          voice: (peer, packet, privateMessage) => {
+            if (!blockedUsers.has('mesh:' + peer.id) && !contactsService.get(peer.id)?.blocked)
+              liveVoice.receive(peer.id, peer.name, packet, privateMessage);
+          },
           media: (peer, attachment, privateMessage) => {
             if (blockedUsers.has('mesh:' + peer.id) || contactsService.get(peer.id)?.blocked) { attachment.data.fill(0); return; }
             meshAttachments.offer(peer.id, peer.name, attachment, privateMessage);
@@ -705,6 +710,22 @@ class BitchatService {
     await this.outbox.enqueue(peer, { id, peer: own, recipient: peer,
       name, content, timestamp: Date.now(), outgoing: true, delivery: 'queued' });
     if (this.connection) void this.flush(peer).catch(() => bitchatSessionStore.setState({ error: true }));
+  }
+  voiceSender(peer?: string) {
+    const session = this.session;
+    if (!session) throw new Error('Join Nearby first');
+    return {
+      prepare: async () => {
+        if (peer) {
+          if (!await this.preparePrivateConversation(peer) || session !== this.session) throw new Error('Voice recipient unavailable');
+          await session.prepareVoice(peer);
+        }
+      },
+      send: async (payload: Uint8Array) => {
+        if (session !== this.session || peer && (blockedUsers.has('mesh:' + peer) || contactsService.get(peer)?.blocked)) throw new Error('Voice session ended');
+        await session.sendVoice(payload, peer);
+      },
+    };
   }
   async sendMedia(mime: string, data: Uint8Array, peer?: string): Promise<void> {
     const session = this.session;

@@ -328,5 +328,14 @@
     "public_notice": "Public Mesh attachments can be read by anyone on the mesh.",
     "send_image": "Send selected image",
     "private_offer": "Private attachment from {{name}}"
+  },
+  "live_voice": {
+    "listen": "Listen to live voice",
+    "stop_listening": "Stop listening",
+    "hold": "Hold to talk",
+    "public_notice": "Anyone listening on Public Mesh can hear this voice channel.",
+    "talking": "Talking…",
+    "speaker": "Speaking: {{name}}",
+    "failed": "Live voice could not connect. Check microphone access and the Nearby connection."
   }
 }

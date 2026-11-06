@@ -1,3 +1,5 @@
+import { LivePushToTalk } from './LivePushToTalk';
+import { liveVoiceStore } from '@/services/bitchat/live-voice';
 import { useCallback, useRef, useState } from 'react';
 import { Image, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -23,7 +25,9 @@ const remove = (file?: File) => { if (file?.exists) file.delete(); };
 
 export function MeshAttachments({ peer, canSend, joined, onOpenPeer }: { peer?: string; canSend: boolean; joined: boolean; onOpenPeer(id: string): void }) {
   const { t } = useTranslation();
-  const { offers, epoch } = useStore(meshAttachmentStore);
+  const voice = useStore(liveVoiceStore);
+  const voiceActive = voice.listening || voice.talking;
+  const offers = useStore(meshAttachmentStore, state => state.offers);
   const recorder = useAudioRecorder(recordingOptions);
   const player = useAudioPlayer();
   const [recording, setRecording] = useState(false), [busy, setBusy] = useState(false), [status, setStatus] = useState<'failed' | 'sent'>();
@@ -54,7 +58,7 @@ export function MeshAttachments({ peer, canSend, joined, onOpenPeer }: { peer?: 
     };
     const subscription = platform.appState.addChangeListener(state => { if (state !== 'active' && !picking.current) reset(); });
     return () => { subscription(); reset(); };
-  }, [clearSelection, epoch, peer, player, recorder]));
+  }, [clearSelection, player, recorder]));
   const operate = async (task: (valid: () => boolean) => Promise<void>) => {
     if (busy) return;
     const current = generation.current, intent = sessionIntent();
@@ -162,7 +166,7 @@ export function MeshAttachments({ peer, canSend, joined, onOpenPeer }: { peer?: 
       </View>)}
     {preview && <View style={{ gap: spacing.xs }}>
       {preview.image ? <Image source={{ uri: preview.file.uri }} style={{ width: '100%', aspectRatio: 2 }} resizeMode="contain" accessibilityLabel={t('mesh_media.accepted_image')} />
-        : <AppButton size="sm" variant="secondary" label={t('mesh_media.play')} onPress={() => { player.replace(preview.file.uri); player.play(); }} />}
+        : <AppButton size="sm" variant="secondary" disabled={voiceActive} label={t('mesh_media.play')} onPress={() => { player.replace(preview.file.uri); player.play(); }} />}
       <AppButton size="sm" variant="text" label={t('mesh_media.close')} onPress={close} />
     </View>}
     {!peer && canSend && <AppText variant="caption" tone="muted">{t('mesh_media.public_notice')}</AppText>}
@@ -172,9 +176,10 @@ export function MeshAttachments({ peer, canSend, joined, onOpenPeer }: { peer?: 
         void operate(async valid => { try { await sendImage(picked, valid); } finally { clearSelection(); } });
       }} />}
       {picked && <AppButton size="sm" fullWidth={false} variant="text" label={t('mobile.cancel')} disabled={busy} onPress={clearSelection} />}
-      <AppButton size="sm" fullWidth={false} variant="text" label={t(recording ? 'mesh_media.send_voice' : 'mesh_media.record')} disabled={!canSend || busy} onPress={() => void (recording ? finish(true) : record())} />
+      <AppButton size="sm" fullWidth={false} variant="text" label={t(recording ? 'mesh_media.send_voice' : 'mesh_media.record')} disabled={!canSend || busy || voiceActive} onPress={() => void (recording ? finish(true) : record())} />
       {recording && <AppButton size="sm" fullWidth={false} variant="text" label={t('mobile.cancel')} disabled={busy} onPress={() => void finish(false)} />}
     </View>
+    {joined && <LivePushToTalk peer={peer} canTalk={canSend} disabled={recording || busy} />}
     {status && <AppText variant="caption" tone={status === 'failed' ? 'danger' : 'muted'} accessibilityLiveRegion="polite">{t(`mesh_media.${status}`)}</AppText>}
   </View>;
 }

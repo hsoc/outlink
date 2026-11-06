@@ -14,6 +14,8 @@ private struct PendingWrite {
 }
 
 public final class ExpoProximityModule: Module {
+  private let liveAudio = LiveVoiceAudio()
+  private var voiceForeground = true
   private let serviceUUID = CBUUID(string: "F47B5E2D-4A9E-4C5A-9B3F-8E1D2C3A4B5C")
   private let mailboxUUID = CBUUID(string: "A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D")
   private let bluetoothQueue = DispatchQueue(label: "io.github.hsoc.outlink.proximity.bluetooth")
@@ -57,7 +59,41 @@ public final class ExpoProximityModule: Module {
         promise.resolve(nil)
       }
     }
-    Events("onPeer", "onSignal", "onMessage", "onConnection", "onBluetoothState")
+    Events("onPeer", "onSignal", "onMessage", "onConnection", "onBluetoothState", "onVoiceFrame")
+
+    OnAppEntersForeground { self.liveAudio.queue.async { self.voiceForeground = true } }
+    OnAppEntersBackground {
+      self.liveAudio.queue.async { self.voiceForeground = false; self.liveAudio.stopCapture(); self.liveAudio.stopPlayback() }
+    }
+    OnDestroy {
+      self.liveAudio.queue.async { self.liveAudio.stopCapture(); self.liveAudio.stopPlayback() }
+    }
+    AsyncFunction("startVoiceCaptureAsync") { (token: Int, promise: Promise) in
+      self.liveAudio.queue.async {
+        guard self.voiceForeground else { promise.reject("ERR_VOICE_CAPTURE", "Live voice requires foreground."); return }
+        do {
+          try self.liveAudio.start { [weak self] frame in
+            self?.sendEvent("onVoiceFrame", ["token": token, "frame": frame.base64EncodedString()])
+          }
+          promise.resolve()
+        } catch { promise.reject("ERR_VOICE_CAPTURE", "Could not start live microphone capture.", error) }
+      }
+    }
+    AsyncFunction("stopVoiceCaptureAsync") { (promise: Promise) in
+      self.liveAudio.queue.async { self.liveAudio.stopCapture(); promise.resolve() }
+    }
+    AsyncFunction("playVoiceFrameAsync") { (frame: String, promise: Promise) in
+      self.liveAudio.queue.async {
+        guard frame.count <= 684, let bytes = Data(base64Encoded: frame) else {
+          promise.reject("ERR_VOICE_FRAME", "Invalid live voice frame."); return
+        }
+        do { if self.voiceForeground { try self.liveAudio.play(bytes) }; promise.resolve() }
+        catch { promise.reject("ERR_VOICE_PLAYBACK", "Could not play live voice.", error) }
+      }
+    }
+    AsyncFunction("stopVoicePlaybackAsync") { (promise: Promise) in
+      self.liveAudio.queue.async { self.liveAudio.stopPlayback(); promise.resolve() }
+    }
 
     AsyncFunction("configureProtocolAsync") { (mode: String, promise: Promise) in
       self.bluetoothQueue.async {

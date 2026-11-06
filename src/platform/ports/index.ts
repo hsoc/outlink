@@ -1,3 +1,4 @@
+import type { LiveVoicePort } from './live-voice';
 import type { MentionNotificationsPort } from './mention-notifications';
 import type { BackgroundConnectivityPort } from './background-connectivity';
 import type { RecordsPort } from './records';
@@ -18,6 +19,7 @@ export interface PlatformAdapters {
   backgroundConnectivity: BackgroundConnectivityPort;
   history: HistoryPort;
   records: RecordsPort;
+  liveVoice: LiveVoicePort;
   meshMediaCache: { save(id: number, extension: string, data: Uint8Array): string; clear(): void };
   wipeLocalData(): Promise<void>;
   confirmationDialog: { confirm(title: string, message: string, cancel: string, confirm: string): Promise<boolean> };

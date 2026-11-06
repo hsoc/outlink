@@ -154,6 +154,8 @@ from private threads.
 
 Nearby attachments show sender, type and size before acceptance. Keep public
 visibility explicit and leave media unopened until the recipient accepts it.
+Live Nearby voice uses an explicit listening toggle and a hold-to-talk control.
+Stop capture and playback when the active conversation loses focus.
 
 Cashu transfers are explicit actions inside Nearby private conversations, with a
 Settings entry for received/recovery records. Review shows the stated amount, mint

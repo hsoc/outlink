@@ -1,3 +1,4 @@
+import type { LiveVoicePort } from '../ports/live-voice';
 import { requireOptionalNativeModule } from 'expo-modules-core';
 import { base64 } from '@scure/base';
 import { PermissionsAndroid, Platform } from 'react-native';
@@ -14,6 +15,10 @@ import type {
  * consistently available or unavailable for the process lifetime.
  */
 type ExpoProximityModule = {
+  startVoiceCaptureAsync?(token: number): Promise<void>;
+  stopVoiceCaptureAsync?(): Promise<void>;
+  playVoiceFrameAsync?(frame: string): Promise<void>;
+  stopVoicePlaybackAsync?(): Promise<void>;
   configureProtocolAsync?(protocol: string): Promise<void>;
   maximumFrameSizeAsync?(endpointId: string): Promise<number>;
   inflateRawAsync?(bytes: string, size: number): Promise<string>;
@@ -91,4 +96,18 @@ export const proximityTransportAdapter: ProximityTransportPort = {
       }
       listener(event);
     }) ?? NO_OP_SUBSCRIPTION,
+};
+
+export const liveVoiceAdapter: LiveVoicePort = {
+  available: () => !!load()?.startVoiceCaptureAsync,
+  startCapture: token => load()?.startVoiceCaptureAsync?.(token) ?? Promise.reject(new Error('Live voice unavailable')),
+  stopCapture: () => load()?.stopVoiceCaptureAsync?.() ?? Promise.resolve(),
+  subscribe(listener) {
+    const subscription = load()?.addListener('onVoiceFrame', event => {
+      if (typeof event.token === 'number' && typeof event.frame === 'string') listener(event.token, base64.decode(event.frame));
+    });
+    return () => subscription?.remove();
+  },
+  play: frame => load()?.playVoiceFrameAsync?.(base64.encode(frame)) ?? Promise.resolve(),
+  stopPlayback: () => load()?.stopVoicePlaybackAsync?.() ?? Promise.resolve(),
 };

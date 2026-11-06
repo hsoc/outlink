@@ -52,6 +52,8 @@ internal fun maximumGattFrameSize(mtu: Int): Int = min(
 class ExpoProximityModule : Module() {
   private val SERVICE_UUID = UUID.fromString("F47B5E2D-4A9E-4C5A-9B3F-8E1D2C3A4B5C")
   private val MAILBOX_UUID = UUID.fromString("A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D")
+  private val liveAudio = LiveVoiceAudio()
+  @Volatile private var voiceForeground = true
   private val handler = Handler(Looper.getMainLooper())
   private var gattServer: BluetoothGattServer? = null
   private var serverMailbox: BluetoothGattCharacteristic? = null
@@ -118,11 +120,27 @@ class ExpoProximityModule : Module() {
         }
       }
     }
+    OnActivityEntersForeground { voiceForeground = true }
+    OnActivityEntersBackground { voiceForeground = false; liveAudio.stopCapture(); liveAudio.stopPlayback() }
     OnDestroy {
+      liveAudio.stopCapture(); liveAudio.stopPlayback()
       appContext.reactContext?.let { it.stopService(Intent(it, ConnectivityService::class.java)) }
     }
 
-    Events("onPeer", "onSignal", "onMessage", "onConnection", "onBluetoothState")
+    Events("onPeer", "onSignal", "onMessage", "onConnection", "onBluetoothState", "onVoiceFrame")
+
+    AsyncFunction("startVoiceCaptureAsync") { token: Int ->
+      check(voiceForeground) { "Live voice requires foreground" }
+      liveAudio.start { frame ->
+        sendEvent("onVoiceFrame", mapOf("token" to token, "frame" to Base64.encodeToString(frame, Base64.NO_WRAP)))
+      }
+    }
+    AsyncFunction("stopVoiceCaptureAsync") { liveAudio.stopCapture() }
+    AsyncFunction("playVoiceFrameAsync") { frame: String ->
+      require(frame.length <= 684)
+      if (voiceForeground) liveAudio.play(Base64.decode(frame, Base64.DEFAULT))
+    }
+    AsyncFunction("stopVoicePlaybackAsync") { liveAudio.stopPlayback() }
 
     AsyncFunction("configureProtocolAsync") { mode: String, promise: Promise ->
       handler.post {

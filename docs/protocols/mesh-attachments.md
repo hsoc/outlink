@@ -22,5 +22,5 @@ visibility and recipient acceptance are independent. A successful send does not
 prove that anyone accepted the attachment.
 
 The MIT implementation was written against the [upstream file packet](https://github.com/permissionlesstech/bitchat/blob/5e9287fae1e5fea80ca741d4ea669829dc16f144/bitchat/Protocols/BitchatFilePacket.swift) and
-private media wire format. Live push-to-talk, media receipts and transfer
-resumption are separate features.
+private media wire format. [Live push-to-talk](live-voice.md) uses a separate stream. Attachment receipts
+and resumption are currently unavailable.
