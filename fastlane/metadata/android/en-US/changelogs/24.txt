@@ -1,0 +1,1 @@
+Send images and voice notes in Nearby DMs and Public Mesh. Accept attachments before opening them. Use the new icons beside Send for attachments and opt-in live push-to-talk. Nearby DMs have independent history and unread counts. Includes security and erase recovery improvements.
