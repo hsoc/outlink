@@ -1,3 +1,4 @@
+import { PRIVATE_MEDIA_CAPABILITY, type MeshMedia } from '../compatibility/media';
 import { GroupRuntime, type GroupInfo, type GroupMessage } from '../compatibility/group-runtime';
 /** @jest-environment node */
 import { bytesToHex } from '@noble/hashes/utils.js';
@@ -53,14 +54,15 @@ const sessions: BitchatSession[] = [];
 function node(id: string, n: number, frameSize = 185, extension?: (packet: BitchatPacket, context: ExtensionContext) => Promise<boolean>, groupState?: (peer: BitchatPeer, payload: Uint8Array, invite: boolean) => Promise<void>) {
   const r = radio(id, frameSize), peers = new Map<string, BitchatPeer>(), messages: BitchatMessage[] = [];
   const receipts: [string, string, string][] = [];
+  const media: { peer: string; attachment: MeshMedia; privateMessage: boolean }[] = [];
   const noiseSeed = new Uint8Array(32).fill(n);
   let counter = 1;
   const identity = { noiseSeed, noisePublicKey: x25519.getPublicKey(noiseSeed), signingSeed: new Uint8Array(32).fill(n + 10) };
   const session = new BitchatSession(r.port, identity, id,
-    { extension, groupState, peer: (p) => peers.set(p.id, { ...p }), message: (m) => { messages.push(m); },
+    { extension, groupState, media: (peer, attachment, privateMessage) => { media.push({ peer: peer.id, attachment, privateMessage }); }, peer: (p) => peers.set(p.id, { ...p }), message: (m) => { messages.push(m); },
       receipt: (message, sender, status) => receipts.push([message, sender, status]), error: jest.fn() },
     (length) => new Uint8Array(length).fill(counter++));
-  sessions.push(session); return { r, session, peers, messages, receipts, identity };
+  sessions.push(session); return { r, session, peers, messages, receipts, identity, media };
 }
 afterEach(async () => { await Promise.all(sessions.splice(0).map((s) => s.stop())); });
 it('discovers signed identities through a relay and delivers a public message once across a cycle', async () => {
@@ -451,4 +453,21 @@ it('delivers encrypted group invitations and messages across a nonmember Bluetoo
   await until(() => resumed.delivered.some(m => m.content === 'missed while disconnected'));
   expect(resumed.groups()[0]).toMatchObject({ id, status: 'joined' });
   a.runtime.stop(); relay.runtime.stop(); resumed.runtime.stop();
+});
+
+it('receives signed public images and encrypted private voice notes over fragmented BLE', async () => {
+  const a = node('Alice', 1), b = node('Bob', 2);
+  a.session.setCapabilities(PRIVATE_MEDIA_CAPABILITY); b.session.setCapabilities(PRIVATE_MEDIA_CAPABILITY);
+  await Promise.all([a.session.start(), b.session.start()]); connect(a.r, b.r);
+  await until(() => a.peers.has(b.session.id) && b.peers.has(a.session.id));
+  const image = new Uint8Array(1200).fill(21); image.set([255, 216, 255]);
+  await a.session.sendMedia('image/jpeg', image);
+  await until(() => b.media.length === 1);
+  expect(b.media[0]).toEqual({ peer: a.session.id, attachment: { mime: 'image/jpeg', data: image }, privateMessage: false });
+  const audio = new Uint8Array(900).fill(34); audio.set(bytes('ftypM4A '), 4);
+  const before = a.r.wire.length;
+  await a.session.sendMedia('audio/mp4', audio, b.session.id);
+  await until(() => b.media.length === 2);
+  expect(b.media[1]).toEqual({ peer: a.session.id, attachment: { mime: 'audio/mp4', data: audio }, privateMessage: true });
+  expect(a.r.wire.slice(before).every(frame => !Buffer.from(frame).includes(Buffer.from('ftypM4A ')))).toBe(true);
 });

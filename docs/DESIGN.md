@@ -152,6 +152,9 @@ the area controls; omit the separate area label and Change area button. Its
 accessibility label retains public-channel context to distinguish broadcasts
 from private threads.
 
+Nearby attachments show sender, type and size before acceptance. Keep public
+visibility explicit and leave media unopened until the recipient accepts it.
+
 Cashu transfers are explicit actions inside Nearby private conversations, with a
 Settings entry for received/recovery records. Review shows the stated amount, mint
 and recipient identity before sending. Never label offline tokens Paid or Redeemed.

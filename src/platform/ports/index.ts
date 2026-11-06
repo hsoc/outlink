@@ -18,6 +18,7 @@ export interface PlatformAdapters {
   backgroundConnectivity: BackgroundConnectivityPort;
   history: HistoryPort;
   records: RecordsPort;
+  meshMediaCache: { save(id: number, extension: string, data: Uint8Array): string; clear(): void };
   wipeLocalData(): Promise<void>;
   confirmationDialog: { confirm(title: string, message: string, cancel: string, confirm: string): Promise<boolean> };
   notices: { readText(id: string): Promise<string> };

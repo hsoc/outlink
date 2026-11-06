@@ -22,7 +22,6 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [],
       "blockedPermissions": [
-        "android.permission.RECORD_AUDIO",
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.READ_MEDIA_VIDEO",
         "android.permission.READ_MEDIA_AUDIO",
@@ -88,9 +87,25 @@
         "expo-camera",
         {
           "cameraPermission": "Allow Outlink to scan contact verification codes.",
-          "microphonePermission": false,
+          "microphonePermission": "Allow Outlink to record Nearby voice notes.",
           "recordAudioAndroid": false,
           "barcodeScannerEnabled": true
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow Outlink to record Nearby voice notes.",
+          "enableBackgroundPlayback": false,
+          "enableBackgroundRecording": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Outlink to choose images for Nearby attachments.",
+          "cameraPermission": "Allow Outlink to scan contact verification codes.",
+          "microphonePermission": "Allow Outlink to record Nearby voice notes."
         }
       ],
       "./plugins/with-local-notifications",

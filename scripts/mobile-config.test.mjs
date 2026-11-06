@@ -7,7 +7,7 @@ test('only Android and iOS applications and the Bitchat native module ship', asy
   assert.deepEqual(app.platforms,['ios','android']);assert.equal(pkg.workspaces,undefined);
   assert.equal(app.android.package,'io.github.hsoc.outlink');assert.equal(app.ios.bundleIdentifier,'io.github.hsoc.outlink');
   assert.equal(app.ios.entitlements?.['aps-environment'],undefined);
-  for(const dep of ['electron','electron-builder','@getalby/sdk','expo-audio'])assert.equal(pkg.dependencies[dep],undefined);
+  for(const dep of ['electron','electron-builder','@getalby/sdk'])assert.equal(pkg.dependencies[dep],undefined);
   assert.deepEqual((await readdir('modules')).sort(),['expo-proximity']);
   assert.deepEqual((await readdir('src/app')).sort(),['+native-intent.tsx','_layout.tsx','contacts.tsx','groups.tsx','index.tsx','licenses.tsx','payments.tsx','settings.tsx']);
 });
@@ -16,12 +16,14 @@ test('both native modes still advertise the standard Bitchat BLE service', async
   for(const path of files)assert.match((await readFile(path,'utf8')).toLowerCase(),/f47b5e2d-4a9e-4c5a-9b3f-8e1d2c3a4b5c/);
 });
 
-test('QR scanning grants camera access without microphone or push permissions', async()=>{
+test('QR scanning does not record audio and Nearby recording stays foreground-only', async()=>{
   const app=(await read('app.json')).expo;
   const plugin=app.plugins.find(p=>Array.isArray(p)&&p[0]==='expo-camera');
-  assert.equal(plugin[1].recordAudioAndroid,false); assert.equal(plugin[1].microphonePermission,false);
+  assert.equal(plugin[1].recordAudioAndroid,false);
   assert.ok(!app.android.blockedPermissions.includes('android.permission.CAMERA'));
-  assert.ok(app.android.blockedPermissions.includes('android.permission.RECORD_AUDIO'));
+  assert.ok(!app.android.blockedPermissions.includes('android.permission.RECORD_AUDIO'));
+  const audio=app.plugins.find(p=>Array.isArray(p)&&p[0]==='expo-audio');
+  assert.equal(audio[1].enableBackgroundRecording,false); assert.equal(audio[1].enableBackgroundPlayback,false);
 });
 
 test('unused SQLite full-text extensions are disabled in both native builds', async()=>{
@@ -38,6 +40,11 @@ test('local mention alerts do not enable remote push registration', async () => 
   const mods = JSON.parse(output)._internal.modResults;
   assert.equal(mods.ios.entitlements['aps-environment'], undefined);
   assert.ok(!(mods.ios.infoPlist.UIBackgroundModes ?? []).includes('remote-notification'));
+  assert.equal(mods.ios.infoPlist.NSMicrophoneUsageDescription, 'Allow Outlink to record Nearby voice notes.');
+  assert.ok(!(mods.ios.infoPlist.UIBackgroundModes ?? []).includes('audio'));
+  const microphone = mods.android.manifest.manifest['uses-permission'].filter(entry => entry.$['android:name'] === 'android.permission.RECORD_AUDIO');
+  assert.ok(microphone.some(entry => entry.$['tools:node'] !== 'remove'));
+  assert.ok(microphone.every(entry => entry.$['tools:node'] !== 'remove'));
   const metadata = mods.android.manifest.manifest.application[0]['meta-data'];
   for (const name of ['firebase_messaging_auto_init_enabled', 'firebase_analytics_collection_enabled'])
     assert.equal(metadata.find(item => item.$['android:name'] === name).$['android:value'], 'false');

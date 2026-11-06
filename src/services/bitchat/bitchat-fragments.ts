@@ -2,6 +2,8 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 import { BITCHAT_MAX_PACKET, BitchatType, decodePacket, encodePacket, join,
   type BitchatPacket, type InflateRaw } from './bitchat-wire';
 
+const large = (type: number) => type === BitchatType.file || type === BitchatType.encrypted;
+const fragmentLimit = (type: number, version: number) => version === 2 && large(type) ? 4096 : 256;
 type Assembly = { packet: BitchatPacket; count: number; type: number; at: number; ingress?: string;
   bytes: number; chunks: Map<number, Uint8Array> };
 export function fragmentPacket(packet: BitchatPacket, mtu: number, fragmentId: Uint8Array): Uint8Array[] {
@@ -11,7 +13,7 @@ export function fragmentPacket(packet: BitchatPacket, mtu: number, fragmentId: U
     signature: undefined, wirePayload: undefined, compressed: false, payload: new Uint8Array() };
   const chunkSize = mtu - encodePacket(envelope).length - 13;
   const count = Math.ceil(wire.length / chunkSize);
-  if (fragmentId.length !== 8 || chunkSize < 1 || count > 256) throw new Error('Bitchat link MTU too small');
+  if (fragmentId.length !== 8 || chunkSize < 1 || count > fragmentLimit(packet.type, packet.version)) throw new Error('Bitchat link MTU too small');
   return Array.from({ length: count }, (_, i) => {
     const header = new Uint8Array(13); header.set(fragmentId);
     const view = new DataView(header.buffer); view.setUint16(8, i); view.setUint16(10, count); header[12] = packet.type;
@@ -27,12 +29,12 @@ export class BitchatFragments {
     const a = this.pending.get(key); if (a) this.totalBytes -= a.bytes; this.pending.delete(key);
   }
   async accept(packet: BitchatPacket, now: number, inflate?: InflateRaw, ingress?: string): Promise<BitchatPacket | null> {
-    for (const [key, a] of this.pending) if (now - a.at > 30_000) this.remove(key);
+    for (const [key, a] of this.pending) if (now - a.at > (large(a.type) ? 180_000 : 30_000)) this.remove(key);
     const p = packet.payload;
     if (p.length <= 13) throw new Error('Invalid Bitchat fragment');
     const view = new DataView(p.buffer, p.byteOffset, p.byteLength);
     const index = view.getUint16(8), count = view.getUint16(10), type = p[12];
-    if (!count || count > 256 || index >= count || type === BitchatType.fragment)
+    if (!count || count > fragmentLimit(type, packet.version) || index >= count || type === BitchatType.fragment)
       throw new Error('Invalid Bitchat fragment header');
     const key = `${packet.sender}:${bytesToHex(p.subarray(0, 8))}`;
     let a = this.pending.get(key);

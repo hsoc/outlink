@@ -1,3 +1,5 @@
+import { PRIVATE_MEDIA_CAPABILITY } from './compatibility/media';
+import { meshAttachments } from './mesh-attachments';
 import { actionMessage } from '@/lib/message-actions';
 import { nearbyAlerts } from '@/services/mentions/nearby-alerts';
 import { conversationActivity, conversationScope } from '@/services/mentions/conversation-activity';
@@ -386,7 +388,7 @@ class BitchatService {
         if (count > 0) void this.flushAll().catch(() => bitchatSessionStore.setState({ error: true }));
       }, error: () => bitchatSessionStore.setState({ error: true }),
     }, protocolStorage);
-    session.setCapabilities(9 | (options.gateway ? 4 : 0) | (options.bridge ? 128 : 0));
+    session.setCapabilities(9 | PRIVATE_MEDIA_CAPABILITY | (options.gateway ? 4 : 0) | (options.bridge ? 128 : 0));
     await this.network.start();
     geohashService.meshFallback = (event, hash) => this.network?.uplinkGeo(event, hash) ?? Promise.resolve(false);
   }
@@ -509,6 +511,10 @@ class BitchatService {
         });
         this.groups = groups; await groups.restore();
         this.session = new BitchatSession(platform.proximityTransport, this.identity, name, {
+          media: (peer, attachment, privateMessage) => {
+            if (blockedUsers.has('mesh:' + peer.id) || contactsService.get(peer.id)?.blocked) { attachment.data.fill(0); return; }
+            meshAttachments.offer(peer.id, peer.name, attachment, privateMessage);
+          },
           groupState: async (peer, payload, invite) => { if (!blockedUsers.has('mesh:' + peer.id) && !contactsService.get(peer.id)?.blocked) { const changed = await this.groups?.receiveState(peer, payload, invite); if (changed) await this.replayGroups(); } },
           extension: (packet, context) => this.extension(packet, context),
           peer: peer => {
@@ -547,7 +553,7 @@ class BitchatService {
           error: () => bitchatSessionStore.setState({ error: true }),
         }, randomBytes, { ...await gossipArchive(() => bitchatSessionStore.setState({ error: true })), pins: contactsStore.getState().contacts.filter(contact => contact.verified).map(contact => ({ id: contact.id, noiseKey: contact.noiseKey, signingKey: contact.signingKey })) });
         await this.replayGroups();
-        this.session.setCapabilities(9);
+        this.session.setCapabilities(9 | PRIVATE_MEDIA_CAPABILITY);
         await this.session.start();
         this.rename(nicknameStore.getState().name || name);
         this.connection = { account, name: this.session.nickname ?? name };
@@ -699,6 +705,12 @@ class BitchatService {
     await this.outbox.enqueue(peer, { id, peer: own, recipient: peer,
       name, content, timestamp: Date.now(), outgoing: true, delivery: 'queued' });
     if (this.connection) void this.flush(peer).catch(() => bitchatSessionStore.setState({ error: true }));
+  }
+  async sendMedia(mime: string, data: Uint8Array, peer?: string): Promise<void> {
+    const session = this.session;
+    if (!session || peer && !await this.preparePrivateConversation(peer) || session !== this.session)
+      throw new Error('Join Nearby and choose an available recipient');
+    await this.track(session.sendMedia(mime, data, peer));
   }
   async sendCashu(peer: string, id: string): Promise<void> {
     return this.track((async () => {

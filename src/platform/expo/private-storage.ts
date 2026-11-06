@@ -1,3 +1,4 @@
+import { clearMeshMediaCache } from './mesh-media-cache';
 import { openDatabaseAsync } from 'expo-sqlite';
 import Storage from 'expo-sqlite/kv-store';
 import { createEncryptedStorage } from './encrypted-storage';
@@ -16,6 +17,7 @@ const encryptedStorage = createEncryptedStorage(
 export const privateStorage = {
   ...encryptedStorage,
   async wipe() {
+    clearMeshMediaCache();
     await Storage.clear();
     await encryptedStorage.wipe();
   },

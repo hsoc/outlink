@@ -1,3 +1,4 @@
+import { decodeMeshMedia, encodeMeshMedia, PRIVATE_MEDIA_CAPABILITY, type MeshMedia } from './compatibility/media';
 import { groupEnvelope } from './compatibility/group-protocol';
 import { MeshRouting, nextRoute, selectFanout, relayTiming } from './compatibility/routing';
 import { verificationResponseBytes } from './compatibility/verification';
@@ -20,7 +21,7 @@ export type BitchatMessage = { id: string; peer: string; recipient?: string; nam
 type KnownPeer = BitchatPeer & { ingress: string; noiseKey: Uint8Array; signingKey: Uint8Array };
 type Negotiation = { handshake: BitchatHandshake; at: number; ingress?: string; candidate?: { cipher: BitchatCipher; link?: string }; promise: Promise<void>;
   resolve: () => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> };
-type Callbacks = { groupState?(peer: BitchatPeer, payload: Uint8Array, invite: boolean): Promise<void>; extension?(packet: BitchatPacket, context: ExtensionContext): Promise<boolean>; peer: (peer: BitchatPeer) => void; message: (message: BitchatMessage) => void | false | Promise<void | false>;
+type Callbacks = { media?(peer: BitchatPeer, attachment: MeshMedia, privateMessage: boolean): void; groupState?(peer: BitchatPeer, payload: Uint8Array, invite: boolean): Promise<void>; extension?(packet: BitchatPacket, context: ExtensionContext): Promise<boolean>; peer: (peer: BitchatPeer) => void; message: (message: BitchatMessage) => void | false | Promise<void | false>;
   receipt: (id: string, sender: string, status: 'sent' | 'delivered' | 'read' | 'failed') => void; error: (error: Error) => void };
 
 /** MIT implementation of the Bitchat bearer/session rules, with bounded ephemeral state. */
@@ -351,6 +352,23 @@ export class BitchatSession {
       await Promise.all([response, this.broadcast(this.packet(BitchatType.encrypted, cipher.seal(join(Uint8Array.of(0x10), encodeTlv([[1, bytes(noiseKey)], [2, nonce]]))), peer))]);
     } finally { clearTimeout(timer); this.verificationWaits.delete(peer); nonce.fill(0); }
   }
+  async sendMedia(mime: string, data: Uint8Array, peer?: string): Promise<void> {
+    if (!this.running || !this.links.size) throw new Error('No Bluetooth route');
+    const payload = encodeMeshMedia(mime, data);
+    if (peer) {
+      const cipher = await this.ensureCipher(peer);
+      for (let i = 0; i < 40 && this.running && this.ciphers.get(peer)?.cipher === cipher &&
+          !this.peers.get(peer)?.authenticatedCapabilities; i++)
+        await new Promise(resolve => setTimeout(resolve, 50));
+      const known = this.peers.get(peer);
+      if (this.ciphers.get(peer)?.cipher !== cipher || !known?.authenticatedCapabilities || !(known.capabilities! & PRIVATE_MEDIA_CAPABILITY))
+        throw new Error('Peer does not support encrypted attachments');
+      await this.broadcast({ ...this.packet(BitchatType.encrypted, cipher.seal(join(Uint8Array.of(0x20), payload)), peer), version: 2 });
+    } else {
+      const packet = signPacket({ ...this.packet(BitchatType.file, payload), version: 2 }, this.identity.signingSeed);
+      await this.broadcast(packet);
+    }
+  }
   async sendPrivate(peer: string, content: string, messageId: string): Promise<void> {
     if (!content.trim() || bytes(content).length > 255 || !messageId || bytes(messageId).length > 255)
       throw new Error('Message must fit 255 UTF-8 bytes');
@@ -468,6 +486,11 @@ export class BitchatSession {
           peer: packet.sender, name: known.name, content, timestamp: packet.timestamp, outgoing: false, delivery: 'sent' });
       } else { known.lastSeen = 0; known.secure = false; this.callbacks.peer(known);
         this.ciphers.get(packet.sender)?.cipher.destroy(); this.ciphers.delete(packet.sender); }
+    } else if (packet.type === BitchatType.file) {
+      const peer = this.peers.get(packet.sender);
+      if (!peer || !isBroadcast(packet) || Math.abs(Date.now() - packet.timestamp) > 300_000 || !verifyPacket(packet, peer.signingKey)) return;
+      const media = decodeMeshMedia(packet.payload);
+      this.callbacks.media?.(peer, media, false);
     } else if (packet.type === BitchatType.sync) {
       const known = this.peers.get(packet.sender);
       if (packet.ttl !== 0 || !known || !verifyPacket(packet, known.signingKey) || (packet.recipient && packet.recipient !== this.id)) return;
@@ -617,6 +640,9 @@ export class BitchatSession {
         this.remember(this.privateSeen, key);
       }
       await this.broadcast(this.packet(BitchatType.encrypted, cipher.seal(join(Uint8Array.of(3), bytes(messageId))), peer.id));
+    } else if (plain[0] === 0x20 && !oldSession) {
+      try { this.callbacks.media?.(peer, decodeMeshMedia(plain.subarray(1)), true); }
+      finally { plain.fill(0); }
     } else if ((plain[0] === 6 || plain[0] === 7) && !oldSession) {
       await this.callbacks.groupState?.(peer, plain.subarray(1), plain[0] === 6);
     } else if (plain[0] === 2 || plain[0] === 3) {

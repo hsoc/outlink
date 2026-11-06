@@ -27,7 +27,7 @@ export default function Layout() {
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let alive = true;
-    void resumePendingWipe().then(() => { if (alive) setRecovered(true); })
+    void resumePendingWipe().then(() => { platform.meshMediaCache.clear(); if (alive) setRecovered(true); })
       .catch(() => { if (alive) setRecoveryFailed(true); });
     return () => { alive = false; };
   }, [attempt]);

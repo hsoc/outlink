@@ -1,3 +1,5 @@
+import { meshAttachments } from '@/services/bitchat/mesh-attachments';
+import { MeshAttachments } from '@/components/MeshAttachments';
 import { messageTime } from '@/lib/message-time';
 import { conversationActivity, conversationActivityStore, conversationScope } from '@/services/mentions/conversation-activity';
 import { LocationInfo } from '@/components/common/LocationInfo';
@@ -310,7 +312,8 @@ export default function Chats() {
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
           <AppText variant="caption" tone="muted">{transportHint}</AppText>
           {active ? <AppButton label={t('bitchat.leave')} variant="text" fullWidth={false} size="sm" disabled={busy} onPress={() => void operate(async () => {
-            if (mode === 'mesh') await bitchatService.stop(); else geohashService.stop(); setRecipient(undefined);
+            if (mode === 'mesh') { await bitchatService.stop(); meshAttachments.clear(); } else geohashService.stop();
+            setRecipient(undefined);
           })} /> : <AppButton label={t('mobile.join')} variant="secondary" fullWidth={false} size="sm" loading={busy} disabled={!name.trim() || busy} onPress={() => void operate(join, 'join')} />}
         </View>
         {mode === 'geo' && !geo.privateActive && geoRecipient && <View style={{ gap: spacing.sm }}>
@@ -390,6 +393,7 @@ export default function Chats() {
           </View>} />
         {mode === 'mesh' && !recipient && workspace.bridge && <AppButton label={t('mobile.nearby_only')} variant="secondary" selected={workspace.nearbyOnly} disabled={busy} onPress={() => workspaceStore.setState({ nearbyOnly: !workspace.nearbyOnly })} />}
         {mode === 'mesh' && recipient && <AppButton label={t('cashu.title')} variant="secondary" disabled={busy} onPress={() => router.push({ pathname: '/payments', params: { peer: recipient } })} />}
+        {mode === 'mesh' && <MeshAttachments peer={recipient} joined={active} onOpenPeer={setRecipient} canSend={active && !busy && (recipient ? selectedOnline : canSendPublicMesh)} />}
         <AppInput ref={composerRef} label={t('bitchat.message')} value={draft} onChangeText={setDraft} multiline compactMultiline scrollEnabled maxLength={mode === 'mesh' ? 255 : geoRecipient ? 4096 : MAX_GEO_CONTENT_BYTES} />
         <AppButton label={t(mode === 'mesh' && !recipient && !canSendPublicMesh ? 'mobile.nobody_around' : 'bitchat.send')} loading={working} disabled={(mode === 'mesh' && !!recipient && (!contactsService.get(recipient) || !!savedContact?.blocked)) || (!active && !(mode === 'mesh' && recipient && contactsService.get(recipient))) || (mode === 'mesh' && !recipient && !canSendPublicMesh) || busy || !draft.trim() || bytes(draft).length > (mode === 'mesh' ? 255 : geoRecipient ? 4096 : MAX_GEO_CONTENT_BYTES) || (mode === 'geo' && (geoRecipient ? !geo.privateActive || geoThread?.blocked : !geo.connected && !bitchatService.hasGateway()))}
           onPress={() => void operate(send, 'send')} />

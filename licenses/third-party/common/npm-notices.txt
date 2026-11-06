@@ -2443,6 +2443,13 @@ LICENSE
   Text: fb3ca4a837f5779e83cef89b78253a8949cfb9429c340309f62d0465ec6610b4
 ========================================
 
+expo-audio@57.0.5
+License: MIT
+Source: https://github.com/expo/expo.git
+LICENSE
+  Text: fb3ca4a837f5779e83cef89b78253a8949cfb9429c340309f62d0465ec6610b4
+========================================
+
 expo-blur@57.0.3
 License: MIT
 Source: https://github.com/expo/expo.git
@@ -2486,6 +2493,27 @@ LICENSE
 ========================================
 
 expo-glass-effect@57.0.3
+License: MIT
+Source: https://github.com/expo/expo.git
+LICENSE
+  Text: fb3ca4a837f5779e83cef89b78253a8949cfb9429c340309f62d0465ec6610b4
+========================================
+
+expo-image-loader@57.0.1
+License: MIT
+Source: https://github.com/expo/expo.git
+LICENSE
+  Text: fb3ca4a837f5779e83cef89b78253a8949cfb9429c340309f62d0465ec6610b4
+========================================
+
+expo-image-manipulator@57.0.22
+License: MIT
+Source: https://github.com/expo/expo.git
+LICENSE
+  Text: fb3ca4a837f5779e83cef89b78253a8949cfb9429c340309f62d0465ec6610b4
+========================================
+
+expo-image-picker@57.0.21
 License: MIT
 Source: https://github.com/expo/expo.git
 LICENSE

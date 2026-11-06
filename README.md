@@ -27,6 +27,10 @@ mesh gateway/bridge features are disabled by default. There is no Tor integratio
 remote push delivery or file transfer. Android offers an optional ongoing-notification
 mode to retain a joined Bluetooth mesh and open relay connections in the background.
 It is off by default; iOS and internet-only sessions pause and reconnect on return.
+[Nearby attachments](docs/protocols/mesh-attachments.md) support images and
+recorded voice notes in Public Mesh and encrypted Nearby DMs. Recipients choose
+whether to open each attachment.
+
 See [background connectivity](docs/protocols/background-connectivity.md). Messages, drafts,
 and channel selections survive restarts. Chat history expires after six hours
 and can be cleared sooner in Settings.

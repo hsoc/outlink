@@ -311,5 +311,22 @@
     "peer": "Bluetooth identity: {{peer}}",
     "amount": "{{amount}} sats · unverified token amount",
     "mint": "Mint: {{mint}}"
+  },
+  "mesh_media": {
+    "image_offer": "Image from {{name}} · {{size}} KiB",
+    "voice_offer": "Voice note from {{name}} · {{size}} KiB",
+    "choose_image": "Choose image",
+    "record": "Record voice note (15 sec max)",
+    "send_voice": "Send voice note",
+    "accept": "Accept attachment",
+    "decline": "Decline",
+    "play": "Play voice note",
+    "close": "Close attachment",
+    "accepted_image": "Accepted image",
+    "failed": "Could not send or open the attachment. Check permissions, Bluetooth, and the 96 KiB size limit.",
+    "sent": "Sent to the mesh. Recipient acceptance is separate.",
+    "public_notice": "Public Mesh attachments can be read by anyone on the mesh.",
+    "send_image": "Send selected image",
+    "private_offer": "Private attachment from {{name}}"
   }
 }

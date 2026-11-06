@@ -1,3 +1,4 @@
+import { meshAttachments } from './mesh-attachments';
 import { nearbyAlerts } from '@/services/mentions/nearby-alerts';
 import { conversationActivity } from '@/services/mentions/conversation-activity';
 import { cashuTransfers } from '@/services/cashu/transfers';
@@ -22,11 +23,13 @@ export function panicWipe(): Promise<void> {
   return wiping ??= (async () => {
     invalidateSessionIntent(); conversationActivity.reset(); resetNickname(); cashuTransfers.reset();
     await platform.secureStorage.setItem(WIPE_MARKER, '1');
+    meshAttachments.clear();
     await cashuTransfers.idle();
     workspaceStore.setState({ keepBackground: false, backgroundError: false });
     // Native notification/service cleanup must not prevent transport shutdown and key deletion.
     await platform.backgroundConnectivity?.stop().catch(() => {});
     await bitchatService.stop(); geohashService.stop(); await geohashService.idle();
+    meshAttachments.clear();
     bitchatSessionStore.setState({ busy: true });
     workspaceStore.setState({ ready: false, keepBackground: false, backgroundError: false, drafts: {}, recipient: undefined, internet: false, autoAreaRelays: true, gateway: false, bridge: false, bridgeCell: '', nearbyOnly: false, mode: 'mesh', hash: '' });
     await privateMessageAlerts.clear().catch(() => {});

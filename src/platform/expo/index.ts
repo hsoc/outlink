@@ -1,3 +1,4 @@
+import { meshMediaCache } from './mesh-media-cache';
 import { clipboardAdapter } from './clipboard';
 import { mentionNotificationsAdapter } from './mention-notifications';
 import { backgroundConnectivityAdapter } from './background-connectivity';
@@ -14,7 +15,7 @@ import { proximityTransportAdapter } from './proximity-transport';
 import { secureStorageAdapter } from './secure-storage';
 import { preferencesAdapter, locationAdapter } from './mobile';
 export function createExpoAdapters(): PlatformAdapters {
-  return { clipboard: clipboardAdapter, mentionNotifications: mentionNotificationsAdapter, backgroundConnectivity: backgroundConnectivityAdapter, records: privateStorage.records, wipeLocalData: privateStorage.wipe, confirmationDialog: confirmationDialogAdapter, history: historyAdapter, notices: noticesAdapter, urlOpener: urlOpenerAdapter, appState: appStateAdapter, deviceCrypto: deviceCryptoAdapter,
+  return { meshMediaCache, clipboard: clipboardAdapter, mentionNotifications: mentionNotificationsAdapter, backgroundConnectivity: backgroundConnectivityAdapter, records: privateStorage.records, wipeLocalData: privateStorage.wipe, confirmationDialog: confirmationDialogAdapter, history: historyAdapter, notices: noticesAdapter, urlOpener: urlOpenerAdapter, appState: appStateAdapter, deviceCrypto: deviceCryptoAdapter,
     localization: localizationAdapter, proximityTransport: proximityTransportAdapter,
     secureStorage: secureStorageAdapter, preferences: preferencesAdapter, location: locationAdapter };
 }

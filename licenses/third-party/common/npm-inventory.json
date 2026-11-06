@@ -1,6 +1,6 @@
 {
-  "reviewed": "2026-10-27",
-  "lockfileSha256": "5ad58b20e8eab060aa23299da5e740654d64505b66ebf7d49428db27ad452b2d",
+  "reviewed": "2026-11-06",
+  "lockfileSha256": "2dac7381def4869bd66d9c34e5d57fc92666e641819e571033bbe15952f851b4",
   "scope": "All locked non-development npm packages on all platforms. Includes build utilities; not an exact binary inventory.",
   "packages": [
     {
@@ -4590,6 +4590,20 @@
       ]
     },
     {
+      "name": "expo-audio",
+      "version": "57.0.5",
+      "license": "MIT",
+      "integrity": "sha512-39fX5JC5zDvELB4/eDJPj2XAYRN0W9+K2DfDWm5N3aC5WZ7HRrhupWtT6hbH09NlfYpsRSqYOwEZnocFM42ynQ==",
+      "repository": "https://github.com/expo/expo.git",
+      "homepage": "https://docs.expo.dev/versions/latest/sdk/audio/",
+      "licenseFiles": [
+        {
+          "source": "LICENSE",
+          "sha256": "fb3ca4a837f5779e83cef89b78253a8949cfb9429c340309f62d0465ec6610b4"
+        }
+      ]
+    },
+    {
       "name": "expo-blur",
       "version": "57.0.3",
       "license": "MIT",
@@ -4680,6 +4694,48 @@
       "integrity": "sha512-aTh2J5eCxf+rSRMBJTnP8Ib5/k8DYFVDuEX1xqesN9F9aqTXocwMv/aQRVBNUs/iogDWhHIJz2pN97IsrrTcoA==",
       "repository": "https://github.com/expo/expo.git",
       "homepage": "https://docs.expo.dev/versions/latest/sdk/glass-effect/",
+      "licenseFiles": [
+        {
+          "source": "LICENSE",
+          "sha256": "fb3ca4a837f5779e83cef89b78253a8949cfb9429c340309f62d0465ec6610b4"
+        }
+      ]
+    },
+    {
+      "name": "expo-image-loader",
+      "version": "57.0.1",
+      "license": "MIT",
+      "integrity": "sha512-uhrZKLT/cTl2mXyR28kPpVkS5O+PK9N1QA/07IFM4f5T4g0lTW1JHT3NEWwEEsGFldPmVX4j7LwUVVZxE+woug==",
+      "repository": "https://github.com/expo/expo.git",
+      "homepage": "https://github.com/expo/expo/tree/main/packages/expo-image-loader",
+      "licenseFiles": [
+        {
+          "source": "LICENSE",
+          "sha256": "fb3ca4a837f5779e83cef89b78253a8949cfb9429c340309f62d0465ec6610b4"
+        }
+      ]
+    },
+    {
+      "name": "expo-image-manipulator",
+      "version": "57.0.22",
+      "license": "MIT",
+      "integrity": "sha512-GXvxbCIMCBk0JruD/lj+fvhSeAvqIoBvgLspx6fZAHOrwE0/mQWSmHb7gNHEEX6pQM10qdacgoio1V3hVYoFrw==",
+      "repository": "https://github.com/expo/expo.git",
+      "homepage": "https://docs.expo.dev/versions/latest/sdk/imagemanipulator/",
+      "licenseFiles": [
+        {
+          "source": "LICENSE",
+          "sha256": "fb3ca4a837f5779e83cef89b78253a8949cfb9429c340309f62d0465ec6610b4"
+        }
+      ]
+    },
+    {
+      "name": "expo-image-picker",
+      "version": "57.0.21",
+      "license": "MIT",
+      "integrity": "sha512-DRAqZyzbAgpBRFIzqsIeGvCVxzEWg0KmqN5nMC8nPca00BLPJ/8ubdMmPFMMuilP4JI5xZV9rKp5H1bjycUyCg==",
+      "repository": "https://github.com/expo/expo.git",
+      "homepage": "https://docs.expo.dev/versions/latest/sdk/imagepicker/",
       "licenseFiles": [
         {
           "source": "LICENSE",
