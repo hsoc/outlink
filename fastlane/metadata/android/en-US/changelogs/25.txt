@@ -1,0 +1,1 @@
+Stabilizes conversation scrolling in Nearby and Location channels and keeps your position while you read older messages.
