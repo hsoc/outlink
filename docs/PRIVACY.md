@@ -57,7 +57,8 @@ deleted. Settings → Clear local history deletes saved messages and drafts, not
 identity/storage keys, contacts, queued outgoing messages, relay copies,
 recipients' copies, or screenshots. Queued outgoing messages can still send after
 clearing history. Settings → Erase identity and all local data also removes
-contacts, queues, gossip and the old identity/storage keys. Remote copies and
+contacts, queues, gossip, local preferences (including notification opt-ins and
+relay-directory cache metadata), and the old identity/storage keys. Remote copies and
 flash-storage/backups remain outside this deletion boundary.
 See [local storage](security/local-storage.md) for the full protection boundary.
 

@@ -22,7 +22,8 @@ Only the creator manages membership. **Remove member** rotates the group key and
 sends updates to remaining reachable members. Offline members receive updates
 when they reconnect to the creator, including through intermediate mesh devices.
 The removed member receives a signed removal notice containing a separate dummy
-key, never the new group key. Removal cannot erase already-received history.
+key and only the creator’s roster entry. The notice does not contain the new
+group key or the remaining membership. Removal cannot erase already-received history.
 
 **Leave group** deletes the local group key and keeps a creator/epoch tombstone
 against replay. It is local departure, not a signed membership change: the creator

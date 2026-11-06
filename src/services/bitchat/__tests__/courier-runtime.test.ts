@@ -10,14 +10,14 @@ function fixture() {
   const envelope = (id: number, copies = 4): CourierEnvelope => ({ tag: courierTags(recipient, now)[1], expiry: now + 86400000, copies, ciphertext: new Uint8Array(96).fill(id) });
   return { storage, runtime, envelope, advance(ms: number) { now += ms; } };
 }
-it('persists opaque mail, limits copies across restart/replay, and removes only an accepted direct handover', async () => {
+it('persists opaque mail, limits copies across restart/replay, and retains mail after a direct handover', async () => {
   const f = fixture(), envelope = f.envelope(1); await f.runtime().deposit(envelope, 'sender', 'favorite');
   const send = jest.fn(async () => {}); await f.runtime().encounter(carrier, 'verified', true, send); expect(send).toHaveBeenCalledWith(expect.objectContaining({ copies: 2 }));
   await f.runtime().deposit(envelope, 'sender', 'favorite'); // Replaying the original cannot refill spent copies.
   const saved = await f.storage.list<{ wire: string }>('courier', 40); expect(decodeCourier(base64.decode(saved[0].wire)).copies).toBe(2);
   await f.runtime().encounter(carrier, 'verified', true, send); expect(send).toHaveBeenCalledTimes(1);
   await f.runtime().encounter(recipient, undefined, true, async () => { throw new Error('disconnected'); }); expect(await f.storage.list('courier', 40)).toHaveLength(1);
-  await f.runtime().encounter(recipient, undefined, true, send); expect(await f.storage.list('courier', 40)).toHaveLength(0);
+  await f.runtime().encounter(recipient, undefined, true, send); expect(await f.storage.list('courier', 40)).toHaveLength(1);
 });
 it('retains remote handovers, enforces cooldown and expiry, and does not spray to the depositor', async () => {
   const f = fixture(); await f.runtime().deposit(f.envelope(1), Buffer.from(carrier).toString('hex'), 'favorite');

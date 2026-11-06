@@ -57,7 +57,7 @@ function node(id: string, n: number, frameSize = 185, extension?: (packet: Bitch
   let counter = 1;
   const identity = { noiseSeed, noisePublicKey: x25519.getPublicKey(noiseSeed), signingSeed: new Uint8Array(32).fill(n + 10) };
   const session = new BitchatSession(r.port, identity, id,
-    { extension, groupState, peer: (p) => peers.set(p.id, { ...p }), message: (m) => messages.push(m),
+    { extension, groupState, peer: (p) => peers.set(p.id, { ...p }), message: (m) => { messages.push(m); },
       receipt: (message, sender, status) => receipts.push([message, sender, status]), error: jest.fn() },
     (length) => new Uint8Array(length).fill(counter++));
   sessions.push(session); return { r, session, peers, messages, receipts, identity };
@@ -246,7 +246,7 @@ it('delivers prekey-sealed private mail through a restarted courier after its se
   receiver = new PrekeyRuntime(b.identity, recipientStorage, { get: async () => secret, set: async value => { secret = value; } });
   const sender = new PrekeyRuntime(a.identity, senderStorage, { get: async () => null, set: async () => {} });
   await sender.ingest(await receiver.bundle(), ed25519.getPublicKey(b.identity.signingSeed));
-  const assigned = (await sender.assign(b.identity.noisePublicKey, 'offline-message'))!;
+  const assigned = (await sender.assign(b.identity.noisePublicKey, 'offline-message', bytesToHex(ed25519.getPublicKey(b.identity.signingSeed))))!;
   const plain = join(Uint8Array.of(1), encodeTlv([[0, bytes('offline-message')], [1, bytes('mail carried while Alice is gone')]]));
   const envelope = { tag: courierTags(b.identity.noisePublicKey)[1], expiry: Date.now() + 86400000, copies: 4, prekeyId: assigned.id,
     ciphertext: sealCourier(plain, a.identity.noiseSeed, assigned.publicKey, assigned.id) };
@@ -264,20 +264,27 @@ it('delivers prekey-sealed private mail through a restarted courier after its se
   await c.session.authenticateDirect(b.session.id);
   await restartedBag.encounter(b.identity.noisePublicKey, undefined, true, value => c.session.sendExtension(BitchatType.courier, encodeCourier(value), b.session.id, true));
   await until(() => delivered.length === 1);
-  expect(delivered).toEqual(['mail carried while Alice is gone']); expect(await carried.list('courier', 40)).toHaveLength(0);
+  expect(delivered).toEqual(['mail carried while Alice is gone']); expect(await carried.list('courier', 40)).toHaveLength(1);
   await c.session.sendExtension(BitchatType.courier, encodeCourier(envelope), b.session.id, true);
   await new Promise(resolve => setTimeout(resolve, 30)); expect(delivered).toHaveLength(1);
   expect(c.r.wire.every(wire => !Buffer.from(wire).includes(Buffer.from(delivered[0])))).toBe(true);
 });
 
-it('defers a signed prekey bundle that races its owner announcement, then authenticates and processes it', async () => {
+it('accepts prekey bundles only after Noise authenticates the signing key', async () => {
   const a = node('Alice', 1, 512), accepted = jest.fn(async () => true), b = node('Bob', 2, 512, accepted);
   let saved: string | null = null;
   const keys = new PrekeyRuntime(a.identity, memoryStorage(), { get: async () => saved, set: async value => { saved = value; } });
   const packet = signPacket({ version: 1, type: BitchatType.prekeys, ttl: 7, timestamp: Date.now(), sender: a.session.id, payload: await keys.bundle() }, a.identity.signingSeed);
   a.session.setCapabilities(1);
   await Promise.all([a.session.start(), b.session.start()]); connect(a.r, b.r);
-  b.r.listeners.get('onMessage')!.forEach(fn => fn({ endpointId: a.r.id, payload: encodePacket(packet) }));
+  await until(() => !!b.peers.get(a.session.id)?.lastSeen);
+  const inject = () => b.r.listeners.get('onMessage')!.forEach(fn => fn({ endpointId: a.r.id, payload: encodePacket(packet) }));
+  inject();
+  await new Promise(resolve => setTimeout(resolve, 30));
+  expect(accepted).not.toHaveBeenCalled();
+  await b.session.authenticateDirect(a.session.id);
+  await until(() => !!b.peers.get(a.session.id)?.authenticatedCapabilities);
+  inject();
   await until(() => accepted.mock.calls.length > 0);
   expect(b.peers.get(a.session.id)?.capabilities).toBe(1);
   expect(accepted).toHaveBeenCalledWith(expect.objectContaining({ type: BitchatType.prekeys }), expect.objectContaining({ noiseKey: a.identity.noisePublicKey, signingKey: ed25519.getPublicKey(a.identity.signingSeed) }));

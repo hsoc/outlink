@@ -62,9 +62,10 @@ bitchatSessionStore.subscribe((state, previous) => {
   }
 });
 function contactsStoreLookup(sender: string) {
-  return contactsStore.getState().contacts.find(contact => {
-    try { if (!contact.npub) return false; const decoded = decodeNpub(contact.npub); return decoded.type === 'npub' && decoded.data === sender; } catch { return false; }
+  const matches = contactsStore.getState().contacts.filter(contact => {
+    try { if (!contact.noiseBoundNpub) return false; const decoded = decodeNpub(contact.noiseBoundNpub); return decoded.type === 'npub' && decoded.data === sender; } catch { return false; }
   });
+  return matches.length === 1 ? matches[0] : undefined;
 }
 export const meshGroupsStore = createStore<{ groups: GroupInfo[]; messages: GroupMessage[]; self: string; historyEpoch: number }>(() => ({ groups: [], messages: [], self: '', historyEpoch: 0 }));
 class BitchatService {
@@ -142,13 +143,13 @@ class BitchatService {
     if (previous?.verified && previous.signingKey !== signingKey) throw new Error('Verified signing identity changed');
     if (!previous || previous.name !== peer.name || previous.signingKey !== signingKey || !isSavedContact(previous) && (previous.expiresAt ?? 0) < Date.now() + 3600000) await contactsService.upsert(peer.id, current => ({ id: peer.id, noiseKey, signingKey, name: peer.name,
       fingerprint: peer.fingerprint, saved: current?.saved, expiresAt: Date.now() + DISCOVERY_LIFETIME_MS, favorite: current?.favorite ?? false, verified: current?.verified ?? false,
-      blocked: current?.blocked ?? false, mutual: current?.mutual ?? false, npub: current?.npub,
+      blocked: current?.blocked ?? false, mutual: current?.mutual ?? false, npub: current?.npub, noiseBoundNpub: current?.noiseBoundNpub,
       theirFavorite: current?.theirFavorite, pendingFavorite: current?.pendingFavorite, updatedAt: Date.now() }));
     if (newlyOnline && peer.lastSeen > 0 && this.connection) void this.encounter(peer.id).catch(() => bitchatSessionStore.setState({ error: true }));
   }
   private carrierPeers(entry?: PendingMessage) {
     return bitchatSessionStore.getState().peers.filter(peer => this.session?.directPeers().includes(peer.id) && peer.lastSeen > 0 && !contactsService.get(peer.id)?.blocked &&
-      (!entry?.courier || entry.courier.deposited.length < 3 && !entry.courier.deposited.includes(peer.noisePublicKey!)));
+      (!entry?.courier?.boundFormat || entry.courier.deposited.length < 3 && !entry.courier.deposited.includes(peer.noisePublicKey!)));
   }
   private flush(peer: string): Promise<void> {
     const existing = this.flushes.get(peer); if (existing) return existing;
@@ -163,20 +164,23 @@ class BitchatService {
     if (contact.blocked) return;
     await this.sendFavoriteNotice(peer); await this.flushReceipts(peer);
     const available = (entry: PendingMessage) => !!this.session && bitchatSessionStore.getState().peers.some(p => p.id === peer && p.lastSeen > 0 && Date.now() - p.lastSeen < 60000) ||
-      !!this.mailbox && this.internetConnections > 0 && contact.favorite && !!contact.npub || !!this.prekeys && (this.carrierPeers(entry).length > 0 || !!this.network?.canDrop() && !entry.courier?.dropAccepted);
+      !!this.mailbox && this.internetConnections > 0 && contact.favorite && !!contact.noiseBoundNpub || !!this.prekeys && (this.carrierPeers(entry).length > 0 || !!this.network?.canDrop() && (!entry.courier?.boundFormat || !entry.courier.dropAccepted));
     await this.outbox.flush(peer, async entry => {
       const session = this.session;
       const live = bitchatSessionStore.getState().peers.find(p => p.id === peer && p.lastSeen > 0 && Date.now() - p.lastSeen < 60000);
       if (session && live) { try { await session.sendPrivate(peer, entry.message.content, entry.message.id); return { delivery: 'sent' }; } catch { /* Try another transport. */ } }
-      if (this.mailbox && this.internetConnections > 0 && contact.favorite && contact.npub) {
-        const target = decodeNpub(contact.npub); if (target.type !== 'npub') throw new Error('Invalid Nostr contact');
+      if (this.mailbox && this.internetConnections > 0 && contact.favorite && contact.noiseBoundNpub) {
+        const target = decodeNpub(contact.noiseBoundNpub); if (target.type !== 'npub') throw new Error('Invalid Nostr contact');
         try { await this.mailbox.send(target.data, { kind: 'message', id: entry.message.id, content: entry.message.content,
           senderId: entry.message.peer, recipientId: peer, timestamp: entry.message.timestamp }, entry.message.peer, peer); return { delivery: 'sent' }; } catch { /* Try sealed mail. */ }
       }
       if (!session || !this.prekeys || !this.identity) throw new Error('Peer has no available route');
-      let dispatch: CourierDispatch = entry.courier ? { ...entry.courier, deposited: [...entry.courier.deposited] } : { wire: '', deposited: [] };
+      let dispatch: CourierDispatch = entry.courier?.boundFormat ? { ...entry.courier, deposited: [...entry.courier.deposited] } : { wire: '', boundFormat: true, deposited: [] };
       if (!dispatch.wire) {
-        const recipient = hexToBytes(contact.noiseKey), prekey = await this.prekeys.assign(recipient, entry.message.id);
+        const recipient = hexToBytes(contact.noiseKey);
+        const known = bitchatSessionStore.getState().peers.find(p => p.id === peer && p.authenticatedCapabilities && p.noisePublicKey === contact.noiseKey);
+        const signer = known?.signingPublicKey ?? (contact.verified ? contact.signingKey : undefined);
+        const prekey = signer ? await this.prekeys.assign(recipient, entry.message.id, signer) : undefined;
         const plain = join(Uint8Array.of(1), encodeTlv([[0, bytes(entry.message.id)], [1, bytes(entry.message.content)]]));
         try { dispatch.wire = base64.encode(encodeCourier({ tag: courierTag(recipient, Math.floor(Date.now() / 86400000)), expiry: entry.expiresAt, copies: 4,
           prekeyId: prekey?.id, ciphertext: sealCourier(plain, this.identity.noiseSeed, prekey?.publicKey ?? recipient, prekey?.id) })); } finally { plain.fill(0); }
@@ -230,7 +234,7 @@ class BitchatService {
       await this.groups.receiveMessage(packet.payload); return true;
     }
     if (packet.type === BitchatType.prekeys) {
-      if (!context.signingKey || !context.noiseKey || !this.prekeys || !isBroadcast(packet)) return false;
+      if (!context.signingBound || !context.signingKey || !context.noiseKey || !this.prekeys || !isBroadcast(packet)) return false;
       const bundle = decodePrekeys(packet.payload, context.signingKey);
       if (peerId(bundle.owner) !== packet.sender || bytesToHex(bundle.owner) !== bytesToHex(context.noiseKey)) return false;
       await this.prekeys.ingest(packet.payload, context.signingKey); return true;
@@ -288,8 +292,8 @@ class BitchatService {
         if (live) await session.sendReceipt(peer, entry.id, entry.status);
         else {
           const contact = contactsService.get(peer);
-          if (!this.mailbox || !this.internetConnections || !contact?.favorite || !contact.npub || contact.blocked) continue;
-          const target = decodeNpub(contact.npub); if (target.type !== 'npub') continue;
+          if (!this.mailbox || !this.internetConnections || !contact?.favorite || !contact.noiseBoundNpub || contact.blocked) continue;
+          const target = decodeNpub(contact.noiseBoundNpub); if (target.type !== 'npub') continue;
           await this.mailbox.send(target.data, { kind: 'receipt', id: entry.id, delivery: entry.status, senderId: session.id, recipientId: peer, timestamp: Date.now() }, session.id, peer);
         }
       }
@@ -348,7 +352,7 @@ class BitchatService {
     const contact = contactsStoreLookup(sender);
     if (!contact || blockedUsers.has('mesh:' + contact.id) || contact.blocked || payload.senderId && payload.senderId !== contact.id || payload.recipientId && payload.recipientId !== bitchatSessionStore.getState().id) return;
     if (payload.kind === 'receipt') { await this.receipt(payload.id, contact.id, payload.delivery); return; }
-    if (await this.favoriteNotification(contact.id, payload.content)) return;
+    if (await this.favoriteNotification(contact.id, payload.content, sender)) return;
     const own = bitchatSessionStore.getState().id;
     const previous = await historyOperation(() => platform.history.get('mesh', payload.id + contact.id));
     if (!previous) {
@@ -459,7 +463,7 @@ class BitchatService {
         });
         this.groups = groups; await groups.restore();
         this.session = new BitchatSession(platform.proximityTransport, this.identity, name, {
-          groupState: async (peer, payload, invite) => { if (!contactsService.get(peer.id)?.blocked) { const changed = await this.groups?.receiveState(peer, payload, invite); if (changed) await this.replayGroups(); } },
+          groupState: async (peer, payload, invite) => { if (!blockedUsers.has('mesh:' + peer.id) && !contactsService.get(peer.id)?.blocked) { const changed = await this.groups?.receiveState(peer, payload, invite); if (changed) await this.replayGroups(); } },
           extension: (packet, context) => this.extension(packet, context),
           peer: peer => {
             const pin = contactsService.get(peer.id);
@@ -473,22 +477,29 @@ class BitchatService {
             void this.rememberPeer(peer, !old?.lastSeen || peer.secure && !old.secure).catch(() => bitchatSessionStore.setState({ error: true }));
           },
           message: message => {
-            if (blockedUsers.has('mesh:' + message.peer) || contactsService.get(message.peer)?.blocked) return;
+            if (blockedUsers.has('mesh:' + message.peer) || contactsService.get(message.peer)?.blocked) return false;
             if (message.content.startsWith(CASHU_PREFIX)) {
-              if (!message.outgoing && message.recipient && !message.bridge) void this.track(cashuTransfers.receive(message.peer, message.content)).catch(() => bitchatSessionStore.setState({ error: true }));
+              if (!message.outgoing && message.recipient && !message.bridge) return this.track(cashuTransfers.receive(message.peer, message.content)).catch(() => { bitchatSessionStore.setState({ error: true }); return false as const; });
               return;
             }
             if (message.content.startsWith('[FAVORITED]:') || message.content.startsWith('[UNFAVORITED]:')) {
-              if (!message.outgoing) void this.favoriteNotification(message.peer, message.content).catch(() => bitchatSessionStore.setState({ error: true }));
+              if (!message.outgoing && message.recipient && !message.bridge) return this.track(this.favoriteNotification(message.peer, message.content)).then(() => {}).catch(() => { bitchatSessionStore.setState({ error: true }); return false as const; });
               return;
             }
             if (!message.outgoing && message.recipient) {
-              void this.track(historyOperation(() => platform.history.get('mesh', message.id + message.peer)).then(previous => { if (!previous) this.mergeMessage(message); })).catch(() => bitchatSessionStore.setState({ error: true }));
+              const id = message.id + message.peer;
+              return this.track(historyOperation(async () => {
+                const previous = await platform.history.get('mesh', id);
+                if (previous) return JSON.parse(previous).deleted ? false as const : undefined;
+                if (!messageIsFresh(message)) return false as const;
+                await platform.history.save('mesh', id, JSON.stringify(message));
+                this.mergeMessage(message, true);
+              })).catch(() => { bitchatSessionStore.setState({ error: true }); return false as const; });
             } else this.mergeMessage(message);
           },
           receipt: (id, sender, delivery) => { void this.track(this.receipt(id, sender, delivery)).catch(() => bitchatSessionStore.setState({ error: true })); },
           error: () => bitchatSessionStore.setState({ error: true }),
-        }, randomBytes, { ...await gossipArchive(() => bitchatSessionStore.setState({ error: true })), pins: contactsStore.getState().contacts.filter(contact => contact.verified || contact.favorite).map(contact => ({ id: contact.id, noiseKey: contact.noiseKey, signingKey: contact.signingKey })) });
+        }, randomBytes, { ...await gossipArchive(() => bitchatSessionStore.setState({ error: true })), pins: contactsStore.getState().contacts.filter(contact => contact.verified).map(contact => ({ id: contact.id, noiseKey: contact.noiseKey, signingKey: contact.signingKey })) });
         await this.replayGroups();
         this.session.setCapabilities(9);
         await this.session.start();
@@ -549,10 +560,12 @@ class BitchatService {
   }
   async importContact(link: string) {
     const qr = verifyLink(link);
-    this.session?.pin(qr.id, qr.noiseKeyHex, qr.signKeyHex);
+    const session = this.session;
+    const online = session && bitchatSessionStore.getState().peers.some(peer => peer.id === qr.id && peer.lastSeen > 0);
+    if (online) await session.verifyContact(qr.id, qr.noiseKeyHex, qr.signKeyHex);
     const contact = await contactsService.importVerification(link);
-    if (this.session && bitchatSessionStore.getState().peers.some(peer => peer.id === contact.id && peer.lastSeen > 0)) {
-      await this.session.verifyContact(contact.id, contact.noiseKey, contact.signingKey);
+    if (online && session === this.session) {
+      session.pin(qr.id, qr.noiseKeyHex, qr.signKeyHex);
       // Preserve concurrent preference changes made while waiting for the response.
       const current = contactsService.get(contact.id);
       if (current?.noiseKey === contact.noiseKey && current.signingKey === contact.signingKey) await contactsService.save({ ...current, verified: true });
@@ -573,8 +586,8 @@ class BitchatService {
       const id = await platform.deviceCrypto.randomUUID();
       if (bitchatSessionStore.getState().peers.some(p => p.id === peer && p.lastSeen > 0 && Date.now() - p.lastSeen < 60000)) await session.sendPrivate(peer, content, id);
       else {
-        if (!this.mailbox || !this.internetConnections || !contact.npub) return;
-        const target = decodeNpub(contact.npub); if (target.type !== 'npub') return;
+        if (!this.mailbox || !this.internetConnections || !contact.noiseBoundNpub) return;
+        const target = decodeNpub(contact.noiseBoundNpub); if (target.type !== 'npub') return;
         await this.mailbox.send(target.data, { kind: 'message', id, content, senderId: session.id, recipientId: peer, timestamp: Date.now() }, session.id, peer);
       }
       const current = contactsService.get(peer);
@@ -586,14 +599,19 @@ class BitchatService {
     await contactsService.upsert(peer, current => ({ ...(current ?? contact), favorite, saved: favorite || current?.saved, mutual: favorite && !!current?.theirFavorite, pendingFavorite: favorite }));
     await this.sendFavoriteNotice(peer);
   }
-  private async favoriteNotification(peer: string, content: string): Promise<boolean> {
+  private async favoriteNotification(peer: string, content: string, internetSender?: string): Promise<boolean> {
     const favorite = content.startsWith('[FAVORITED]:'), unfavorite = content.startsWith('[UNFAVORITED]:');
     if (!favorite && !unfavorite) return false;
     const npub = content.slice(content.indexOf(':') + 1), decoded = decodeNpub(npub);
     if (decoded.type !== 'npub') throw new Error('Invalid favorite identity');
+    if (internetSender !== undefined && decoded.data !== internetSender) return true;
     await historyOperation(async () => {});
     const contact = contactsService.get(peer); if (!contact) return true;
-    await contactsService.upsert(peer, current => ({ ...(current ?? contact), npub, theirFavorite: favorite, mutual: !!current?.favorite && favorite }));
+    await contactsService.upsert(peer, current => {
+      const previous = current ?? contact;
+      if (internetSender !== undefined && previous.noiseBoundNpub !== npub) return previous;
+      return { ...previous, npub, noiseBoundNpub: npub, theirFavorite: favorite, mutual: previous.favorite && favorite };
+    });
     return true;
   }
   private async receipt(id: string, sender: string, delivery: 'sent' | 'delivered' | 'read' | 'failed') {

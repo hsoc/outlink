@@ -1,4 +1,5 @@
 /** @jest-environment node */
+import { bytesToHex } from '@noble/hashes/utils.js';
 import { ed25519, x25519 } from '@noble/curves/ed25519.js';
 import { PrekeyRuntime } from '../compatibility/prekey-runtime';
 import { decodePrekeys, sealCourier } from '../compatibility/courier';
@@ -14,9 +15,9 @@ it('persists a signed batch, assigns keys once across restart, and keeps only a 
   const f = fixture(), owner = f.owner(), sender = f.sender();
   const wire = await owner.bundle(), bundle = decodePrekeys(wire, signing); expect(bundle.prekeys).toHaveLength(8);
   await sender.ingest(wire, signing);
-  const assigned = await sender.assign(bob.noisePublicKey, 'one'); expect(assigned).toBeDefined();
-  expect(await f.sender().assign(bob.noisePublicKey, 'one')).toEqual(assigned);
-  expect((await sender.assign(bob.noisePublicKey, 'two'))?.id).not.toBe(assigned!.id);
+  const assigned = await sender.assign(bob.noisePublicKey, 'one', bytesToHex(signing)); expect(assigned).toBeDefined();
+  expect(await f.sender().assign(bob.noisePublicKey, 'one', bytesToHex(signing))).toEqual(assigned);
+  expect((await sender.assign(bob.noisePublicKey, 'two', bytesToHex(signing)))?.id).not.toBe(assigned!.id);
   const ciphertext = sealCourier(Uint8Array.of(1, 2, 3), alice, assigned!.publicKey, assigned!.id);
   expect(await owner.open(ciphertext, assigned!.id)).toMatchObject({ payload: Uint8Array.of(1, 2, 3), changed: true });
   expect((await f.owner().open(ciphertext, assigned!.id)).changed).toBe(false);
@@ -33,11 +34,21 @@ it('does not consume a prekey on invalid ciphertext and propagates secure-storag
 });
 it('serializes concurrent assignments, replenishes below low water, rejects forged/stale bundles and preserves used IDs across top-ups', async () => {
   const f = fixture(), owner = f.owner(), sender = f.sender(), wire = await owner.bundle(); await sender.ingest(wire, signing);
-  const assignments = await Promise.all(Array.from({ length: 8 }, (_, i) => sender.assign(bob.noisePublicKey, String(i))));
-  expect(new Set(assignments.map(key => key!.id)).size).toBe(8); expect(await sender.assign(bob.noisePublicKey, 'exhausted')).toBeUndefined();
+  const assignments = await Promise.all(Array.from({ length: 8 }, (_, i) => sender.assign(bob.noisePublicKey, String(i), bytesToHex(signing))));
+  expect(new Set(assignments.map(key => key!.id)).size).toBe(8); expect(await sender.assign(bob.noisePublicKey, 'exhausted', bytesToHex(signing))).toBeUndefined();
   for (const key of assignments.slice(0, 6)) await owner.open(sealCourier(Uint8Array.of(1), alice, key!.publicKey, key!.id), key!.id);
   const fresh = await owner.bundle(); expect(decodePrekeys(fresh, signing).prekeys).toHaveLength(8); await sender.ingest(fresh, signing);
-  const added = await sender.assign(bob.noisePublicKey, 'new'); expect(added!.id).toBeGreaterThan(8);
+  const added = await sender.assign(bob.noisePublicKey, 'new', bytesToHex(signing)); expect(added!.id).toBeGreaterThan(8);
   const forged = fresh.slice(); forged[forged.length - 1] ^= 1; await expect(sender.ingest(forged, signing)).rejects.toThrow();
-  f.advance(7 * 86400000 + 1000); expect(await sender.assign(bob.noisePublicKey, 'stale')).toBeUndefined();
+  f.advance(7 * 86400000 + 1000); expect(await sender.assign(bob.noisePublicKey, 'stale', bytesToHex(signing))).toBeUndefined();
+});
+
+it('rejects legacy cached prekeys signed by an attacker claiming the genuine Noise key', async () => {
+  const f = fixture(), sender = f.sender();
+  const signingSeed = new Uint8Array(32).fill(42), forgedSigner = ed25519.getPublicKey(signingSeed);
+  const forged = new PrekeyRuntime({ ...bob, signingSeed }, f.storage, f.secrets, () => 1700000000000);
+  await sender.ingest(await forged.bundle(), forgedSigner);
+  expect(await sender.assign(bob.noisePublicKey, 'private', bytesToHex(signing))).toBeUndefined();
+  expect(await sender.ingest(await f.owner().bundle(), signing)).toBe(true);
+  expect(await sender.assign(bob.noisePublicKey, 'private', bytesToHex(signing))).toBeDefined();
 });

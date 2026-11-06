@@ -118,7 +118,7 @@ export class GroupRuntime {
   }
   needsConnection(fingerprint: string): boolean {
     return [...this.entries.values()].some(entry => entry.status !== 'left' && (entry.state.creator === fingerprint ||
-      entry.state.creator === this.self.fingerprint && (entry.state.members.some(m => m.fingerprint === fingerprint) || entry.revoked?.includes(fingerprint))));
+      entry.state.creator === this.self.fingerprint && entry.state.members.some(m => m.fingerprint === fingerprint)));
   }
   disconnected(peer: string) { for (const key of this.sent.keys()) if (key.startsWith(peer + ':')) this.sent.delete(key); }
   sync(peer: BitchatPeer): Promise<void> {
@@ -140,7 +140,7 @@ export class GroupRuntime {
       if (entry.status !== 'joined' || entry.state.creator !== this.self.fingerprint || !entry.revoked?.includes(peer.fingerprint)) continue;
       // A removal notice carries a separate dummy key, never the current group key.
       const dummy = bytesToHex(sha256(new TextEncoder().encode(`outlink/group-removal/${entry.state.key}/${peer.fingerprint}`)));
-      const data = encodeGroupState({ ...entry.state, key: dummy }, this.identity.signingSeed), token = bytesToHex(sha256(data)), key = `${peer.id}:removed:${entry.state.id}`;
+      const data = encodeGroupState({ ...entry.state, key: dummy, members: entry.state.members.filter(member => member.fingerprint === entry.state.creator) }, this.identity.signingSeed), token = bytesToHex(sha256(data)), key = `${peer.id}:removed:${entry.state.id}`;
       if (this.sent.get(key)?.token === token && Date.now() - this.sent.get(key)!.at < 60000) continue;
       await this.io.state(peer.id, data, false); if (!this.stopped) this.sent.set(key, { token, at: Date.now() });
     }

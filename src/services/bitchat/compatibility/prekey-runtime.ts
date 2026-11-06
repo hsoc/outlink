@@ -67,21 +67,21 @@ export class PrekeyRuntime {
     return this.serial(async () => {
       const bundle = decodePrekeys(wire, signing), owner = bytesToHex(bundle.owner);
       if (bundle.generatedAt > this.now() + 60000 || this.now() - bundle.generatedAt > 7 * 86400000) return false;
-      const previous = await this.storage.get<RemoteBundle>('prekey-bundles', owner);
-      if (previous && previous.signing !== bytesToHex(signing)) throw new Error('Prekey signer changed');
+      const cached = await this.storage.get<RemoteBundle>('prekey-bundles', owner);
+      const previous = cached?.signing === bytesToHex(signing) ? cached : null;
       if (previous && previous.at >= bundle.generatedAt) return false;
       const ids = new Set(bundle.prekeys.map(key => key.id));
       const entry: RemoteBundle = { owner, signing: bytesToHex(signing), wire: base64.encode(wire), at: bundle.generatedAt,
         used: (previous?.used ?? []).filter(id => ids.has(id)), assignments: Object.fromEntries(Object.entries(previous?.assignments ?? {}).filter(([, id]) => ids.has(id))) };
       const all = await this.storage.list<RemoteBundle>('prekey-bundles', 200);
-      if (!previous && all.length >= 200) { const oldest = all.sort((a, b) => a.at - b.at)[0]; await this.storage.remove('prekey-bundles', oldest.owner); }
+      if (!cached && all.length >= 200) { const oldest = all.sort((a, b) => a.at - b.at)[0]; await this.storage.remove('prekey-bundles', oldest.owner); }
       await this.storage.put('prekey-bundles', owner, entry); return true;
     });
   }
-  assign(owner: Uint8Array, message: string): Promise<PrekeyBundle['prekeys'][number] | undefined> {
+  assign(owner: Uint8Array, message: string, signing: string): Promise<PrekeyBundle['prekeys'][number] | undefined> {
     return this.serial(async () => {
       const id = bytesToHex(owner), saved = await this.storage.get<RemoteBundle>('prekey-bundles', id);
-      if (!saved || this.now() - saved.at > 7 * 86400000 || saved.at > this.now() + 60000) return;
+      if (!saved || saved.signing !== signing || this.now() - saved.at > 7 * 86400000 || saved.at > this.now() + 60000) return;
       const bundle = decodePrekeys(base64.decode(saved.wire), hexToBytes(saved.signing));
       const assigned = saved.assignments[message]; if (assigned !== undefined) return bundle.prekeys.find(key => key.id === assigned);
       const next = bundle.prekeys.filter(key => !saved.used.includes(key.id)).sort((a, b) => a.id - b.id)[0]; if (!next) return;

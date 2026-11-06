@@ -44,10 +44,10 @@ export class CourierRuntime {
       for (const entry of await this.entries()) {
         const envelope = decodeCourier(base64.decode(entry.wire)), recipient = tags.has(bytesToHex(envelope.tag));
         if (recipient) {
-          if (!direct && entry.lastRemote !== undefined && this.now() - entry.lastRemote < 600000) continue;
+          if (entry.lastRemote !== undefined && this.now() - entry.lastRemote < 600000) continue;
           try { await send(envelope); } catch { continue; }
-          if (direct) await this.storage.remove('courier', entry.id);
-          else { entry.lastRemote = this.now(); await this.storage.put('courier', entry.id, entry); }
+          // Link acceptance is not an authenticated delivery receipt.
+          entry.lastRemote = this.now(); await this.storage.put('courier', entry.id, entry);
         } else if (direct && tier && envelope.copies > 1 && entry.depositor !== peer && !entry.sprayed.includes(peer)) {
           const copies = Math.floor(envelope.copies / 2);
           // Reserve budget durably before transmission: a crash may lose a copy, never mint extra copies.

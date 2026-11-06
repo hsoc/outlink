@@ -6,7 +6,7 @@ import { peerId } from '../bitchat-wire';
 import { putRecord, readRecords, removeRecord } from './storage';
 import { verifyLink } from './verification';
 export type Contact = { id: string; noiseKey: string; signingKey: string; fingerprint: string; name: string;
-  saved?: boolean; expiresAt?: number; favorite: boolean; verified: boolean; blocked: boolean; mutual: boolean; theirFavorite?: boolean; pendingFavorite?: boolean; npub?: string; updatedAt: number };
+  saved?: boolean; expiresAt?: number; favorite: boolean; verified: boolean; blocked: boolean; mutual: boolean; theirFavorite?: boolean; pendingFavorite?: boolean; npub?: string; noiseBoundNpub?: string; updatedAt: number };
 export const contactsStore = createStore<{ contacts: Contact[]; ready: boolean }>(() => ({ contacts: [], ready: false }));
 export const DISCOVERY_LIFETIME_MS = 24 * 60 * 60 * 1000;
 export const isSavedContact = (contact: Contact) => contact.saved === true || contact.favorite || contact.verified || contact.blocked;
@@ -65,8 +65,8 @@ export const contactsService = {
     const qr = verifyLink(link);
     if (qr.npub && decode(qr.npub).type !== 'npub') throw new Error('Invalid Nostr identity');
     await this.upsert(qr.id, previous => ({ ...previous, id: qr.id, saved: true, noiseKey: qr.noiseKeyHex, signingKey: qr.signKeyHex,
-      fingerprint: qr.fingerprint, name: qr.nickname, favorite: previous?.favorite ?? true, verified: previous?.verified === true && previous.signingKey === qr.signKeyHex,
-      blocked: previous?.blocked ?? false, mutual: previous?.mutual ?? false, npub: qr.npub ?? previous?.npub, updatedAt: Date.now() }));
+      fingerprint: qr.fingerprint, name: qr.nickname, favorite: previous?.favorite ?? false, verified: previous?.verified === true && previous.signingKey === qr.signKeyHex,
+      blocked: previous?.blocked ?? false, mutual: previous?.mutual ?? false, npub: previous?.npub, updatedAt: Date.now() }));
     return this.get(qr.id)!;
   },
   async remove(id: string) {

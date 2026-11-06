@@ -13,6 +13,8 @@ offline retained contact enters the encrypted outbox. Temporary discovery identi
 are retained for pending delivery without turning them into permanently saved
 contacts; see [contact retention](contact-retention.md). Outlink first tries live
 Bluetooth, then optional favorite internet delivery, then sealed courier mail.
+A contact’s internet address is usable only after it was shared in a live Noise
+private message. Existing addresses stored before this check need a fresh exchange.
 Nearby eligible carriers are authenticated before a deposit. They can deliver
 later when the sender is absent. Leaving/backgrounding preserves queued and
 carried mail; cold launch still waits for Join before opening transports.
@@ -81,8 +83,9 @@ are retained. Exhausting that grace quota fails closed rather than discarding
 unexpired keys. Forward-secrecy benefits begin when the private key is deleted.
 
 Public bundles require matching owner/sender Noise identity and valid inner and
-outer Ed25519 signatures against the announce-bound key. A bounded pending cache
-handles bundles racing announcements. The sender remembers used IDs and per-message
+outer Ed25519 signatures against the signing key bound by encrypted Noise state.
+Sealing also checks the cached signer against the bound identity. Unbound peers
+use static-key sealing, and old queued seals are rebuilt before retry. The sender remembers used IDs and per-message
 assignments across restart. Newer bundles preserve assignments still offered;
 older generations cannot replace them. The cache holds 200 owners; sealing uses
 bundles no older than seven days. Gossip serves at most 200 latest owner bundles
@@ -108,8 +111,8 @@ remaining budget to a newly encountered eligible carrier, excluding the deposito
 and recipient. Spent budget and spray identities persist. Budget is reserved
 before a potentially ambiguous radio write: a crash may lose a copy but cannot
 mint extra copies. Replaying an original deposit cannot replenish a sprayed
-budget. Direct authenticated recipient handover removes an accepted copy;
-remote handover retains it and is throttled for ten minutes. Local expiry and
+budget. Both direct and remote recipient handover retain the carried copy and throttle
+resends for ten minutes. A radio write does not prove recipient delivery. Local expiry and
 quotas prune mail independently of conversation history.
 
 ## Public carriers and relay mailboxes

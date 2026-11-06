@@ -320,3 +320,15 @@ test('explicit history clearing compacts free pages while preserving protected m
     for (const scope of ['cashu-transfers', 'outbox:peer', 'contacts']) assert.equal(await adapter.records.get(scope, 'protected'), 'retain this record');
   } finally { adapter.close(); f.cleanup(); }
 });
+
+test('explicit wipe recovers a database whose encryption key was already lost', async () => {
+  const f = fixture(); let adapter = f.open();
+  try {
+    await adapter.history.save('mesh', 'old', '{"content":"old ciphertext"}');
+    adapter.close(); f.keys.clear(); adapter = f.open();
+    await assert.rejects(adapter.history.load('mesh'), /key is unavailable/);
+    await adapter.wipe();
+    assert.equal(f.keys.size, 0);
+    assert.deepEqual(Array.from(await adapter.history.load('mesh')), []);
+  } finally { adapter.close(); f.cleanup(); }
+});

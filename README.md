@@ -28,7 +28,8 @@ remote push delivery or file transfer. Android offers an optional ongoing-notifi
 mode to retain a joined Bluetooth mesh and open relay connections in the background.
 It is off by default; iOS and internet-only sessions pause and reconnect on return.
 See [background connectivity](docs/protocols/background-connectivity.md). Messages, drafts,
-and channel selections survive restarts; Settings offers explicit local-history deletion.
+and channel selections survive restarts. Chat history expires after six hours
+and can be cleared sooner in Settings.
 Ephemeral Nostr events do not guarantee historical message retrieval.
 
 Tap **@Nickname** beside the app icon, or open **Settings → Nickname → Save**.

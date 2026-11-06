@@ -10,7 +10,7 @@ import { bytes } from '@/services/bitchat/bitchat-wire';
 import { migrationProof, validMigration } from './identity-migration';
 import type { ChannelIdentitySet } from './channel-identities';
 type Ack = { peer: string; own?: string; id: string; status: 'delivered' | 'read'; expires: number };
-export type GeoThread = { peer: string; head: string; keys: string[]; local: string; migrationAt?: number; retired?: { key: string; expires: number }[] };
+export type GeoThread = { peer: string; head: string; keys: string[]; local: string; initiated?: boolean; migrationAt?: number; retired?: { key: string; expires: number }[] };
 type Notice = { root: string; own: string; target: string; payload: RotationPayload; expires: number; lastAttempt: number; attempts: number };
 export type PrivateDependencies = {
   records: ProtocolStorage; outbox: OutboxStorage; hash?: string; legacyPubkey?: string;
@@ -64,7 +64,7 @@ export class GeoPrivateSession {
   private async loadRoster(): Promise<GeoThread[]> {
     const records = await this.deps.records.list<Partial<GeoThread> & { peer: string }>('geo-peers', 100);
     const result: GeoThread[] = records.map(entry => {
-      const thread: GeoThread = { peer: entry.peer, head: entry.head ?? entry.peer, keys: entry.keys ?? [entry.peer], local: entry.local ?? this.deps.legacyPubkey ?? this.pubkey, migrationAt: entry.migrationAt, retired: entry.retired ?? [] };
+      const thread: GeoThread = { peer: entry.peer, head: entry.head ?? entry.peer, keys: entry.keys ?? [entry.peer], local: entry.local ?? this.deps.legacyPubkey ?? this.pubkey, initiated: entry.initiated === true, migrationAt: entry.migrationAt, retired: entry.retired ?? [] };
       if (!publicKey(thread.peer) || !publicKey(thread.head) || !publicKey(thread.local) || !Array.isArray(thread.keys) || thread.keys.length > 4 || !thread.keys.every(publicKey) || !thread.keys.includes(thread.head)) throw new Error('Invalid private conversation');
       if (!Array.isArray(thread.retired) || thread.retired.length > 3 || thread.retired.some(e => !publicKey(e.key) || !Number.isSafeInteger(e.expires))) throw new Error('Invalid remote grace identities');
       return thread;
@@ -113,7 +113,10 @@ export class GeoPrivateSession {
     if (!thread || !this.hasOwn(thread.local)) throw new Error('Private identity expired; recover the conversation explicitly');
     const message: BitchatMessage = { id: bytesToHex(randomBytes(16)), peer: thread.local, recipient: thread.head, channelThread: thread.peer,
       name: name === undefined ? thread.local.slice(0, 8) : validateNickname(name), content, timestamp: Date.now(), outgoing: true, delivery: 'queued' };
-    await this.outbox.enqueue(thread.peer, message); await this.pending;
+    await this.outbox.enqueue(thread.peer, message);
+    await this.serial(async () => {
+      if (!thread.initiated) await this.saveThread(thread, { ...thread, initiated: true });
+    });
     if (!this.stopped) void this.flush().catch(this.deps.error);
   }
   private async ack(peer: string, own: string, id: string, status: 'delivered' | 'read') {
@@ -168,7 +171,7 @@ export class GeoPrivateSession {
   private async prepareMigrations() {
     if (!this.deps.hash) return;
     for (const thread of await this.roster()) {
-      if (thread.local === this.pubkey || !this.hasOwn(thread.local)) continue;
+      if (!thread.initiated || this.deps.blocked?.(thread.head, thread.keys) || thread.local === this.pubkey || !this.hasOwn(thread.local)) continue;
       const existing = await this.deps.records.get<Notice>('geo-migrations', `proof:${thread.peer}`);
       if (existing?.payload.kind === 'rotation' && existing.payload.proof.pubkey === this.pubkey && existing.own === thread.local && existing.expires > Date.now()) {
         if (existing.target !== thread.head) await this.deps.records.put('geo-migrations', `proof:${thread.peer}`, { ...existing, target: thread.head, lastAttempt: 0 });
@@ -234,7 +237,8 @@ export class GeoPrivateSession {
     for (const notice of await this.deps.records.list<Notice>('geo-migrations', 200)) {
       if (this.stopped) return;
       const key = `${notice.payload.kind === 'rotation' ? 'proof' : 'ack'}:${notice.root}`;
-      if (notice.expires <= Date.now()) {
+      if (notice.expires <= Date.now() || notice.payload.kind === 'rotation' &&
+          !this.threads?.some(thread => thread.peer === notice.root && thread.initiated && !this.deps.blocked?.(thread.head, thread.keys))) {
         await this.serial(async () => { const current = await this.deps.records.get<Notice>('geo-migrations', key); if (current?.payload.id === notice.payload.id) await this.deps.records.remove('geo-migrations', key); });
         continue;
       }
@@ -245,7 +249,7 @@ export class GeoPrivateSession {
         if (!current || current.payload.id !== notice.payload.id) return false;
         await this.deps.records.put('geo-migrations', key, { ...current, attempts: current.attempts + 1, lastAttempt: Date.now() }); return true;
       });
-      if (!reserved || this.stopped) continue;
+      if (!reserved || this.stopped || this.deps.blocked?.(notice.target)) continue;
       await this.mailbox.sendFrom(notice.own, notice.target, { ...notice.payload, timestamp: Date.now() });
       if (notice.payload.kind === 'rotation-ack') await this.serial(async () => {
         const current = await this.deps.records.get<Notice>('geo-migrations', key);

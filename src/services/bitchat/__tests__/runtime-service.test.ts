@@ -10,6 +10,7 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import { saveNickname } from '@/services/preferences/nickname';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { bitchatService, bitchatSessionStore, meshGroupsStore } from '../bitchat.service';
+import { verificationLink } from '../compatibility/verification';
 import { contactsService, contactsStore } from '../compatibility/contacts';
 import { memoryStorage } from '../test-support/protocol-storage';
 import { BitchatSession } from '../bitchat-session';
@@ -112,7 +113,7 @@ it('opens courier mail durably, deduplicates copies, queues a receipt, and rejec
 
 it('persists mesh-favorite internet receipts across a failed relay write and sends offline favorite notices', async () => {
   const peer = peerId(recipientKey), npubKey = getPublicKey(new Uint8Array(32).fill(2));
-  await contactsService.upsert(peer, previous => ({ ...previous!, npub: npubEncode(npubKey) }));
+  await contactsService.upsert(peer, previous => ({ ...previous!, npub: npubEncode(npubKey), noiseBoundNpub: npubEncode(npubKey) }));
   await bitchatService.start(root, 'Alice'); await bitchatService.enableInternet(true);
   const mailbox = jest.mocked(PrivateMailbox).mock.results.at(-1)!.value as { callbacks: { message(sender: string, payload: InternetPayload): Promise<void> }; send: jest.Mock };
   mailbox.send.mockRejectedValueOnce(new Error('relay rejected'));
@@ -241,4 +242,25 @@ it('expands actions before mesh public send and private outbox persistence, enfo
   await bitchatService.send('/me waves', peerId(recipientKey));
   expect(bitchatSessionStore.getState().messages.find(m => m.id === 'outgoing-one')?.content).toBe('* Bob waves *');
   await expect(bitchatService.send('/me ' + 'x'.repeat(248))).rejects.toThrow('255');
+});
+
+
+it('ignores a legacy contact Nostr key until it is shared over live Noise', async () => {
+  const peer = peerId(recipientKey), key = getPublicKey(new Uint8Array(32).fill(42));
+  await contactsService.upsert(peer, previous => ({ ...previous!, npub: npubEncode(key) }));
+  await bitchatService.start(root, 'Alice'); await bitchatService.enableInternet(true);
+  const mailbox = jest.mocked(PrivateMailbox).mock.results.at(-1)!.value;
+  await mailbox.callbacks.message(key, { kind: 'message', id: 'forged', content: 'impersonation', senderId: peer, recipientId: session().id, timestamp: Date.now() });
+  expect(history.has('mesh:forged' + peer)).toBe(false);
+  await bitchatService.send('private', peer);
+  expect(mailbox.send).not.toHaveBeenCalled();
+});
+
+it('does not grant internet routing or a verified pin to an offline QR import', async () => {
+  const peer = peerId(recipientKey), key = npubEncode(getPublicKey(new Uint8Array(32).fill(42)));
+  await contactsService.remove(peer);
+  const contact = await bitchatService.importContact(verificationLink(recipientSeed, new Uint8Array(32).fill(42), 'Bob', key));
+  expect(contact).toMatchObject({ id: peer, saved: true, favorite: false, verified: false });
+  expect(contact.npub).toBeUndefined();
+  expect(contact.noiseBoundNpub).toBeUndefined();
 });

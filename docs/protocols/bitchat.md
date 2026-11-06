@@ -170,6 +170,8 @@ Reserved session replacement and encrypted capability updates are detailed in
 [connection lifecycle](connection-and-internet.md). Their sender
 must match the outgoing message's intended recipient before updating its status.
 Private message IDs are deduplicated separately from outer encrypted packets.
+Incoming live DMs use local receipt time because the outer timestamp is not
+authenticated. Delivery receipts follow successful local acceptance.
 Unknown private payload types are ignored. Group controls use `0x06`/`0x07` and
 group broadcasts use `0x25`, with capability bit 3 advertised only with the full
 runtime. Files/voice payloads are not advertised or accepted.
@@ -217,7 +219,7 @@ handshakes, 128 queued inbound packets, 128 scheduled relays, and 64 inbound
 frames per second per admitted link. Outbound link writes are paced to 48 frames
 per rolling second; stop/disconnect cancels waiting writes. Losing an authenticated
 peer's ingress invalidates its ephemeral cipher until a fresh handshake. Invalid inbound radio traffic is discarded
-without injecting it into the user timeline. Local history persists until explicitly deleted in Settings. The visible
+without injecting it into the user timeline. Local chat history expires after six hours and can be cleared sooner in Settings. The visible
 timeline is bounded to 512 messages; older records are loaded in indexed
 200-message pages. Closing a room releases transport/session keys without
 deleting its history.

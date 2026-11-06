@@ -232,13 +232,22 @@ export function createEncryptedStorage(
     },
   };
   async function wipe() {
-    const { db, cipher } = await get();
-    await db.withExclusiveTransactionAsync(async tx => {
-      await tx.execAsync('PRAGMA secure_delete = ON; DELETE FROM encrypted_messages; DELETE FROM protected_records; DELETE FROM private_preferences; DELETE FROM local_meta;');
-    });
-    await db.execAsync('PRAGMA wal_checkpoint(TRUNCATE); VACUUM; PRAGMA wal_checkpoint(TRUNCATE);');
+    const active = await initialized?.catch(() => undefined);
     await secrets.deleteItem(KEY);
-    cipher.destroy(); await db.closeAsync(); initialized = undefined;
+    active?.cipher.destroy();
+    initialized = undefined;
+    const db = active?.db ?? await open();
+    try {
+      await db.withExclusiveTransactionAsync(async tx => {
+        await tx.execAsync(`PRAGMA secure_delete = ON;
+          DROP TABLE IF EXISTS messages;
+          DROP TABLE IF EXISTS encrypted_messages;
+          DROP TABLE IF EXISTS protected_records;
+          DROP TABLE IF EXISTS private_preferences;
+          DROP TABLE IF EXISTS local_meta;`);
+      });
+      await db.execAsync('PRAGMA wal_checkpoint(TRUNCATE); VACUUM; PRAGMA wal_checkpoint(TRUNCATE);');
+    } finally { await db.closeAsync(); }
   }
   return { history, preferences, records, wipe };
 }

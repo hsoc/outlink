@@ -42,6 +42,7 @@ it('rotates keys on removal, never sends the new key to the removed peer, and ca
   expect(b.io.changed.mock.calls.at(-1)![0]).toEqual([]);
   await a.runtime.sync(c.peer); const current = decodeGroupState(a.io.state.mock.calls.at(-1)![1]);
   expect(decodeGroupState(removal).key).not.toBe(current.key);
+  expect(decodeGroupState(removal).members.map(member => member.fingerprint)).toEqual([a.peer.fingerprint]);
   expect(current.epoch).toBeGreaterThan(decodeGroupState(original).epoch);
   await expect(b.runtime.receiveState(a.peer, original, true)).rejects.toThrow('rollback');
   await expect(b.runtime.send(id, 'Bob', 'stale')).rejects.toThrow();

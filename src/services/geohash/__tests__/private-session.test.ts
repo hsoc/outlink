@@ -115,15 +115,17 @@ it('authenticates migration privately and preserves conversation roots when both
   const hub = relay(), a = client(1, hub, storage(), true), b = client(2, hub, storage(), true);
   const oldA = a.session.pubkey, oldB = b.session.pubkey;
   await a.session.send(oldB, 'established thread'); await until(() => b.history.size === 1 && a.pending.size === 0);
+  await b.session.send(oldA, 'reply'); await until(() => a.history.size === 2 && b.pending.size === 0);
   await Promise.all([a.session.replaceIdentities(identitySet(4, [1])), b.session.replaceIdentities(identitySet(5, [2]))]);
   await until(async () => (await a.records.get<{ local: string }>('geo-peers', oldB))?.local === a.session.pubkey && (await b.records.get<{ local: string }>('geo-peers', oldA))?.local === b.session.pubkey);
   // Drive coalesced control work without waiting for the periodic maintenance interval.
   for (let i = 0; i < 3; i++) { await Promise.all([a.session.flush(), b.session.flush()]); await new Promise(resolve => setTimeout(resolve, 10)); }
   expect(await a.records.get('geo-peers', oldB)).toMatchObject({ peer: oldB, head: b.session.pubkey, local: a.session.pubkey });
   expect(await b.records.get('geo-peers', oldA)).toMatchObject({ peer: oldA, head: a.session.pubkey, local: b.session.pubkey });
-  await a.session.send(oldB, 'after rotation'); await until(() => b.history.size === 2 && a.pending.size === 0);
-  expect([...b.history.values()].map(m => m.channelThread)).toEqual([oldA, oldA]);
-  expect([...b.history.values()][1]).toMatchObject({ peer: a.session.pubkey, recipient: b.session.pubkey });
+  await a.session.send(oldB, 'after rotation'); await until(() => b.history.size === 3 && a.pending.size === 0);
+  const incoming = [...b.history.values()].filter(message => !message.outgoing);
+  expect(incoming.map(m => m.channelThread)).toEqual([oldA, oldA]);
+  expect(incoming[1]).toMatchObject({ peer: a.session.pubkey, recipient: b.session.pubkey });
   expect(hub.events.every(event => event.kind === 1059)).toBe(true);
   expect(JSON.stringify(hub.events)).not.toContain('outlink/channel-rotation/v1');
 });
@@ -224,4 +226,14 @@ it('discards blocked private senders before saving or alerting, including proven
   await a.session.send(b.session.pubkey, 'blocked');
   await until(() => blocked.mock.calls.length > 0);
   expect(b.history.size).toBe(0); expect(b.deps.received).not.toHaveBeenCalled();
+});
+
+it('does not send local rotation proofs to unsolicited private senders', async () => {
+  const hub = relay(), a = client(1, hub, storage(), true), b = client(2, hub, storage(), true);
+  const oldA = a.session.pubkey, oldB = b.session.pubkey;
+  await b.session.send(oldA, 'unsolicited'); await until(() => a.history.size === 1 && b.pending.size === 0);
+  await a.session.replaceIdentities(identitySet(4, [1]));
+  await a.session.flush();
+  expect(await a.records.get('geo-migrations', `proof:${oldB}`)).toBeNull();
+  expect(await b.records.get('geo-peers', oldA)).toMatchObject({ head: oldA });
 });

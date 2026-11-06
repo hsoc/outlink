@@ -49,7 +49,8 @@ actual sender and recipient keys used on the wire, plus their conversation root.
 Older history does not need to be scanned or rewritten at rotation.
 
 Before sending under a new local key, Outlink sends an encrypted migration proof
-from the old identity to an existing private peer. The peer verifies both old-key
+from the old identity only to peers the local user has messaged. Incoming-only
+threads and legacy threads without a recorded local send do not get proofs. The peer verifies both old-key
 authentication and new-key possession, then acknowledges to the new inbox using
 an identity the sender already knows. Only that authenticated acknowledgment
 switches the sender's local identity for that conversation. A known peer directly

@@ -3,7 +3,9 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { signAndroid, signAndroidBundle, signingMode } from './release-signing.mjs';
 function run(command,args,cwd=process.cwd()) {
-  const result=spawnSync(command,args,{cwd,env:{...process.env,EXPO_PUBLIC_APP_ENV:'production'},stdio:'inherit'});
+  const env = { ...process.env, EXPO_PUBLIC_APP_ENV: 'production' };
+  for (const key of ['ANDROID_KEYSTORE_BASE64', 'ANDROID_KEYSTORE_PASSWORD', 'ANDROID_KEY_ALIAS', 'ANDROID_KEY_PASSWORD']) delete env[key];
+  const result=spawnSync(command,args,{cwd,env,stdio:'inherit'});
   if(result.error||result.status!==0)throw new Error(`Android build failed: ${command}`);
 }
 const signing=signingMode('android');
