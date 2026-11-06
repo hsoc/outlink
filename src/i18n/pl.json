@@ -24,7 +24,6 @@
     "title": "Bitchat",
     "default_name": "Outlink",
     "description": "Rozmawiaj przez Bluetooth z pobliskimi użytkownikami Bitchat bez połączenia z internetem.",
-    "privacy": "Po dołączeniu Twoja nazwa i tożsamość urządzenia będą widoczne dla pobliskich użytkowników. Czaty Nearby są wstrzymane, gdy ten pokój jest otwarty. Wiadomości znikają po wyjściu.",
     "name": "Twoja publiczna nazwa",
     "join": "Dołącz do pobliskiego pokoju",
     "public": "Publiczna sieć mesh",
@@ -65,5 +64,19 @@
       "indigo": "Indygo",
       "slate": "Łupkowy"
     }
+  },
+  "mobile": {
+    "geo_privacy": "Kanały lokalizacyjne są publiczne. Operatorzy przekaźników i słuchacze widzą wiadomości, nazwy i obszar.",
+    "bridge_notice": "Publiczny czat przechodzi przez most internetowy dla tego obszaru i nie jest szyfrowany.",
+    "network_privacy": "Obie opcje są domyślnie wyłączone. Przekaźniki widzą adres IP i kod obszaru. Wiadomości prywatne są szyfrowane. W tle połączenie zwykle się wstrzymuje, chyba że Android utrzymuje połączenie z siecią mesh.",
+    "wipe_confirm": "Tożsamość, dane lokalne i zapisane tokeny Cashu zostaną trwale usunięte. Zachowaj bezpieczne kopie do czasu realizacji.",
+    "quick_erase_hint": "Trzy stuknięcia w ciągu 1,5 sekundy natychmiast usuwają tożsamość i wszystkie dane lokalne, w tym tokeny Cashu, bez potwierdzenia.",
+    "channel_rotation_hint": "Publiczna tożsamość zmienia się codziennie. Stare klucze odbierają wiadomości prywatne przez 48 godzin. Pseudonim i czas publikacji nadal mogą Cię zidentyfikować."
+  },
+  "cashu": {
+    "risk": "Każdy posiadacz kopii może wydać token. Odbiór offline nie dowodzi ważności ani nie zapobiega podwójnemu wydaniu. Zrealizuj token w zaufanym portfelu.",
+    "erase": "Zachowaj bezpieczną kopię do realizacji. Usunięcie historii zachowuje tokeny, a pełne wymazanie je usuwa. Kopie w schowku i na innych urządzeniach pozostają.",
+    "copy_warning": "Token trafi do schowka systemowego. Wklej go tylko do zaufanego portfela Cashu. Kopiowanie nie jest realizacją ani dowodem płatności.",
+    "confirm": "Przesłać {{amount}} sat przez {{mint}} do tożsamości Bluetooth {{peer}}? Nie wysyłaj tych samych dowodów z innego portfela. Dostawa może być częściowa; ponawiaj tylko dla tego odbiorcy."
   }
 }

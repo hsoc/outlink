@@ -144,3 +144,7 @@ leave/reinvitation, storage failures, command parsing, history clearing, multi-h
 Noise invitations, opaque nonmember relay, restart and group gossip backfill.
 Native builds and interoperability with official applications on physical devices
 remain unverified; physical testing was omitted by maintainer request.
+
+Outlink scopes local group identity and replay tombstones to the authenticated
+creator and the wire group ID. Existing local group history keeps its original
+identifier. The Bluetooth wire format is unchanged.

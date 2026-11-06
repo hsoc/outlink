@@ -76,7 +76,7 @@ their existing shortcut. This does not enable private/group mention notification
 Incoming Nearby DMs now surface in an **Unread Nearby messages** strip on the
 main screen, including while Location channels is selected. Tap a sender button
 to open that private conversation directly. Contacts also shows per-sender unread
-counts. These counts use received messages in the bounded loaded history window,
+counts. Nearby counts use unexpired unread messages in encrypted local history,
 not a full archive-wide count. Blocked contacts do not appear. Opening a private
 thread marks its loaded messages read only while the screen is focused and the
 app is in the foreground; background receipt and Settings do not mark them read.
@@ -105,7 +105,7 @@ opens the matching private thread in the currently loaded area, leaving any area
 edit form. The proven conversation root groups rotated sender keys together;
 expired/blocked private threads do not contribute unread indicators. Names use the
 existing private-message identity label, without assuming a public nickname is an
-authenticated private identity. Like Nearby, counts cover the bounded loaded
+authenticated private identity. Location counts cover the bounded loaded
 history window; other areas are not aggregated into a global inbox. With private
 messaging active, only a focused foreground private thread sends read receipts;
 Settings and background receipt leave messages unread. Offline history retains

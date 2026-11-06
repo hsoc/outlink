@@ -5,8 +5,10 @@ import type { BitchatIdentity, BitchatPeer } from '../bitchat-session';
 import type { ProtocolStorage } from './prekey-runtime';
 import { decodeGroupState, encodeGroupState, groupEnvelope, openGroupMessage, sealGroupMessage, validateGroup, type GroupState, type GroupMember } from './group-protocol';
 export type GroupInfo = Omit<GroupState, 'key'> & { status: 'joined' | 'invited' | 'left' };
-type Entry = { state: GroupState; status: GroupInfo['status']; revoked?: string[] };
+type Entry = { localId?: string; state: GroupState; status: GroupInfo['status']; revoked?: string[] };
 export type GroupMessage = { id: string; group: string; sender: string; name: string; content: string; timestamp: number; outgoing: boolean };
+const creatorGroupId = (state: GroupState) => `${state.creator}:${state.id}`;
+const localGroupId = (entry: Entry) => entry.localId ?? creatorGroupId(entry.state);
 type IO = {
   state(peer: string, data: Uint8Array, invite: boolean): Promise<void>;
   broadcast(data: Uint8Array): Promise<void>;
@@ -16,6 +18,8 @@ type IO = {
 /** Group mutations persist atomically before publication; no network wait holds this queue. */
 export class GroupRuntime {
   private entries = new Map<string, Entry>();
+  private readonly byWireId = new Map<string, Set<string>>();
+  private readonly byLocalId = new Map<string, string>();
   private pending: Promise<unknown> = Promise.resolve();
   private stopped = false;
   private invitationBytes = 0;
@@ -30,35 +34,47 @@ export class GroupRuntime {
     this.pending = work; return work;
   }
   idle() { return this.pending.catch(() => {}); }
-  stop() { this.stopped = true; this.entries.clear(); }
+  stop() { this.stopped = true; this.entries.clear(); this.byWireId.clear(); this.byLocalId.clear(); }
   private publish() {
-    this.io.changed([...this.entries.values()].filter(e => e.status !== 'left').map(({ state: { key: _key, ...metadata }, status }) => ({ ...metadata, status })));
+    this.io.changed([...this.entries.values()].filter(e => e.status !== 'left').map(entry => {
+      const { key: _key, ...metadata } = entry.state;
+      return { ...metadata, id: localGroupId(entry), status: entry.status };
+    }));
   }
   async restore() {
     return this.serial(async () => {
       for (const entry of await this.storage.list<Entry>('mesh-groups', Number.MAX_SAFE_INTEGER)) {
         validateGroup(entry.state);
         if (!['joined', 'invited', 'left'].includes(entry.status)) throw new Error('Invalid saved group');
-        this.entries.set(entry.state.id, entry);
+        this.index({ ...entry, localId: entry.localId ?? entry.state.id });
         if (entry.status === 'invited') this.invitationBytes += new TextEncoder().encode(JSON.stringify(entry.state)).length;
       }
       this.publish();
     });
   }
+  private index(entry: Entry) {
+    const key = creatorGroupId(entry.state);
+    this.entries.set(key, entry);
+    this.byLocalId.set(localGroupId(entry), key);
+    const ids = this.byWireId.get(entry.state.id) ?? new Set<string>();
+    ids.add(key);
+    this.byWireId.set(entry.state.id, ids);
+  }
   private async put(entry: Entry) {
-    const old = this.entries.get(entry.state.id);
+    const key = creatorGroupId(entry.state), old = this.entries.get(key);
+    entry = { ...entry, localId: old?.localId ?? localGroupId(entry) };
     const size = (value?: Entry) => value?.status === 'invited' ? new TextEncoder().encode(JSON.stringify(value.state)).length : 0;
     const invitationBytes = this.invitationBytes - size(old) + size(entry);
     if (entry.status === 'invited' && invitationBytes > 2 * 1024 * 1024) throw new Error('Pending invitation storage budget reached');
-    await this.storage.put('mesh-groups', entry.state.id, entry);
+    await this.storage.put('mesh-groups', localGroupId(entry), entry);
     this.invitationBytes = invitationBytes;
-    this.entries.set(entry.state.id, entry); this.publish();
+    this.index(entry); this.publish();
   }
   create(name: string, nickname: string) {
     return this.serial(async () => {
       const state: GroupState = { id: bytesToHex(randomBytes(16)), name: name.trim(), key: bytesToHex(randomBytes(32)), epoch: 1,
         creator: this.self.fingerprint, members: [{ ...this.self, nickname }] };
-      validateGroup(state); await this.put({ state, status: 'joined' }); return state.id;
+      validateGroup(state); await this.put({ state, status: 'joined' }); return creatorGroupId(state);
     });
   }
   accept(id: string) {
@@ -71,7 +87,8 @@ export class GroupRuntime {
       await this.put({ state: { ...entry.state, key: '00'.repeat(32) }, status: 'left' });
     });
   }
-  private get(id: string) { const entry = this.entries.get(id); if (!entry) throw new Error('Unknown group'); return entry; }
+  private get(id: string) { const entry = this.entries.get(this.byLocalId.get(id) ?? id); if (!entry) throw new Error('Unknown group'); return entry; }
+  wireId(id: string) { return this.get(id).state.id; }
   private owned(id: string) {
     const entry = this.get(id);
     if (entry.status !== 'joined' || entry.state.creator !== this.self.fingerprint) throw new Error('Only the group creator may manage members');
@@ -97,7 +114,7 @@ export class GroupRuntime {
   }
   receiveState(peer: BitchatPeer, data: Uint8Array, invite: boolean) {
     return this.serial(async () => {
-      const state = decodeGroupState(data), old = this.entries.get(state.id), creator = state.members.find(m => m.fingerprint === state.creator)!;
+      const state = decodeGroupState(data), old = this.entries.get(creatorGroupId(state)), creator = state.members.find(m => m.fingerprint === state.creator)!;
       if (!peer.authenticatedCapabilities || peer.fingerprint !== state.creator || peer.signingPublicKey !== creator.signingKey ||
           old && (old.state.creator !== state.creator || old.state.members.find(m => m.fingerprint === state.creator)?.signingKey !== creator.signingKey)) throw new Error('Group creator identity mismatch');
       if (!old && !invite) return false;
@@ -148,13 +165,18 @@ export class GroupRuntime {
 
   receiveMessage(data: Uint8Array) {
     return this.serial(async () => {
-      const envelope = groupEnvelope(data), entry = this.entries.get(envelope.id);
+      const envelope = groupEnvelope(data);
       if (envelope.ciphertext.length <= 16) throw new Error('Invalid group ciphertext');
-      if (!entry || entry.status !== 'joined' || entry.state.epoch !== envelope.epoch) return;
-      const message = openGroupMessage(entry.state, data);
-      if (message.timestamp < Date.now() - 21600000 || message.timestamp > Date.now() + 60000) throw new Error('Stale group message');
-      await this.io.message({ id: message.id, group: entry.state.id, sender: message.member.fingerprint, name: message.member.nickname,
-        content: message.content, timestamp: message.timestamp, outgoing: message.member.fingerprint === this.self.fingerprint });
+      for (const key of this.byWireId.get(envelope.id) ?? []) {
+        const entry = this.entries.get(key);
+        if (!entry || entry.status !== 'joined' || entry.state.epoch !== envelope.epoch) continue;
+        let message: ReturnType<typeof openGroupMessage>;
+        try { message = openGroupMessage(entry.state, data); } catch { continue; }
+        if (message.timestamp < Date.now() - 21600000 || message.timestamp > Date.now() + 60000) throw new Error('Stale group message');
+        await this.io.message({ id: message.id, group: localGroupId(entry), sender: message.member.fingerprint, name: message.member.nickname,
+          content: message.content, timestamp: message.timestamp, outgoing: message.member.fingerprint === this.self.fingerprint });
+        return;
+      }
     });
   }
   async send(id: string, name: string, content: string) {
@@ -162,7 +184,7 @@ export class GroupRuntime {
       const entry = this.get(id); if (entry.status !== 'joined') throw new Error('Not a group member');
       const timestamp = Date.now(), messageId = bytesToHex(randomBytes(16));
       return { data: sealGroupMessage(entry.state, this.identity.signingSeed, name, content, messageId, timestamp),
-        message: { id: messageId, group: id, sender: this.self.fingerprint, name, content, timestamp, outgoing: true } };
+        message: { id: messageId, group: localGroupId(entry), sender: this.self.fingerprint, name, content, timestamp, outgoing: true } };
     });
     if (this.stopped) throw new Error('Groups stopped');
     await this.io.broadcast(prepared.data);

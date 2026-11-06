@@ -9,9 +9,13 @@ export interface ProtocolStorage {
   put(scope: string, id: string, value: unknown): Promise<void>;
   remove(scope: string, id: string): Promise<void>;
 }
-type PrivateRecord = { id: number; seed: string; created: number; consumed?: number };
+type PrivateRecord = { id: number; seed: string; created: number; consumed?: number; sender?: string };
 type PrivateState = { next: number; generated: number; records: PrivateRecord[] };
 type RemoteBundle = { owner: string; wire: string; signing: string; used: number[]; assignments: Record<string, number>; at: number };
+const DAY = 86400000;
+const BUNDLE_MAX_AGE = 7 * DAY;
+const PREKEY_GRACE = 8 * DAY + 120000;
+const GRACE_CAPACITY = 256;
 /** Serialized secure-key updates commit before publication, consumption or delivery. */
 export class PrekeyRuntime {
   private pending = Promise.resolve();
@@ -27,22 +31,25 @@ export class PrekeyRuntime {
   }
   private maintain(state: PrivateState): boolean {
     const now = this.now(), old = state.records.length;
-    state.records = state.records.filter(record => record.consumed === undefined ? now - record.created < 30 * 86400000 : now - record.consumed < 2 * 86400000);
+    state.records = state.records.filter(record => record.consumed === undefined || now - record.consumed < PREKEY_GRACE);
     let changed = old !== state.records.length;
     const unused = state.records.filter(record => record.consumed === undefined).length;
-    if (unused < 3) for (let i = unused; i < 8; ++i) {
+    const target = Math.min(8, GRACE_CAPACITY - (state.records.length - unused));
+    if (unused < 3) for (let i = unused; i < target; ++i) {
       if (state.next > 0xffffffff) throw new Error('Prekey IDs exhausted');
       state.records.push({ id: state.next++, seed: bytesToHex(randomBytes(32)), created: now }); changed = true;
     }
-    if (changed || !state.generated) state.generated = Math.max(now, state.generated + 1);
+    if (changed || !state.generated || now - state.generated >= DAY) state.generated = Math.max(now, state.generated + 1);
     return changed;
   }
-  bundle(): Promise<Uint8Array> {
+  bundle(): Promise<Uint8Array | undefined> {
     return this.serial(async () => {
       const state = await this.state(); this.maintain(state); await this.secrets.set(JSON.stringify(state));
+      if (state.records.filter(record => record.consumed !== undefined).length >= GRACE_CAPACITY) return;
       const bundle = { owner: this.identity.noisePublicKey, generatedAt: state.generated, prekeys: state.records.filter(record => record.consumed === undefined).map(record => {
         const seed = hexToBytes(record.seed); try { return { id: record.id, publicKey: x25519.getPublicKey(seed) }; } finally { seed.fill(0); }
       }) };
+      if (!bundle.prekeys.length) return;
       return encodePrekeys({ ...bundle, signature: ed25519.sign(prekeySigningBytes(bundle), this.identity.signingSeed) });
     });
   }
@@ -55,7 +62,13 @@ export class PrekeyRuntime {
       try {
         const opened = openCourier(ciphertext, seed, id), changed = record.consumed === undefined;
         if (changed) {
-          if (state.records.filter(record => record.consumed !== undefined).length >= 256) throw new Error('Prekey grace capacity reached');
+          const sender = bytesToHex(opened.sender);
+          if (state.records.filter(record => record.sender === sender).length >= 8 ||
+              state.records.filter(record => record.consumed !== undefined).length >= GRACE_CAPACITY) {
+            opened.payload.fill(0);
+            throw new Error('Prekey grace capacity reached');
+          }
+          record.sender = sender;
           record.consumed = this.now(); state.generated = Math.max(this.now(), state.generated + 1);
           this.maintain(state); await this.secrets.set(JSON.stringify(state));
         }
@@ -66,7 +79,7 @@ export class PrekeyRuntime {
   ingest(wire: Uint8Array, signing: Uint8Array): Promise<boolean> {
     return this.serial(async () => {
       const bundle = decodePrekeys(wire, signing), owner = bytesToHex(bundle.owner);
-      if (bundle.generatedAt > this.now() + 60000 || this.now() - bundle.generatedAt > 7 * 86400000) return false;
+      if (bundle.generatedAt > this.now() + 60000 || this.now() - bundle.generatedAt > BUNDLE_MAX_AGE) return false;
       const cached = await this.storage.get<RemoteBundle>('prekey-bundles', owner);
       const previous = cached?.signing === bytesToHex(signing) ? cached : null;
       if (previous && previous.at >= bundle.generatedAt) return false;
@@ -81,10 +94,12 @@ export class PrekeyRuntime {
   assign(owner: Uint8Array, message: string, signing: string): Promise<PrekeyBundle['prekeys'][number] | undefined> {
     return this.serial(async () => {
       const id = bytesToHex(owner), saved = await this.storage.get<RemoteBundle>('prekey-bundles', id);
-      if (!saved || saved.signing !== signing || this.now() - saved.at > 7 * 86400000 || saved.at > this.now() + 60000) return;
+      if (!saved || saved.signing !== signing || this.now() - saved.at > BUNDLE_MAX_AGE || saved.at > this.now() + 60000) return;
       const bundle = decodePrekeys(base64.decode(saved.wire), hexToBytes(saved.signing));
       const assigned = saved.assignments[message]; if (assigned !== undefined) return bundle.prekeys.find(key => key.id === assigned);
-      const next = bundle.prekeys.filter(key => !saved.used.includes(key.id)).sort((a, b) => a.id - b.id)[0]; if (!next) return;
+      const available = bundle.prekeys.filter(key => !saved.used.includes(key.id));
+      if (!available.length) return;
+      const next = available[randomBytes(1)[0] % available.length];
       saved.used.push(next.id); saved.assignments[message] = next.id;
       await this.storage.put('prekey-bundles', id, saved); return next;
     });

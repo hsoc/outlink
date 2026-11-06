@@ -21,6 +21,13 @@ export function createEncryptedStorage(
     try { message = JSON.parse(value) ?? {}; } catch { /* Legacy opaque values start their local retention window at migration. */ }
     return messageDeadline(message, now());
   };
+  function meshIndex(input: string, value: string, cipher: ReturnType<typeof localCipher>) {
+    if (input !== 'mesh') return { thread: null, unread: 0 };
+    let message: { peer?: string; recipient?: string; outgoing?: boolean; delivery?: string } = {};
+    try { message = JSON.parse(value) ?? {}; } catch { /* Legacy opaque values are public. */ }
+    const peer = message.recipient && (message.outgoing ? message.recipient : message.peer);
+    return { thread: cipher.index(`mesh-thread:${peer || 'public'}`), unread: peer && !message.outgoing && message.delivery === 'delivered' ? 1 : 0 };
+  }
   let initialized: Promise<{ db: SQLiteDatabase; cipher: ReturnType<typeof localCipher> }> | undefined;
   async function initialize() {
     const db = await open();
@@ -33,6 +40,7 @@ export function createEncryptedStorage(
           value TEXT NOT NULL, UNIQUE(room, id));
         CREATE INDEX IF NOT EXISTS encrypted_room_sequence ON encrypted_messages(room, sequence);
         CREATE TABLE IF NOT EXISTS private_preferences (name TEXT PRIMARY KEY, value TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS courier_replays (sender TEXT NOT NULL, id TEXT NOT NULL, PRIMARY KEY(sender, id));
         CREATE TABLE IF NOT EXISTS protected_records (
           sequence INTEGER PRIMARY KEY AUTOINCREMENT, scope TEXT NOT NULL, id TEXT NOT NULL,
           value TEXT NOT NULL, UNIQUE(scope, id));
@@ -93,6 +101,23 @@ export function createEncryptedStorage(
         await compactLegacyPreferences();
         await db.runAsync('DELETE FROM local_meta WHERE name = ?', 'preferences-cleanup');
       }
+      if (!columns.some(column => column.name === 'mesh_thread')) await db.execAsync('ALTER TABLE encrypted_messages ADD COLUMN mesh_thread TEXT');
+      if (!columns.some(column => column.name === 'mesh_unread')) await db.execAsync('ALTER TABLE encrypted_messages ADD COLUMN mesh_unread INTEGER NOT NULL DEFAULT 0');
+      const meshRoom = activeCipher.index('room:mesh');
+      while (true) {
+        let count = 0;
+        await db.withExclusiveTransactionAsync(async tx => {
+          const rows = await tx.getAllAsync<Row>('SELECT sequence, room, id, value FROM encrypted_messages WHERE room = ? AND deleted = 0 AND mesh_thread IS NULL LIMIT 100', meshRoom);
+          for (const row of rows) {
+            const { thread, unread } = meshIndex('mesh', activeCipher.open(row.value, `message:${row.room}:${row.id}`), activeCipher);
+            await tx.runAsync('UPDATE encrypted_messages SET mesh_thread = ?, mesh_unread = ? WHERE sequence = ?', thread, unread, row.sequence);
+          }
+          count = rows.length;
+        });
+        if (!count) break;
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+      await db.execAsync('CREATE INDEX IF NOT EXISTS mesh_thread_sequence ON encrypted_messages(mesh_thread, sequence); CREATE INDEX IF NOT EXISTS mesh_unread_sequence ON encrypted_messages(mesh_thread, sequence) WHERE mesh_unread = 1 AND deleted = 0');
       const retentionColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(encrypted_messages)');
       if (!retentionColumns.some(column => column.name === 'expires_at')) await db.execAsync('ALTER TABLE encrypted_messages ADD COLUMN expires_at INTEGER');
       await db.execAsync('CREATE INDEX IF NOT EXISTS encrypted_message_expiry ON encrypted_messages(expires_at)');
@@ -137,7 +162,41 @@ export function createEncryptedStorage(
       const room = cipher.index(`room:${input}`), id = cipher.index(`id:${input}:${messageId}`);
       const deadline = deadlineFor(value);
       if (deadline <= now()) return;
-      await db.runAsync('INSERT INTO encrypted_messages(room, id, value, expires_at) VALUES (?, ?, ?, ?) ON CONFLICT(room, id) DO UPDATE SET value = excluded.value, expires_at = MIN(encrypted_messages.expires_at, excluded.expires_at) WHERE encrypted_messages.deleted = 0 AND encrypted_messages.expires_at > ?', room, id, cipher.seal(value, `message:${room}:${id}`), deadline, now());
+      const { thread, unread } = meshIndex(input, value, cipher);
+      await db.runAsync('INSERT INTO encrypted_messages(room, id, value, expires_at, mesh_thread, mesh_unread) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(room, id) DO UPDATE SET value = excluded.value, expires_at = MIN(encrypted_messages.expires_at, excluded.expires_at), mesh_thread = excluded.mesh_thread, mesh_unread = excluded.mesh_unread WHERE encrypted_messages.deleted = 0 AND encrypted_messages.expires_at > ?', room, id, cipher.seal(value, `message:${room}:${id}`), deadline, thread, unread, now());
+    },
+    async loadMeshThread(peer, before = Number.MAX_SAFE_INTEGER) {
+      const { db, cipher } = await get(), thread = cipher.index(`mesh-thread:${peer}`);
+      const rows = await db.getAllAsync<Row>('SELECT sequence, room, id, value FROM encrypted_messages WHERE mesh_thread = ? AND deleted = 0 AND sequence < ? AND expires_at > ? ORDER BY sequence DESC LIMIT 200', thread, before, now());
+      return rows.reverse().map(row => ({ sequence: row.sequence, value: cipher.open(row.value, `message:${row.room}:${row.id}`) }));
+    },
+    async meshUnread() {
+      const { db, cipher } = await get();
+      const rows = await db.getAllAsync<Row & { count: number }>(`SELECT e.sequence, e.room, e.id, e.value, summary.count
+        FROM (SELECT MAX(sequence) AS latest, COUNT(*) AS count FROM encrypted_messages
+          WHERE mesh_unread = 1 AND deleted = 0 AND expires_at > ? GROUP BY mesh_thread) summary
+        JOIN encrypted_messages e ON e.sequence = summary.latest`, now());
+      return rows.map(row => ({ count: row.count, value: cipher.open(row.value, `message:${row.room}:${row.id}`) }));
+    },
+    async acceptCourier(sender, messageId, messageIdInHistory, value) {
+      const { db, cipher } = await get();
+      const room = cipher.index('room:mesh'), id = cipher.index(`id:mesh:${messageIdInHistory}`);
+      const owner = cipher.index(`courier-sender:${sender}`), replay = cipher.index(`courier-id:${messageId}`);
+      let result: 'new' | 'duplicate' | 'rejected' = 'rejected';
+      await db.withExclusiveTransactionAsync(async tx => {
+        if (await tx.getFirstAsync('SELECT id FROM courier_replays WHERE sender = ? AND id = ?', owner, replay)) {
+          result = 'duplicate'; return;
+        }
+        const ownerCount = await tx.getFirstAsync<{ count: number }>('SELECT COUNT(*) AS count FROM courier_replays WHERE sender = ?', owner);
+        const total = await tx.getFirstAsync<{ count: number }>('SELECT MAX(rowid) AS count FROM courier_replays');
+        if ((ownerCount?.count ?? 0) >= 4096 || (total?.count ?? 0) >= 65536) return;
+        await tx.runAsync('INSERT INTO courier_replays(sender, id) VALUES (?, ?)', owner, replay);
+        const { thread, unread } = meshIndex('mesh', value, cipher);
+        const inserted = await tx.runAsync('INSERT OR IGNORE INTO encrypted_messages(room, id, value, expires_at, mesh_thread, mesh_unread) VALUES (?, ?, ?, ?, ?, ?)',
+          room, id, cipher.seal(value, `message:${room}:${id}`), deadlineFor(value), thread, unread);
+        result = inserted.changes ? 'new' : 'duplicate';
+      });
+      return result;
     },
     async deleteConversation(input, peer, pendingIds = []) {
       const { db, cipher } = await get(), room = cipher.index(`room:${input}`);
@@ -243,6 +302,7 @@ export function createEncryptedStorage(
           DROP TABLE IF EXISTS messages;
           DROP TABLE IF EXISTS encrypted_messages;
           DROP TABLE IF EXISTS protected_records;
+          DROP TABLE IF EXISTS courier_replays;
           DROP TABLE IF EXISTS private_preferences;
           DROP TABLE IF EXISTS local_meta;`);
       });

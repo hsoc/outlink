@@ -13,10 +13,15 @@ import { workspaceStore } from '@/services/history/workspace';
 import { geohashService, geohashStore } from '@/services/geohash/geohash.service';
 import { contactsStore } from './compatibility/contacts';
 import { resetMobileIdentity } from './mobile-identity';
+const WIPE_MARKER = 'outlink.wipe.pending';
 let wiping: Promise<void> | undefined;
+export async function resumePendingWipe(): Promise<void> {
+  if (await platform.secureStorage.getItem(WIPE_MARKER) !== null) await panicWipe();
+}
 export function panicWipe(): Promise<void> {
   return wiping ??= (async () => {
     invalidateSessionIntent(); conversationActivity.reset(); resetNickname(); cashuTransfers.reset();
+    await platform.secureStorage.setItem(WIPE_MARKER, '1');
     await cashuTransfers.idle();
     workspaceStore.setState({ keepBackground: false, backgroundError: false });
     // Native notification/service cleanup must not prevent transport shutdown and key deletion.
@@ -34,6 +39,7 @@ export function panicWipe(): Promise<void> {
     resetNickname(); blockedUsers.reset(); cashuTransfers.reset();
     bitchatService.resetLocalState(); geohashService.clearMessages();
     geohashStore.setState({ hash: '' }); contactsStore.setState({ contacts: [], ready: false });
+    await platform.secureStorage.deleteItem(WIPE_MARKER);
     workspaceStore.setState({ ready: true });
   })().catch(error => { bitchatSessionStore.setState({ busy: false, error: true }); throw error; }).finally(() => { wiping = undefined; });
 }

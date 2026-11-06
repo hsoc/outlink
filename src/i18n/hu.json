@@ -24,7 +24,6 @@
     "title": "Bitchat",
     "default_name": "Outlink",
     "description": "Csevegj Bluetoothon a közeli Bitchat-felhasználókkal internetkapcsolat nélkül.",
-    "privacy": "Belépéskor a neved és az eszközazonosságod láthatóvá válik a közeli felhasználóknak. A Nearby-csevegések szünetelnek, amíg ez a szoba nyitva van. A kilépés törli az üzeneteket.",
     "name": "Nyilvános neved",
     "join": "Belépés a közeli szobába",
     "public": "Nyilvános mesh",
@@ -65,5 +64,19 @@
       "indigo": "Indigó",
       "slate": "Palaszürke"
     }
+  },
+  "mobile": {
+    "geo_privacy": "A helycsatornák nyilvánosak. A reléüzemeltetők és a hallgatók láthatják az üzeneteket, neveket és a területet.",
+    "bridge_notice": "A nyilvános csevegés a terület internetes hídján halad át, és nincs titkosítva.",
+    "network_privacy": "Mindkét lehetőség alapból ki van kapcsolva. A relék látják az IP-címet és a területkódot. A privát üzenetek titkosítva maradnak. Háttérben a kapcsolat általában szünetel, kivéve bekapcsolt androidos háttérkapcsolat és csatlakozott mesh esetén.",
+    "wipe_confirm": "Az identitás, helyi adatok és mentett Cashu-tokenek végleg törlődnek. Beválásig tarts biztonságos másolatot.",
+    "quick_erase_hint": "1,5 másodpercen belül három koppintás azonnal, megerősítés nélkül törli az identitást és minden helyi adatot, a Cashu-tokeneket is.",
+    "channel_rotation_hint": "A nyilvános identitás naponta változik. A régi kulcsok 48 órán át fogadnak privát üzeneteket. A becenév és az üzenetek időzítése továbbra is azonosíthat."
+  },
+  "cashu": {
+    "risk": "A token másolatát bárki elköltheti. Az offline fogadás nem igazolja az érvényességet, és nem akadályozza meg a dupla költést. Váltsd be megbízható tárcában.",
+    "erase": "Beváltásig tarts biztonságos másolatot. A csevegési előzmények törlése megőrzi a tokeneket, a teljes törlés eltávolítja őket. A vágólapon és más eszközökön lévő példányok megmaradnak.",
+    "copy_warning": "A token a rendszer vágólapjára kerül. Csak megbízható Cashu-tárcába illeszd be. A másolás nem beváltás és nem fizetési igazolás.",
+    "confirm": "Átutalsz {{amount}} satot a(z) {{mint}} használatával a következő Bluetooth-identitásnak: {{peer}}? Ugyanazokat a bizonylatokat ne küldd másik tárcából. Az átvitel részleges lehet; csak ennél a címzettnél próbáld újra."
   }
 }

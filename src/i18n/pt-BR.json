@@ -24,7 +24,6 @@
     "title": "Bitchat",
     "default_name": "Outlink",
     "description": "Converse por Bluetooth com usuários do Bitchat próximos, sem conexão à internet.",
-    "privacy": "Ao entrar, seu nome e a identidade do dispositivo ficam visíveis para usuários próximos. As conversas Nearby pausam enquanto esta sala está aberta. As mensagens são apagadas ao sair.",
     "name": "Seu nome público",
     "join": "Entrar na sala próxima",
     "public": "Malha pública",
@@ -65,5 +64,19 @@
       "indigo": "Índigo",
       "slate": "Ardósia"
     }
+  },
+  "mobile": {
+    "geo_privacy": "Os canais de localização são públicos. Operadores de relés e ouvintes podem ver mensagens, nomes e área.",
+    "bridge_notice": "O chat público passa pela ponte de internet da área selecionada e não é criptografado.",
+    "network_privacy": "As duas opções vêm desativadas. Os relés veem o IP e o código da área. Mensagens privadas continuam criptografadas. A conexão normalmente pausa em segundo plano, salvo com essa opção do Android ativa e uma malha conectada.",
+    "wipe_confirm": "A identidade, os dados locais e os tokens Cashu salvos serão apagados permanentemente. Guarde cópias seguras até resgatar os tokens.",
+    "quick_erase_hint": "Três toques em 1,5 segundo apagam imediatamente, sem confirmação, a identidade e todos os dados locais, inclusive os tokens Cashu.",
+    "channel_rotation_hint": "A identidade pública muda diariamente. Chaves antigas recebem mensagens privadas por 48 horas. Seu apelido e os horários das mensagens ainda podem identificar você."
+  },
+  "cashu": {
+    "risk": "Qualquer pessoa com uma cópia pode gastar o token. Receber offline não comprova validade nem impede gasto duplo. Resgate em uma carteira confiável.",
+    "erase": "Guarde uma cópia segura até o resgate. Limpar o histórico preserva os tokens, mas apagar tudo os destrói. Cópias na área de transferência ou em outros dispositivos permanecem.",
+    "copy_warning": "O token será copiado para a área de transferência do sistema. Cole somente em uma carteira Cashu confiável. Copiar não é resgatar nem comprovar pagamento.",
+    "confirm": "Transferir {{amount}} sats via {{mint}} para a identidade Bluetooth {{peer}}? Não envie as mesmas provas de outra carteira. A entrega pode ser parcial; tente novamente apenas com este destinatário."
   }
 }

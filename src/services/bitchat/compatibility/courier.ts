@@ -84,3 +84,18 @@ export function decodePrekeys(data: Uint8Array, signingKey: Uint8Array): PrekeyB
   if (!ed25519.verify(bundle.signature, prekeySigningBytes(bundle), signingKey)) throw new Error('Invalid prekey signature');
   return bundle;
 }
+
+// Existing Bitchat clients treat the inner message ID as an opaque string and
+// echo it in receipts. The prefix lets Outlink authenticate time without a new TLV.
+export function timedCourierId(id: string, sentAt: number, expiresAt: number): string {
+  return `olc1.${sentAt}.${expiresAt}.${id}`;
+}
+export function courierMessageId(wireId: string): { id: string; sentAt?: number; expiresAt?: number } {
+  if (!wireId.startsWith('olc1.')) return { id: wireId };
+  const match = /^olc1\.(\d{1,16})\.(\d{1,16})\.(.+)$/s.exec(wireId);
+  if (!match) throw new Error('Invalid timed courier message ID');
+  const sentAt = Number(match[1]), expiresAt = Number(match[2]);
+  if (!Number.isSafeInteger(sentAt) || !Number.isSafeInteger(expiresAt) || expiresAt <= sentAt || expiresAt - sentAt > 86400000 + 60000)
+    throw new Error('Invalid timed courier message lifetime');
+  return { id: match[3], sentAt, expiresAt };
+}

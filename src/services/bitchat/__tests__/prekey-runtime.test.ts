@@ -13,7 +13,7 @@ function fixture() {
 }
 it('persists a signed batch, assigns keys once across restart, and keeps only a fixed redelivery grace after consumption', async () => {
   const f = fixture(), owner = f.owner(), sender = f.sender();
-  const wire = await owner.bundle(), bundle = decodePrekeys(wire, signing); expect(bundle.prekeys).toHaveLength(8);
+  const wire = (await owner.bundle())!, bundle = decodePrekeys(wire, signing); expect(bundle.prekeys).toHaveLength(8);
   await sender.ingest(wire, signing);
   const assigned = await sender.assign(bob.noisePublicKey, 'one', bytesToHex(signing)); expect(assigned).toBeDefined();
   expect(await f.sender().assign(bob.noisePublicKey, 'one', bytesToHex(signing))).toEqual(assigned);
@@ -21,23 +21,23 @@ it('persists a signed batch, assigns keys once across restart, and keeps only a 
   const ciphertext = sealCourier(Uint8Array.of(1, 2, 3), alice, assigned!.publicKey, assigned!.id);
   expect(await owner.open(ciphertext, assigned!.id)).toMatchObject({ payload: Uint8Array.of(1, 2, 3), changed: true });
   expect((await f.owner().open(ciphertext, assigned!.id)).changed).toBe(false);
-  const next = decodePrekeys(await owner.bundle(), signing); expect(next.generatedAt).toBeGreaterThan(bundle.generatedAt); expect(next.prekeys.some(key => key.id === assigned!.id)).toBe(false);
-  f.advance(2 * 86400000 + 1); await owner.bundle();
+  const next = decodePrekeys((await owner.bundle())!, signing); expect(next.generatedAt).toBeGreaterThan(bundle.generatedAt); expect(next.prekeys.some(key => key.id === assigned!.id)).toBe(false);
+  f.advance(8 * 86400000 + 120001); (await owner.bundle())!;
   await expect(owner.open(ciphertext, assigned!.id)).rejects.toThrow('unavailable');
 });
 it('does not consume a prekey on invalid ciphertext and propagates secure-storage failure before publication', async () => {
-  const f = fixture(), owner = f.owner(), bundle = decodePrekeys(await owner.bundle(), signing), prekey = bundle.prekeys[0];
+  const f = fixture(), owner = f.owner(), bundle = decodePrekeys((await owner.bundle())!, signing), prekey = bundle.prekeys[0];
   const ciphertext = sealCourier(Uint8Array.of(1), alice, prekey.publicKey, prekey.id); ciphertext[ciphertext.length - 1] ^= 1;
   await expect(owner.open(ciphertext, prekey.id)).rejects.toThrow();
-  expect(decodePrekeys(await owner.bundle(), signing).prekeys.some(key => key.id === prekey.id)).toBe(true);
+  expect(decodePrekeys((await owner.bundle())!, signing).prekeys.some(key => key.id === prekey.id)).toBe(true);
   f.secrets.set.mockRejectedValueOnce(new Error('keychain unavailable')); await expect(owner.bundle()).rejects.toThrow('keychain');
 });
 it('serializes concurrent assignments, replenishes below low water, rejects forged/stale bundles and preserves used IDs across top-ups', async () => {
-  const f = fixture(), owner = f.owner(), sender = f.sender(), wire = await owner.bundle(); await sender.ingest(wire, signing);
+  const f = fixture(), owner = f.owner(), sender = f.sender(), wire = (await owner.bundle())!; await sender.ingest(wire, signing);
   const assignments = await Promise.all(Array.from({ length: 8 }, (_, i) => sender.assign(bob.noisePublicKey, String(i), bytesToHex(signing))));
   expect(new Set(assignments.map(key => key!.id)).size).toBe(8); expect(await sender.assign(bob.noisePublicKey, 'exhausted', bytesToHex(signing))).toBeUndefined();
   for (const key of assignments.slice(0, 6)) await owner.open(sealCourier(Uint8Array.of(1), alice, key!.publicKey, key!.id), key!.id);
-  const fresh = await owner.bundle(); expect(decodePrekeys(fresh, signing).prekeys).toHaveLength(8); await sender.ingest(fresh, signing);
+  const fresh = (await owner.bundle())!; expect(decodePrekeys(fresh, signing).prekeys).toHaveLength(8); await sender.ingest(fresh, signing);
   const added = await sender.assign(bob.noisePublicKey, 'new', bytesToHex(signing)); expect(added!.id).toBeGreaterThan(8);
   const forged = fresh.slice(); forged[forged.length - 1] ^= 1; await expect(sender.ingest(forged, signing)).rejects.toThrow();
   f.advance(7 * 86400000 + 1000); expect(await sender.assign(bob.noisePublicKey, 'stale', bytesToHex(signing))).toBeUndefined();
@@ -47,8 +47,8 @@ it('rejects legacy cached prekeys signed by an attacker claiming the genuine Noi
   const f = fixture(), sender = f.sender();
   const signingSeed = new Uint8Array(32).fill(42), forgedSigner = ed25519.getPublicKey(signingSeed);
   const forged = new PrekeyRuntime({ ...bob, signingSeed }, f.storage, f.secrets, () => 1700000000000);
-  await sender.ingest(await forged.bundle(), forgedSigner);
+  await sender.ingest((await forged.bundle())!, forgedSigner);
   expect(await sender.assign(bob.noisePublicKey, 'private', bytesToHex(signing))).toBeUndefined();
-  expect(await sender.ingest(await f.owner().bundle(), signing)).toBe(true);
+  expect(await sender.ingest((await f.owner().bundle())!, signing)).toBe(true);
   expect(await sender.assign(bob.noisePublicKey, 'private', bytesToHex(signing))).toBeDefined();
 });

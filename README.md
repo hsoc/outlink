@@ -130,3 +130,6 @@ discoveries expire instead of being saved permanently.
 
 Chat histories expire locally after six hours; conversation windows load up to
 512 messages. Cashu tokens and pending delivery records are kept separately.
+
+The 18 non-English app catalogs include Location, bridge, identity rotation,
+erase, and core Cashu safety warnings. Other text can fall back to English.

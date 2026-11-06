@@ -267,3 +267,9 @@ Complete packets are entered into dedup only after acceptance, so a valid public
 message arriving before its author announcement cannot poison later history
 backfill. A full GCS filter omits the timestamp cursor; a cursor is used only
 when the advertised newest prefix was truncated to its byte budget.
+
+For peers that negotiate signed rekeys inside Noise, replacement handshake
+packets must be signed with the bound signing key while a live cipher exists.
+When the peer supports authenticated session state, initiators keep the old
+cipher until a packet authenticates with the replacement. First-contact and
+legacy handshakes retain their compatible wire format.

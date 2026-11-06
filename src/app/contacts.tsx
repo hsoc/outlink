@@ -60,7 +60,10 @@ export default function Contacts() {
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useFocusEffect(useCallback(() => { void Promise.all([contactsService.restore().then(() => contactsService.prune()), bitchatService.restore()]).catch(() => { if (mounted.current) setFailed(true); }); }, []));
   const blockedUsers = useStore(blockedUsersStore, state => state.users);
-  const unread = useMemo(() => unreadPrivateMessages(mesh.messages, new Set([...contacts.contacts.filter(c => c.blocked).map(c => c.id), ...blockedUsers.filter(user => user.key.startsWith('mesh:')).map(user => user.key.slice(5))])), [mesh.messages, contacts.contacts, blockedUsers]);
+  const unread = useMemo(() => {
+    const blocked = new Set([...contacts.contacts.filter(c => c.blocked).map(c => c.id), ...blockedUsers.filter(user => user.key.startsWith('mesh:')).map(user => user.key.slice(5))]);
+    return mesh.unread ? new Map([...mesh.unread].filter(([peer]) => !blocked.has(peer))) : unreadPrivateMessages(mesh.messages, blocked);
+  }, [mesh.messages, mesh.unread, contacts.contacts, blockedUsers]);
   const entries = useMemo(() => contactDirectory(contacts.contacts, mesh.peers, mesh.messages, mesh.active, tab, query), [contacts.contacts, mesh.peers, mesh.messages, mesh.active, tab, query]);
   const onAction = useCallback((id: string, action: Action) => {
     if (working.current) return;

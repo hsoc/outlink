@@ -39,10 +39,10 @@ it('fails closed on corrupt or uncommitted storage, and panic deletion is retrya
   await expect(eraseChannelIdentities(store, root)).rejects.toThrow('keychain busy'); expect(store.values.size).toBeGreaterThan(0);
   await eraseChannelIdentities(store, root); expect(store.values.size).toBe(0);
 });
-it('serializes concurrent first use and enforces the bounded secure-key index', async () => {
+it('serializes concurrent first use and pages the secure-key index beyond 32 areas', async () => {
   const store = storage(), manager = new ChannelIdentities(store, root);
   const keys = await Promise.all([manager.load('u4pruy'), new ChannelIdentities(store, root).load('u4pruy')]);
   expect(keys[0].current.pubkey).toBe(keys[1].current.pubkey); keys.forEach(clearIdentitySet);
   for (const letter of '0123456789bcdefghjkmnpqrstuvwxyz'.slice(0, 31)) clearIdentitySet(await manager.load(`u${letter}`));
-  await expect(manager.load('zzzz')).rejects.toThrow('limit'); await eraseChannelIdentities(store, root); expect(store.values.size).toBe(0);
+  await expect(manager.load('zzzz')).resolves.toHaveProperty('current'); await eraseChannelIdentities(store, root); expect(store.values.size).toBe(0);
 });

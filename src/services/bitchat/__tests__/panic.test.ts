@@ -1,13 +1,13 @@
 /** @jest-environment node */
 import { createTripleTap } from '@/lib/triple-tap';
-import { panicWipe } from '../panic';
+import { panicWipe, resumePendingWipe } from '../panic';
 import { platform } from '@/platform';
 import { bitchatService, bitchatSessionStore } from '../bitchat.service';
 import { geohashService } from '@/services/geohash/geohash.service';
 import { workspaceStore } from '@/services/history/workspace';
 import { contactsStore } from '../compatibility/contacts';
 import { resetMobileIdentity } from '../mobile-identity';
-jest.mock('@/platform', () => ({ platform: { backgroundConnectivity: { stop: jest.fn(async () => {}) }, wipeLocalData: jest.fn(async () => {}), mentionNotifications: { clear: jest.fn(async () => {}) } } }));
+jest.mock('@/platform', () => ({ platform: { backgroundConnectivity: { stop: jest.fn(async () => {}) }, wipeLocalData: jest.fn(async () => {}), secureStorage: { getItem: jest.fn(async () => null), setItem: jest.fn(async () => {}), deleteItem: jest.fn(async () => {}) }, mentionNotifications: { clear: jest.fn(async () => {}) } } }));
 jest.mock('../bitchat.service', () => {
   const { createStore } = jest.requireActual('zustand/vanilla');
   return { bitchatSessionStore: createStore(() => ({ busy: false, error: false })), bitchatService: { stop: jest.fn(async () => {}), resetLocalState: jest.fn() } };
@@ -67,4 +67,16 @@ it('still stops transports and erases data when native background service shutdo
   await expect(panicWipe()).resolves.toBeUndefined();
   expect(platform.wipeLocalData).toHaveBeenCalledTimes(before + 1);
   expect(workspaceStore.getState()).toMatchObject({ ready: true, drafts: {}, internet: false });
+});
+
+it('retains the recovery marker on failure and clears it only after a resumed wipe completes', async () => {
+  const key = 'outlink.wipe.pending';
+  jest.mocked(platform.secureStorage.deleteItem).mockClear();
+  jest.mocked(platform.wipeLocalData).mockRejectedValueOnce(new Error('interrupted'));
+  await expect(panicWipe()).rejects.toThrow('interrupted');
+  expect(platform.secureStorage.setItem).toHaveBeenLastCalledWith(key, '1');
+  expect(platform.secureStorage.deleteItem).not.toHaveBeenCalled();
+  jest.mocked(platform.secureStorage.getItem).mockResolvedValueOnce('1');
+  await resumePendingWipe();
+  expect(platform.secureStorage.deleteItem).toHaveBeenLastCalledWith(key);
 });

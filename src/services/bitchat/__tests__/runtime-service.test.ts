@@ -16,7 +16,7 @@ import { memoryStorage } from '../test-support/protocol-storage';
 import { BitchatSession } from '../bitchat-session';
 import { platform } from '@/platform';
 import { BitchatType, bytes, peerId, text, decodeTlv, encodeTlv, join, signPacket } from '../bitchat-wire';
-import { courierTags, decodeCourier, encodeCourier, openCourier, sealCourier } from '../compatibility/courier';
+import { courierTags, decodeCourier, encodeCourier, openCourier, sealCourier, timedCourierId } from '../compatibility/courier';
 import type { PendingMessage } from '../compatibility/outbox';
 import { PrivateMailbox, type InternetPayload } from '../compatibility/private-mailbox';
 import { npubEncode } from 'nostr-tools/nip19';
@@ -28,7 +28,7 @@ jest.mock('@/services/mentions/private-messages', () => ({ privateMessageAlerts:
 jest.mock('@/services/mentions/mentions', () => ({ mentionService: { received: jest.fn() } }));
 jest.mock('@/services/geohash/geohash.service', () => ({ geohashService: { acceptCarrier: jest.fn() } }));
 jest.mock('@/platform', () => ({ platform: { proximityTransport: {}, records: { get: jest.fn(), set: jest.fn(), remove: jest.fn(), list: jest.fn() },
-  history: { save: jest.fn(), deleteConversation: jest.fn(), load: jest.fn(async () => []), get: jest.fn() }, preferences: { getItem: jest.fn(async () => null), setItem: jest.fn(async () => {}) },
+  history: { acceptCourier: jest.fn(), save: jest.fn(), deleteConversation: jest.fn(), load: jest.fn(async () => []), get: jest.fn() }, preferences: { getItem: jest.fn(async () => null), setItem: jest.fn(async () => {}) },
   secureStorage: { getItem: jest.fn(), setItem: jest.fn() }, deviceCrypto: { randomUUID: jest.fn(async () => 'outgoing-one') } } }));
 jest.mock('../compatibility/private-mailbox', () => {
   const actual = jest.requireActual('../compatibility/private-mailbox');
@@ -70,6 +70,11 @@ beforeEach(async () => {
   jest.mocked(platform.records.remove).mockImplementation(async (scope, id) => { await records.remove(scope, id); });
   jest.mocked(platform.records.list).mockImplementation(async (scope, before) => before ? [] : (await records.list(scope, 1000)).map((value, index, values) => ({ sequence: values.length - index, value: JSON.stringify(value) })));
   jest.mocked(platform.history.get).mockImplementation(async (room, id) => history.get(room + ':' + id) ?? null);
+  jest.mocked(platform.history.acceptCourier).mockImplementation(async (_sender, _id, historyId, value) => {
+    const key = 'mesh:' + historyId;
+    if (history.has(key)) return 'duplicate';
+    history.set(key, value); return 'new';
+  });
   jest.mocked(platform.history.save).mockImplementation(async (room, id, value) => { history.set(room + ':' + id, value); });
   await contactsService.restore();
   await contactsService.save({ id: peerId(recipientKey), noiseKey: bytesToHex(recipientKey), signingKey: bytesToHex(ed25519.getPublicKey(new Uint8Array(32).fill(12))), fingerprint: bytesToHex(sha256(recipientKey)), name: 'Bob', favorite: true, verified: false, blocked: false, mutual: false, updatedAt: Date.now() });
@@ -85,10 +90,13 @@ it('queues before courier transport, stores opaque dispatch metadata, and clears
   const calls = jest.mocked(session().sendExtension).mock.calls.filter(call => call[0] === BitchatType.courier);
   expect(calls[0].slice(2)).toEqual([carrierId, true]);
   const envelope = decodeCourier(calls[0][1]), opened = openCourier(envelope.ciphertext, recipientSeed);
-  expect(text(decodeTlv(opened.payload.subarray(1)).get(1)!)).toBe('mail while Bob is absent');
-  session().callbacks.receipt('outgoing-one', carrierId, 'delivered'); await historyOperation(async () => {});
+  const fields = decodeTlv(opened.payload.subarray(1));
+  expect(text(fields.get(1)!)).toBe('mail while Bob is absent');
+  const wireId = text(fields.get(0)!);
+  expect(wireId).toBe(timedCourierId('outgoing-one', entry.message.timestamp, entry.expiresAt));
+  session().callbacks.receipt(wireId, carrierId, 'delivered'); await historyOperation(async () => {});
   expect(await records.get(scope, 'outgoing-one')).not.toBeNull();
-  session().callbacks.receipt('outgoing-one', peerId(recipientKey), 'delivered');
+  session().callbacks.receipt(wireId, peerId(recipientKey), 'delivered');
   await until(async () => await records.get(scope, 'outgoing-one') === null);
   expect(bitchatSessionStore.getState().messages.find(message => message.id === 'outgoing-one')?.delivery).toBe('delivered');
 });
@@ -105,6 +113,10 @@ it('opens courier mail durably, deduplicates copies, queues a receipt, and rejec
   expect(bitchatSessionStore.getState().messages.filter(message => message.id === 'incoming')).toHaveLength(1);
   expect(privateMessageAlerts.received).toHaveBeenCalledWith(expect.objectContaining({ id: 'incoming', outgoing: false, recipient: session().id }));
   expect(await records.get('acks:' + peerId(recipientKey), 'incoming')).toMatchObject({ status: 'delivered' });
+  const expiredId = timedCourierId('expired', Date.now() - 86401000, Date.now() - 1000);
+  const rewrapped = { ...envelope, ciphertext: sealCourier(join(Uint8Array.of(1), encodeTlv([[0, bytes(expiredId)], [1, bytes('expired')]])), recipientSeed, own) };
+  expect(await session().callbacks.extension({ ...packet, payload: encodeCourier(rewrapped) }, context)).toBe(true);
+  expect(history.has('mesh:expired' + peerId(recipientKey))).toBe(false);
   const otherEnvelope = { ...envelope, tag: courierTags(recipientKey)[1] };
   const deposit = signPacket({ ...packet, payload: encodeCourier(otherEnvelope) }, new Uint8Array(32).fill(13));
   expect(await session().callbacks.extension(deposit, { ...context, noiseKey: carrierKey, signingKey: ed25519.getPublicKey(new Uint8Array(32).fill(13)), boundPeer: carrierId })).toBe(false);

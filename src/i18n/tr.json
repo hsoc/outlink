@@ -24,7 +24,6 @@
     "title": "Bitchat",
     "default_name": "Outlink",
     "description": "İnternet bağlantısı olmadan yakındaki Bitchat kullanıcılarıyla Bluetooth üzerinden sohbet edin.",
-    "privacy": "Katıldığınızda adınız ve cihaz kimliğiniz yakındaki kullanıcılara görünür. Bu oda açıkken Nearby sohbetleri duraklatılır. Çıktığınızda mesajlar silinir.",
     "name": "Herkese açık adınız",
     "join": "Yakındaki odaya katıl",
     "public": "Herkese Açık Mesh",
@@ -65,5 +64,19 @@
       "indigo": "Çivit mavisi",
       "slate": "Arduvaz"
     }
+  },
+  "mobile": {
+    "geo_privacy": "Konum kanalları herkese açıktır. Röle işletmecileri ve dinleyiciler mesajları, adları ve bölgeyi görebilir.",
+    "bridge_notice": "Herkese açık sohbet seçili bölgenin internet köprüsünden geçer ve şifrelenmez.",
+    "network_privacy": "İki seçenek de varsayılan olarak kapalıdır. Röleler IP adresinizi ve bölge kodunu görebilir. Özel mesajlar şifreli kalır. Android'de arka plan bağlantısı açık ve örgü ağa katılmış değilseniz bağlantı arka planda genellikle duraklar.",
+    "wipe_confirm": "Kimlik, yerel veriler ve kayıtlı Cashu jetonları kalıcı olarak silinir. Bozdurana kadar güvenli kopyalarını saklayın.",
+    "quick_erase_hint": "1,5 saniye içinde üç kez dokunmak kimliği ve Cashu jetonları dahil tüm yerel verileri onay almadan hemen siler.",
+    "channel_rotation_hint": "Herkese açık kimlik her gün değişir. Eski anahtarlar 48 saat özel mesaj alır. Takma adınız ve mesaj saatleriniz sizi yine de tanımlayabilir."
+  },
+  "cashu": {
+    "risk": "Kopyası olan herkes jetonu harcayabilir. Çevrimdışı almak geçerliliği kanıtlamaz ve çift harcamayı önlemez. Güvendiğiniz bir cüzdanda bozdurun.",
+    "erase": "Bozdurana kadar güvenli bir kopya saklayın. Sohbet geçmişini temizlemek jetonları korur, tam silme ise yok eder. Panodaki ve diğer cihazlardaki kopyalar kalır.",
+    "copy_warning": "Jeton sistem panosuna kopyalanır. Yalnızca güvenilir bir Cashu cüzdanına yapıştırın. Kopyalamak bozdurma veya ödeme kanıtı değildir.",
+    "confirm": "{{mint}} üzerinden {{amount}} sat, {{peer}} Bluetooth kimliğine aktarılsın mı? Aynı kanıtları başka bir cüzdandan göndermeyin. Teslimat kısmi olabilir; yalnızca bu alıcıyla tekrar deneyin."
   }
 }

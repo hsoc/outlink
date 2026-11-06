@@ -12,6 +12,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { AppScreen } from '@/components/common/AppScreen';
+import { resumePendingWipe } from '@/services/bitchat/panic';
+import { AppButton } from '@/components/common/AppButton';
 import { AppText } from '@/components/common/AppText';
 import { SystemColorSchemeProvider } from '@/theme';
 import { useThemeStore } from '@/stores/theme.store';
@@ -20,7 +22,17 @@ import { bitchatService, bitchatSessionStore } from '@/services/bitchat/bitchat.
 import { geohashService } from '@/services/geohash/geohash.service';
 export default function Layout() {
   const [ready, setReady] = useState(false);
+  const [recovered, setRecovered] = useState(false);
+  const [recoveryFailed, setRecoveryFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
+    let alive = true;
+    void resumePendingWipe().then(() => { if (alive) setRecovered(true); })
+      .catch(() => { if (alive) setRecoveryFailed(true); });
+    return () => { alive = false; };
+  }, [attempt]);
+  useEffect(() => {
+    if (!recovered) return;
     let alive = true;
     const mentionCopy = () => mentionService.setCopy({ channelName: i18n.t('mobile.mention_notifications'), meshBody: i18n.t('mobile.mention_alert_mesh'), geoBody: i18n.t('mobile.mention_alert_geo') });
     const privateCopy = () => privateMessageAlerts.setCopy({ channelName: i18n.t('mobile.private_message_notifications'), body: i18n.t('mobile.private_message_alert'), geoBody: i18n.t('mobile.private_message_alert_geo') });
@@ -45,8 +57,14 @@ export default function Layout() {
     const historyTimer = setInterval(cleanupHistory, 60000);
     const remove = platform.appState.addChangeListener(state => { if (state === 'active') cleanupHistory(); void lifecycle.change(state).catch(() => {}); });
     return () => { i18n.off('languageChanged', privateCopy); i18n.off('languageChanged', mentionCopy); alive = false; clearInterval(historyTimer); remove(); unsubscribePreference(); unsubscribeMesh(); unsubscribeStop(); lifecycle.dispose(); };
-  }, []);
+  }, [recovered]);
   return <GestureHandlerRootView style={{ flex: 1 }}><SafeAreaProvider><KeyboardProvider><SystemColorSchemeProvider>
-    {ready ? <Stack screenOptions={{ headerShown: false }} /> : <AppScreen><AppText>Outlink</AppText></AppScreen>}
+    {ready ? <Stack screenOptions={{ headerShown: false }} /> : <AppScreen>
+      <AppText>Outlink</AppText>
+      {recoveryFailed && <>
+        <AppText tone="danger" accessibilityLiveRegion="polite">{i18n.t('mobile.operation_failed')}</AppText>
+        <AppButton label={i18n.t('common.retry')} onPress={() => { setRecoveryFailed(false); setAttempt(value => value + 1); }} />
+      </>}
+    </AppScreen>}
   </SystemColorSchemeProvider></KeyboardProvider></SafeAreaProvider></GestureHandlerRootView>;
 }

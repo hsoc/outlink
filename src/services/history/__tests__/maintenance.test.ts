@@ -7,7 +7,7 @@ import { platform } from '@/platform';
 jest.mock('@/platform', () => ({ platform: { history: { prune: jest.fn(async () => {}) } } }));
 jest.mock('@/services/bitchat/bitchat.service', () => {
   const { createStore } = jest.requireActual('zustand/vanilla');
-  return { bitchatSessionStore: createStore(() => ({ messages: [] })), meshGroupsStore: createStore(() => ({ messages: [], groups: ['retained membership'] })) };
+  return { bitchatService: { refreshMeshUnread: jest.fn(async () => {}) }, bitchatSessionStore: createStore(() => ({ messages: [], threadMessages: [] })), meshGroupsStore: createStore(() => ({ messages: [], groups: ['retained membership'] })) };
 });
 jest.mock('@/services/geohash/geohash.service', () => {
   const { createStore } = jest.requireActual('zustand/vanilla');

@@ -24,7 +24,6 @@
     "title": "Bitchat",
     "default_name": "Outlink",
     "description": "Chat with nearby Bitchat users over Bluetooth, without an internet connection.",
-    "privacy": "Nearby public messages are readable by mesh participants. Private messages are encrypted in transit. Chat history is saved on this device.",
     "name": "Nickname",
     "join": "Join",
     "public": "Public Mesh",

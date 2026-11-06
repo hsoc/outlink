@@ -115,3 +115,11 @@ checkpoint/truncation. History clearing preserves protected records, including C
 tokens, contacts and pending delivery records. Compaction errors are reported even
 if message deletion has already completed; repeating Clear local history retries
 compaction. No minute-by-minute full VACUUM is introduced.
+
+Full identity erasure records a device-secured pending marker before deleting
+data. After an interruption, startup resumes the erase before loading normal
+app state and clears the marker only when deletion completes.
+
+Nearby private history uses a keyed conversation index and a local unread flag
+for bounded per-peer paging and unread counts. The database can reveal which
+rows share a conversation index and whether a row is unread.

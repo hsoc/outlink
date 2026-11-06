@@ -24,7 +24,6 @@
     "title": "Bitchat",
     "default_name": "Outlink",
     "description": "Discutez par Bluetooth avec les utilisateurs de Bitchat à proximité, sans connexion Internet.",
-    "privacy": "Votre nom et votre identité d’appareil deviennent visibles aux utilisateurs proches. Les discussions Nearby sont suspendues tant que ce salon est ouvert. Les messages sont effacés à votre départ.",
     "name": "Votre nom public",
     "join": "Rejoindre le salon proche",
     "public": "Maillage public",
@@ -65,5 +64,19 @@
       "indigo": "Indigo",
       "slate": "Ardoise"
     }
+  },
+  "mobile": {
+    "geo_privacy": "Les canaux de localisation sont publics. Les opérateurs de relais et les personnes à l’écoute voient les messages, les noms et la zone.",
+    "bridge_notice": "Le chat public passe par la passerelle Internet de cette zone et n’est pas chiffré.",
+    "network_privacy": "Les deux options sont désactivées par défaut. Les relais voient l’adresse IP et le code de zone. Les messages privés restent chiffrés. La connexion est normalement suspendue en arrière-plan sauf si l’option Android est activée et le réseau maillé rejoint.",
+    "wipe_confirm": "L’identité, les données locales et les jetons Cashu enregistrés seront définitivement effacés. Gardez une copie sûre jusqu’à l’encaissement.",
+    "quick_erase_hint": "Trois pressions en 1,5 seconde effacent immédiatement l’identité et toutes les données locales, dont les jetons Cashu, sans confirmation.",
+    "channel_rotation_hint": "L’identité publique change chaque jour. Les anciennes clés reçoivent les messages privés pendant 48 heures. Votre pseudo et les heures d’envoi peuvent encore vous identifier."
+  },
+  "cashu": {
+    "risk": "Toute personne ayant une copie peut dépenser le jeton. La réception hors ligne ne prouve pas sa validité et n’empêche pas une double dépense. Encaissez-le dans un portefeuille de confiance.",
+    "erase": "Gardez une copie sûre jusqu’à l’encaissement. Effacer l’historique conserve les jetons; l’effacement complet les supprime. Les copies du presse-papiers et des autres appareils subsistent.",
+    "copy_warning": "Le jeton sera copié dans le presse-papiers du système. Collez-le seulement dans un portefeuille Cashu de confiance. Copier ne vaut ni encaissement ni preuve de paiement.",
+    "confirm": "Transférer {{amount}} sats via {{mint}} à l’identité Bluetooth {{peer}} ? N’envoyez pas les mêmes preuves depuis un autre portefeuille. La livraison peut être partielle ; réessayez uniquement avec ce destinataire."
   }
 }

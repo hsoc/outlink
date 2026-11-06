@@ -14,11 +14,11 @@ import { BITCHAT_TTL, BitchatType, bytes, decodePacket, decodeTlv, encodeTlv, jo
 export type ExtensionContext = { link: string; boundPeer?: string; authenticated: boolean; signingBound?: boolean; noiseKey?: Uint8Array; signingKey?: Uint8Array };
 export type MeshPingResult = { rttMs: number; hops?: number };
 export type BitchatIdentity = { noiseSeed: Uint8Array; noisePublicKey: Uint8Array; signingSeed: Uint8Array };
-export type BitchatPeer = { id: string; name: string; fingerprint: string; lastSeen: number; secure: boolean; authenticatedCapabilities?: boolean; capabilities?: number; direct?: boolean; authenticatedLink?: boolean; noisePublicKey?: string; signingPublicKey?: string };
+export type BitchatPeer = { id: string; name: string; fingerprint: string; lastSeen: number; secure: boolean; authenticatedCapabilities?: boolean; signedRekey?: boolean; capabilities?: number; direct?: boolean; authenticatedLink?: boolean; noisePublicKey?: string; signingPublicKey?: string };
 export type BitchatMessage = { id: string; peer: string; recipient?: string; name: string; content: string;
-  timestamp: number; channelThread?: string; bridge?: { pubkey: string; radioHint?: string }; outgoing: boolean; delivery: 'queued' | 'carried' | 'sending' | 'sent' | 'delivered' | 'read' | 'failed' };
+  timestamp: number; courierWireId?: string; channelThread?: string; bridge?: { pubkey: string; radioHint?: string }; outgoing: boolean; delivery: 'queued' | 'carried' | 'sending' | 'sent' | 'delivered' | 'read' | 'failed' };
 type KnownPeer = BitchatPeer & { ingress: string; noiseKey: Uint8Array; signingKey: Uint8Array };
-type Negotiation = { handshake: BitchatHandshake; at: number; ingress?: string; promise: Promise<void>;
+type Negotiation = { handshake: BitchatHandshake; at: number; ingress?: string; candidate?: { cipher: BitchatCipher; link?: string }; promise: Promise<void>;
   resolve: () => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> };
 type Callbacks = { groupState?(peer: BitchatPeer, payload: Uint8Array, invite: boolean): Promise<void>; extension?(packet: BitchatPacket, context: ExtensionContext): Promise<boolean>; peer: (peer: BitchatPeer) => void; message: (message: BitchatMessage) => void | false | Promise<void | false>;
   receipt: (id: string, sender: string, status: 'sent' | 'delivered' | 'read' | 'failed') => void; error: (error: Error) => void };
@@ -314,7 +314,7 @@ export class BitchatSession {
   }
   private failHandshake(peer: string, error: Error): void {
     const n = this.negotiations.get(peer); if (!n) return;
-    clearTimeout(n.timer); n.handshake.destroy(); n.reject(error); this.negotiations.delete(peer);
+    clearTimeout(n.timer); n.candidate?.cipher.destroy(); n.handshake.destroy(); n.reject(error); this.negotiations.delete(peer);
   }
   private async ensureCipher(peer: string, replace = false): Promise<BitchatCipher> {
     const known = this.peers.get(peer);
@@ -323,7 +323,7 @@ export class BitchatSession {
     let negotiation = this.negotiations.get(peer);
     if (!negotiation) {
       negotiation = this.newNegotiation(peer, true);
-      try { await this.broadcast(this.packet(BitchatType.handshake, negotiation.handshake.write(), peer)); }
+      try { await this.broadcast(this.handshakePacket(peer, negotiation.handshake.write())); }
       catch (error) { this.failHandshake(peer, error as Error); throw error; }
     }
     await negotiation.promise;
@@ -446,7 +446,7 @@ export class BitchatSession {
         for (const [link, id] of this.authenticatedLinks) if (id === stale.id) this.authenticatedLinks.delete(link);
       }
       if (!solicited && packet.ttl === BITCHAT_TTL) this.admitLink(ingress);
-      const peer: KnownPeer = { id: packet.sender, name, noiseKey, signingKey, ingress,
+      const peer: KnownPeer = { id: packet.sender, name, noiseKey, signingKey, ingress, signedRekey: previous?.signedRekey,
         authenticatedCapabilities: previous?.authenticatedCapabilities && this.ciphers.has(packet.sender),
         capabilities: previous?.authenticatedCapabilities && this.ciphers.has(packet.sender) ? previous.capabilities : (capability?.[0] ?? 0) | (capability?.[1] ?? 0) << 8, direct: packet.ttl === BITCHAT_TTL && !solicited, authenticatedLink: this.authenticatedDirect(packet.sender), noisePublicKey: bytesToHex(noiseKey), signingPublicKey: bytesToHex(signingKey), fingerprint: bytesToHex(sha256(noiseKey)), lastSeen: solicited ? previous?.lastSeen ?? 0 : Date.now(), secure: this.ciphers.has(packet.sender) };
       this.peers.set(packet.sender, peer); this.callbacks.peer(peer); this.gossip.add(packet);
@@ -526,9 +526,15 @@ export class BitchatSession {
     }, timing.delay);
     this.relays.set(key, timer);
   }
+  private handshakePacket(peer: string, payload: Uint8Array): BitchatPacket {
+    const packet = this.packet(BitchatType.handshake, payload, peer);
+    return this.peers.get(peer)?.signedRekey ? signPacket(packet, this.identity.signingSeed) : packet;
+  }
   private async receiveHandshake(packet: BitchatPacket, ingressForHandshake: string): Promise<void> {
     const peer = this.peers.get(packet.sender); if (!peer) return;
     let entry = this.negotiations.get(peer.id);
+    if (peer.signedRekey && this.ciphers.has(peer.id) && !verifyPacket(packet, peer.signingKey)) return;
+    if (entry?.candidate) return;
     try {
       if (packet.payload.length === 32) {
         if (entry?.handshake.initiator && this.id < peer.id) return;
@@ -543,40 +549,58 @@ export class BitchatSession {
         } else entry = this.newNegotiation(peer.id, false);
         entry.ingress = ingressForHandshake;
         entry.handshake.read(packet.payload);
-        await this.broadcast(this.packet(BitchatType.handshake, entry.handshake.write(), peer.id));
+        await this.broadcast(this.handshakePacket(peer.id, entry.handshake.write()));
         return;
       }
       if (!entry) return;
       entry.handshake.read(packet.payload);
       if (entry.handshake.initiator)
-        await this.broadcast(this.packet(BitchatType.handshake, entry.handshake.write(), peer.id));
+        await this.broadcast(this.handshakePacket(peer.id, entry.handshake.write()));
       if (!this.running) return;
       const cipher = entry.handshake.finish(peer.noiseKey);
-      this.retired.get(peer.id)?.cipher.destroy();
-      const previous = this.ciphers.get(peer.id);
-      if (previous) this.retired.set(peer.id, { cipher: previous.cipher, until: Date.now() + 30000 });
-      this.ciphers.set(peer.id, { cipher, at: Date.now() });
-      for (const [link, id] of this.authenticatedLinks) if (id === peer.id) this.authenticatedLinks.delete(link);
-      peer.authenticatedCapabilities = false;
-      clearTimeout(entry.timer); this.negotiations.delete(peer.id);
-      if (packet.ttl === BITCHAT_TTL && !packet.route?.length && this.directHints.get(ingressForHandshake) === peer.id) this.authenticatedLinks.set(ingressForHandshake, peer.id);
-      peer.secure = true; peer.authenticatedLink = this.authenticatedDirect(peer.id); this.callbacks.peer(peer); entry.resolve();
-      // Bind the signing key to the Noise-authenticated identity for newer clients.
+      const link = packet.ttl === BITCHAT_TTL && !packet.route?.length && this.directHints.get(ingressForHandshake) === peer.id ? ingressForHandshake : undefined;
+      if (entry.handshake.initiator && peer.authenticatedCapabilities && this.ciphers.has(peer.id)) {
+        // A successful local write does not prove that message 3 reached the responder.
+        entry.candidate = { cipher, link };
+      } else this.promoteCipher(peer, entry, cipher, link);
       await this.sendState(peer.id, cipher);
     } catch (error) { this.failHandshake(peer.id, error as Error); throw error; }
   }
+  private promoteCipher(peer: KnownPeer, entry: Negotiation, cipher: BitchatCipher, link?: string) {
+    this.retired.get(peer.id)?.cipher.destroy();
+    const previous = this.ciphers.get(peer.id);
+    if (previous) this.retired.set(peer.id, { cipher: previous.cipher, until: Date.now() + 30000 });
+    this.ciphers.set(peer.id, { cipher, at: Date.now() });
+    for (const [endpoint, id] of this.authenticatedLinks) if (id === peer.id) this.authenticatedLinks.delete(endpoint);
+    peer.authenticatedCapabilities = false;
+    clearTimeout(entry.timer); this.negotiations.delete(peer.id);
+    if (link) this.authenticatedLinks.set(link, peer.id);
+    peer.secure = true; peer.authenticatedLink = this.authenticatedDirect(peer.id); this.callbacks.peer(peer); entry.resolve();
+  }
   private sendState(peer: string, cipher: BitchatCipher) {
-    const state = join(Uint8Array.of(0x21, 1), encodeTlv([[1, this.capabilityBytes()], [2, this.signingKey]]));
+    const capabilities = Uint8Array.of(this.capabilities & 255, (this.capabilities >>> 8) | 0x80);
+    const state = join(Uint8Array.of(0x21, 1), encodeTlv([[1, capabilities], [2, this.signingKey]]));
     return this.broadcast(this.packet(BitchatType.encrypted, cipher.seal(state), peer));
   }
   private async receivePrivate(packet: BitchatPacket): Promise<void> {
-    const peer = this.peers.get(packet.sender), cipher = this.ciphers.get(packet.sender)?.cipher;
+    const peer = this.peers.get(packet.sender);
+    let cipher = this.ciphers.get(packet.sender)?.cipher;
     if (!peer || !cipher) return;
     let plain: Uint8Array, oldSession = false;
     try { plain = cipher.open(packet.payload); } catch (error) {
-      const retired = this.retired.get(peer.id);
-      if (!retired || retired.until <= Date.now()) throw error;
-      plain = retired.cipher.open(packet.payload); oldSession = true;
+      const negotiation = this.negotiations.get(peer.id), candidate = negotiation?.candidate;
+      let confirmed: Uint8Array | undefined;
+      if (candidate) {
+        try { confirmed = candidate.cipher.open(packet.payload); } catch { /* Try the retired cipher below. */ }
+      }
+      if (candidate && negotiation && confirmed) {
+        plain = confirmed; cipher = candidate.cipher;
+        this.promoteCipher(peer, negotiation, cipher, candidate.link);
+      } else {
+        const retired = this.retired.get(peer.id);
+        if (!retired || retired.until <= Date.now()) throw error;
+        plain = retired.cipher.open(packet.payload); oldSession = true;
+      }
     }
     this.routing.confirmed(peer.id);
     if (plain[0] === 1) {
@@ -622,7 +646,8 @@ export class BitchatSession {
       // key. The encrypted state is authoritative after XX authenticates that key.
       const pin = this.pins.get(peer.id);
       if (pin && pin.signingKey !== bytesToHex(key)) throw new Error('Pinned signing identity changed');
-      peer.capabilities = capabilities[0] | (capabilities[1] ?? 0) << 8; peer.authenticatedCapabilities = true;
+      peer.signedRekey ||= !!((capabilities[1] ?? 0) & 0x80);
+      peer.capabilities = capabilities[0] | ((capabilities[1] ?? 0) & 0x7f) << 8; peer.authenticatedCapabilities = true;
       peer.signingKey = key.slice(); peer.signingPublicKey = bytesToHex(key);
       this.callbacks.peer(peer);
     }

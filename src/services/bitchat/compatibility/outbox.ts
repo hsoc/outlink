@@ -1,5 +1,5 @@
 import type { BitchatMessage } from '../bitchat-session';
-export type CourierDispatch = { wire: string; boundFormat?: true; deposited: string[]; dropAccepted?: boolean };
+export type CourierDispatch = { wire: string; timed?: true; deposited: string[]; dropAccepted?: boolean };
 export type DeliveryResult = { delivery: 'sent' | 'carried'; courier?: CourierDispatch };
 export type PendingMessage = { courier?: CourierDispatch; message: BitchatMessage; attempts: number; lastAttempt: number; expiresAt: number };
 export interface OutboxStorage {

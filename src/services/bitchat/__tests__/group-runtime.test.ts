@@ -21,6 +21,10 @@ it('persists invitations, requires acceptance, binds creator identity and reject
   const id = await a.runtime.create('Crew', 'Alice'); await a.runtime.invite(id, b.peer); await a.runtime.sync(b.peer);
   const data = a.io.state.mock.calls.at(-1)![1];
   await expect(b.runtime.receiveState(fake.peer, data, true)).rejects.toThrow('creator');
+  const state = decodeGroupState(data), takeover = { ...state, creator: fake.peer.fingerprint, members: [...state.members, { fingerprint: fake.peer.fingerprint, signingKey: fake.peer.signingPublicKey!, nickname: 'Fake' }] };
+  await expect(b.runtime.receiveState(fake.peer, encodeGroupState(takeover, fake.id.signingSeed), true)).resolves.toBe(true);
+  const squatted = `${fake.peer.fingerprint}:${state.id}`;
+  await b.runtime.leave(squatted);
   await b.runtime.receiveState(a.peer, data, true);
   expect(b.io.changed.mock.calls.at(-1)![0][0]).toMatchObject({ id, status: 'invited' });
   expect(JSON.stringify(b.io.changed.mock.calls)).not.toContain(decodeGroupState(data).key);
@@ -28,8 +32,7 @@ it('persists invitations, requires acceptance, binds creator identity and reject
   await b.runtime.accept(id);
   const restored = new GroupRuntime(b.id, b.store, b.io); await restored.restore(); await restored.send(id, 'Bob', 'hello');
   expect(b.io.broadcast).toHaveBeenCalledTimes(1);
-  const state = decodeGroupState(data), takeover = { ...state, creator: fake.peer.fingerprint, members: [...state.members, { fingerprint: fake.peer.fingerprint, signingKey: fake.peer.signingPublicKey!, nickname: 'Fake' }] };
-  await expect(b.runtime.receiveState(fake.peer, encodeGroupState(takeover, fake.id.signingSeed), true)).rejects.toThrow('creator');
+  expect(b.io.changed.mock.calls.at(-1)![0]).toEqual([expect.objectContaining({ id, status: 'joined' })]);
 });
 it('rotates keys on removal, never sends the new key to the removed peer, and catches up offline members', async () => {
   const a = node(1), b = node(2), c = node(3);

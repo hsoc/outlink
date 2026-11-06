@@ -2,7 +2,7 @@ import { conversationActivity } from '@/services/mentions/conversation-activity'
 import { createStore } from 'zustand/vanilla';
 import { platform } from '@/platform';
 import { messageIsFresh } from '@/lib/message-retention';
-import { bitchatSessionStore, meshGroupsStore } from '@/services/bitchat/bitchat.service';
+import { bitchatService, bitchatSessionStore, meshGroupsStore } from '@/services/bitchat/bitchat.service';
 import { geohashStore } from '@/services/geohash/geohash.service';
 import { historyOperation } from './history';
 import { sessionIntent } from './lifecycle';
@@ -15,11 +15,12 @@ export function pruneChatHistory(): Promise<void> {
   return pending = (async () => {
     const now = Date.now(), fresh = (message: { timestamp?: number }) => messageIsFresh(message, now);
     const trim = <T extends { timestamp?: number }>(messages: T[]): T[] => messages.every(fresh) ? messages : messages.filter(fresh);
-    bitchatSessionStore.setState(state => ({ messages: trim(state.messages) }));
+    bitchatSessionStore.setState(state => ({ messages: trim(state.messages), threadMessages: trim(state.threadMessages) }));
     geohashStore.setState(state => ({ messages: trim(state.messages), privateMessages: trim(state.privateMessages) }));
     meshGroupsStore.setState(state => ({ messages: trim(state.messages) }));
     conversationActivity.prune(now);
     historyClock.setState({ now });
     await historyOperation(async () => { if (epoch === sessionIntent()) await platform.history.prune(); });
+    if (epoch === sessionIntent()) await bitchatService.refreshMeshUnread();
   })().finally(() => { pending = undefined; });
 }

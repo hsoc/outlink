@@ -12,6 +12,30 @@ type Ring = { version: 1; current: Entry; retired: Entry[]; legacyPubkey?: strin
 const queues = new WeakMap<SecretStore, Map<string, Promise<void>>>();
 const indexKey = (root: string) => `outlink.channel-keys.index.${root}`;
 const ringKey = (root: string, hash: string) => `outlink.channel-keys.${root}.${hash}`;
+const tailKey = (root: string) => `${indexKey(root)}.tail`;
+const pageKey = (root: string, page: number) => `${indexKey(root)}.page.${page}`;
+type IndexTail = { page: number; hashes: string[] };
+function indexHashes(value: unknown): string[] {
+  if (!Array.isArray(value) || value.length > 32 || value.some(hash => typeof hash !== 'string' || normalizeGeohash(hash) !== hash))
+    throw new Error('Invalid channel key index');
+  return value;
+}
+async function readTail(store: SecretStore, root: string): Promise<IndexTail> {
+  const saved = await store.getItem(tailKey(root));
+  if (!saved) return { page: 0, hashes: [] };
+  const tail = JSON.parse(saved) as IndexTail;
+  if (!Number.isSafeInteger(tail.page) || tail.page < 0) throw new Error('Invalid channel key index page');
+  return { page: tail.page, hashes: indexHashes(tail.hashes) };
+}
+async function reserveRing(store: SecretStore, root: string, hash: string) {
+  let tail = await readTail(store, root);
+  if (tail.hashes.includes(hash)) return;
+  if (tail.hashes.length === 32) {
+    await store.setItem(pageKey(root, tail.page), JSON.stringify(tail.hashes));
+    tail = { page: tail.page + 1, hashes: [] };
+  }
+  await store.setItem(tailKey(root), JSON.stringify({ ...tail, hashes: [...tail.hashes, hash] }));
+}
 function validate(entry: Entry) {
   if (!entry || !/^[0-9a-f]{64}$/.test(entry.secret) || !secp256k1.utils.isValidSecretKey(hexToBytes(entry.secret)) || !Number.isSafeInteger(entry.created) || entry.created < 0 || entry.expires !== undefined && (!Number.isSafeInteger(entry.expires) || entry.expires < entry.created)) throw new Error('Invalid channel identity');
 }
@@ -32,13 +56,6 @@ export class ChannelIdentities {
     return task;
   }
   private async update(hash: string, legacy?: Uint8Array): Promise<ChannelIdentitySet> {
-    const savedIndex = await this.store.getItem(indexKey(this.root)), index: string[] = savedIndex ? JSON.parse(savedIndex) : [];
-    if (!Array.isArray(index) || index.length > 32 || new Set(index).size !== index.length || index.some(h => typeof h !== 'string' || normalizeGeohash(h) !== h)) throw new Error('Invalid channel key index');
-    if (!index.includes(hash)) {
-      if (index.length >= 32) throw new Error('Channel identity limit reached');
-      // Reserve the index first so panic can find an interrupted first key write.
-      await this.store.setItem(indexKey(this.root), JSON.stringify([...index, hash]));
-    }
     const now = this.now(); if (!Number.isSafeInteger(now) || now < 0 || now + CHANNEL_GRACE_MS > Number.MAX_SAFE_INTEGER) throw new Error('Invalid identity clock');
     const saved = await this.store.getItem(ringKey(this.root, hash));
     let ring: Ring;
@@ -55,6 +72,8 @@ export class ChannelIdentities {
         ring.current = { secret: bytesToHex(secp256k1.utils.randomSecretKey()), created: now };
       }
     } else {
+      // Index the new key before writing it so a failed write remains erasable.
+      await reserveRing(this.store, this.root, hash);
       ring = { version: 1, current: { secret: bytesToHex(secp256k1.utils.randomSecretKey()), created: now }, retired: [] };
       // One bounded compatibility window for the pre-rotation deterministic key.
       if (legacy) { ring.legacyPubkey = getPublicKey(legacy); ring.retired.push({ secret: bytesToHex(legacy), created: now, expires: now + CHANNEL_GRACE_MS }); }
@@ -67,10 +86,18 @@ export class ChannelIdentities {
   idle() { return this.pending; }
 }
 export async function eraseChannelIdentities(store: SecretStore, root: string) {
-  const saved = await store.getItem(indexKey(root)); if (!saved) return;
-  const index: unknown = JSON.parse(saved);
-  if (!Array.isArray(index) || index.length > 32 || index.some(h => typeof h !== 'string' || normalizeGeohash(h) !== h)) throw new Error('Invalid channel key index');
-  for (const hash of index) await store.deleteItem(ringKey(root, hash));
+  const tail = await readTail(store, root);
+  for (const hash of tail.hashes) await store.deleteItem(ringKey(root, hash));
+  // A page is removed only after every key it names is removed. Missing pages
+  // below the tail are safe when an interrupted erase resumes.
+  for (let page = tail.page; page >= 0; page--) {
+    const key = pageKey(root, page), saved = await store.getItem(key);
+    if (saved) for (const hash of indexHashes(JSON.parse(saved))) await store.deleteItem(ringKey(root, hash));
+    await store.deleteItem(key);
+  }
+  await store.deleteItem(tailKey(root));
+  const legacy = await store.getItem(indexKey(root));
+  if (legacy) for (const hash of indexHashes(JSON.parse(legacy))) await store.deleteItem(ringKey(root, hash));
   await store.deleteItem(indexKey(root));
 }
 export function clearIdentitySet(value?: ChannelIdentitySet) { value?.current.key.fill(0); value?.retired.forEach(entry => entry.key.fill(0)); }

@@ -245,7 +245,7 @@ it('delivers prekey-sealed private mail through a restarted courier after its se
   });
   receiver = new PrekeyRuntime(b.identity, recipientStorage, { get: async () => secret, set: async value => { secret = value; } });
   const sender = new PrekeyRuntime(a.identity, senderStorage, { get: async () => null, set: async () => {} });
-  await sender.ingest(await receiver.bundle(), ed25519.getPublicKey(b.identity.signingSeed));
+  await sender.ingest((await receiver.bundle())!, ed25519.getPublicKey(b.identity.signingSeed));
   const assigned = (await sender.assign(b.identity.noisePublicKey, 'offline-message', bytesToHex(ed25519.getPublicKey(b.identity.signingSeed))))!;
   const plain = join(Uint8Array.of(1), encodeTlv([[0, bytes('offline-message')], [1, bytes('mail carried while Alice is gone')]]));
   const envelope = { tag: courierTags(b.identity.noisePublicKey)[1], expiry: Date.now() + 86400000, copies: 4, prekeyId: assigned.id,
@@ -274,7 +274,7 @@ it('accepts prekey bundles only after Noise authenticates the signing key', asyn
   const a = node('Alice', 1, 512), accepted = jest.fn(async () => true), b = node('Bob', 2, 512, accepted);
   let saved: string | null = null;
   const keys = new PrekeyRuntime(a.identity, memoryStorage(), { get: async () => saved, set: async value => { saved = value; } });
-  const packet = signPacket({ version: 1, type: BitchatType.prekeys, ttl: 7, timestamp: Date.now(), sender: a.session.id, payload: await keys.bundle() }, a.identity.signingSeed);
+  const packet = signPacket({ version: 1, type: BitchatType.prekeys, ttl: 7, timestamp: Date.now(), sender: a.session.id, payload: (await keys.bundle())! }, a.identity.signingSeed);
   a.session.setCapabilities(1);
   await Promise.all([a.session.start(), b.session.start()]); connect(a.r, b.r);
   await until(() => !!b.peers.get(a.session.id)?.lastSeen);
@@ -362,16 +362,17 @@ it.each([64, 185])('recovers public text through signed history sync after a los
   await until(() => b.messages.some(message => message.content === content));
   expect(b.messages.filter(message => message.content === content)).toHaveLength(1);
 });
-it('times out a lost replacement response while preserving the established encrypted session', async () => {
+it.each([96, 64])('keeps the established cipher when a %i-byte replacement handshake frame is lost', async missing => {
   const a = node('Alice', 1, 512), b = node('Bob', 2, 512);
   await Promise.all([a.session.start(), b.session.start()]); connect(a.r, b.r);
   await until(() => !!a.peers.get(b.session.id)?.lastSeen && !!b.peers.get(a.session.id)?.lastSeen);
   await a.session.sendPrivate(b.session.id, 'before lost handshake', 'loss-before');
-  await until(() => b.messages.some(m => m.id === 'loss-before'));
-  const send = b.r.port.sendAsync; let dropped = false;
-  b.r.port.sendAsync = async (endpoint, wire) => {
+  await until(() => b.messages.some(m => m.id === 'loss-before') && !!a.peers.get(b.session.id)?.signedRekey);
+  const transport = missing === 96 ? b.r.port : a.r.port;
+  const send = transport.sendAsync; let dropped = false;
+  transport.sendAsync = async (endpoint, wire) => {
     const packet = await decodePacket(wire);
-    if (packet.type === BitchatType.handshake && packet.payload.length === 96) { dropped = true; return; }
+    if (packet.type === BitchatType.handshake && packet.payload.length === missing) { dropped = true; return; }
     await send(endpoint, wire);
   };
   const clock = Date.now, shifted = jest.spyOn(Date, 'now').mockImplementation(() => clock() + 6000);
@@ -384,7 +385,7 @@ it('times out a lost replacement response while preserving the established encry
     const rekey = a.session.rekey(b.session.id), rejection = expect(rekey).rejects.toThrow('timed out');
     await until(() => dropped); expect(deadlines.length).toBeGreaterThanOrEqual(1);
     deadlines[0](); await rejection;
-    timers.mockRestore(); shifted.mockRestore(); b.r.port.sendAsync = send;
+    timers.mockRestore(); shifted.mockRestore(); transport.sendAsync = send;
     await a.session.sendPrivate(b.session.id, 'still encrypted', 'loss-after');
     await until(() => b.messages.some(m => m.id === 'loss-after'));
     expect(a.peers.get(b.session.id)?.secure).toBe(true);

@@ -28,9 +28,9 @@ retired keys. Expired retired material is pruned on that area's next load/check;
 there is no promise of deletion while the app is closed or the area is inactive.
 Existing deterministic channel keys receive one initial 48-hour transition window.
 
-The secure index is capped at 32 retained channel key rings. Corrupt data,
-exhausted quota, and failed persistence surface an error instead of silently
-resetting identity. Concurrent creation and rotation are serialized across
+The secure index stores channel key rings in pages of 32 areas. New areas
+can be joined without evicting existing keys. Corrupt data and failed persistence
+surface an error. Concurrent creation and rotation are serialized across
 manager instances. Clock rollback retains the already committed current identity;
 it never selects an older identity. No permanent-root derivation is used to
 recover a discarded random key.

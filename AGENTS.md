@@ -79,8 +79,8 @@ late focus loads, publish after persistence, and invalidate work on full wipe.
 
 # Private DM visibility
 
-Keep unread Nearby and Location sender shortcuts independent of OS permission. Derive counts
-from the bounded loaded message window and mark read only in a focused foreground
+Keep unread Nearby and Location sender shortcuts independent of OS permission. Derive Nearby counts from the keyed history index and Location counts from the
+bounded loaded window. Mark read only in a focused foreground
 private thread. Feed optional DM alerts only from newly accepted arrival callbacks,
 never history hydration. Preserve separate mention/DM preferences and native
 cleanup categories; full identity erasure invalidates and drains both queues.

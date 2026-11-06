@@ -24,7 +24,6 @@
     "title": "Bitchat",
     "default_name": "Outlink",
     "description": "Chatea por Bluetooth con usuarios de Bitchat cercanos, sin conexión a internet.",
-    "privacy": "Al entrar, tu nombre e identidad del dispositivo serán visibles para usuarios cercanos. Los chats Nearby se pausan mientras esta sala está abierta. Los mensajes se borran al salir.",
     "name": "Tu nombre público",
     "join": "Entrar en la sala cercana",
     "public": "Malla pública",
@@ -65,5 +64,19 @@
       "indigo": "Índigo",
       "slate": "Pizarra"
     }
+  },
+  "mobile": {
+    "geo_privacy": "Los canales de ubicación son públicos. Los operadores de relés y quienes escuchen pueden ver los mensajes, los nombres y la zona.",
+    "bridge_notice": "El chat público pasa por el puente de Internet de la zona y no está cifrado.",
+    "network_privacy": "Ambas opciones están desactivadas de forma predeterminada. Los relés ven la IP y el código de zona. Los mensajes privados siguen cifrados. La conexión suele pausarse en segundo plano salvo con la opción de Android activa y una malla conectada.",
+    "wipe_confirm": "Se borrarán para siempre la identidad, los datos locales y los tokens Cashu guardados. Conserva copias seguras hasta canjearlos.",
+    "quick_erase_hint": "Toca tres veces en 1,5 segundos para borrar de inmediato la identidad y todos los datos locales, incluidos los tokens Cashu, sin confirmación.",
+    "channel_rotation_hint": "La identidad pública cambia a diario. Las claves antiguas reciben mensajes privados durante 48 horas. Tu nombre y el horario de tus mensajes aún pueden identificarte."
+  },
+  "cashu": {
+    "risk": "Cualquiera con una copia puede gastar el token. Recibirlo sin conexión no demuestra que sea válido ni evita el doble gasto. Canjéalo en una cartera de confianza.",
+    "erase": "Guarda una copia segura hasta el canje. Borrar el historial conserva los tokens; el borrado total los elimina. Las copias del portapapeles y de otros dispositivos permanecen.",
+    "copy_warning": "El token se copiará al portapapeles del sistema. Pégalo solo en una cartera Cashu de confianza. Copiar no equivale a canjear ni demuestra el pago.",
+    "confirm": "¿Transferir {{amount}} sats mediante {{mint}} a la identidad Bluetooth {{peer}}? No envíes las mismas pruebas desde otra cartera. La entrega puede ser parcial; reintenta solo con esta persona."
   }
 }

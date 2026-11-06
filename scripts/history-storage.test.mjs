@@ -252,7 +252,7 @@ test('existing encrypted history gains replay markers without changing old messa
     await adapter.history.save('mesh', 'old', JSON.stringify({ peer: 'bob', recipient: 'me', outgoing: false, content: 'old private', delivery: 'delivered' }));
     adapter.close();
     const raw = new DatabaseSync(join(f.directory, 'history.db'));
-    raw.exec('DROP INDEX encrypted_visible_sequence; ALTER TABLE encrypted_messages DROP COLUMN deleted'); raw.close();
+    raw.exec('DROP INDEX encrypted_visible_sequence; DROP INDEX mesh_unread_sequence; ALTER TABLE encrypted_messages DROP COLUMN deleted'); raw.close();
     adapter = f.open();
     assert.equal((await adapter.history.load('mesh')).length, 1);
     await adapter.history.deleteConversation('mesh', 'bob');
@@ -330,5 +330,38 @@ test('explicit wipe recovers a database whose encryption key was already lost', 
     await adapter.wipe();
     assert.equal(f.keys.size, 0);
     assert.deepEqual(Array.from(await adapter.history.load('mesh')), []);
+  } finally { adapter.close(); f.cleanup(); }
+});
+
+test('courier replay markers survive history expiry, clearing and process restart', async () => {
+  const f = fixture(); let adapter = f.open();
+  const accept = () => adapter.history.acceptCourier('sender', 'wire-id', 'local-id', JSON.stringify({ timestamp: f.now(), content: 'courier' }));
+  try {
+    assert.equal(await accept(), 'new');
+    f.advance(7 * 60 * 60 * 1000);
+    await adapter.history.prune();
+    await adapter.history.clear();
+    adapter.close(); adapter = f.open();
+    assert.equal(await accept(), 'duplicate');
+    assert.equal(await adapter.history.get('mesh', 'local-id'), null);
+    await adapter.wipe();
+    assert.equal(await accept(), 'new');
+  } finally { adapter.close(); f.cleanup(); }
+});
+
+test('Nearby private pages and unread counts survive public traffic, a restart and per-thread reads', async () => {
+  const f = fixture(); let adapter = f.open();
+  try {
+    const message = { peer: 'bob', recipient: 'me', outgoing: false, delivery: 'delivered', content: 'private' };
+    await adapter.history.save('mesh', 'dm', JSON.stringify(message));
+    for (let i = 0; i < 205; i++) await adapter.history.save('mesh', `public-${i}`, JSON.stringify({ content: 'public' }));
+    adapter.close(); adapter = f.open();
+    assert.equal((await adapter.history.load('mesh')).length, 200);
+    const thread = await adapter.history.loadMeshThread('bob');
+    assert.equal(thread.length, 1);
+    assert.equal(JSON.parse(thread[0].value).content, 'private');
+    assert.equal((await adapter.history.meshUnread())[0].count, 1);
+    await adapter.history.save('mesh', 'dm', JSON.stringify({ ...message, delivery: 'read' }));
+    assert.equal((await adapter.history.meshUnread()).length, 0);
   } finally { adapter.close(); f.cleanup(); }
 });

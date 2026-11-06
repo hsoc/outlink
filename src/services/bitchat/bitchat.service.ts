@@ -17,7 +17,7 @@ import { PrekeyRuntime, type ProtocolStorage } from './compatibility/prekey-runt
 import { CourierRuntime } from './compatibility/courier-runtime';
 import { NetworkRuntime, type NetworkConfig } from './compatibility/network-runtime';
 import { bridgeHint, meshStableId } from './compatibility/network-protocol';
-import { decodeCourier, encodeCourier, decodePrekeys, courierTag, courierTags, sealCourier } from './compatibility/courier';
+import { decodeCourier, encodeCourier, decodePrekeys, courierTag, courierTags, sealCourier, courierMessageId, timedCourierId } from './compatibility/courier';
 import { geohashService } from '@/services/geohash/geohash.service';
 import { getPublicKey } from 'nostr-tools/pure';
 import { decode as decodeNpub, npubEncode } from 'nostr-tools/nip19';
@@ -37,8 +37,8 @@ import { platform } from '@/platform';
 import { BitchatSession, type BitchatIdentity, type BitchatMessage, type BitchatPeer, type ExtensionContext } from './bitchat-session';
 
 export type BitchatState = { active: boolean; busy: boolean; id: string; account: string | null; peers: BitchatPeer[];
-  messages: BitchatMessage[]; bridgeRelays: number; privateRelays: number; error: boolean };
-const empty: BitchatState = { active: false, busy: false, id: '', account: null, peers: [], messages: [], bridgeRelays: 0, privateRelays: 0, error: false };
+  messages: BitchatMessage[]; threadMessages: BitchatMessage[]; threadPeer?: string; unread?: Map<string, { count: number; name: string }>; bridgeRelays: number; privateRelays: number; error: boolean };
+const empty: BitchatState = { active: false, busy: false, id: '', account: null, peers: [], messages: [], threadMessages: [], threadPeer: undefined, unread: undefined, bridgeRelays: 0, privateRelays: 0, error: false };
 export const bitchatSessionStore = createStore<BitchatState>(() => empty);
 const protocolStorage: ProtocolStorage = { get: readRecord, list: readRecords, put: putRecord, remove: removeRecord };
 const storageKey = (account: string) => `bitchat.identity.${account}`;
@@ -123,7 +123,10 @@ class BitchatService {
       let low = 0, high = messages.length;
       while (low < high) { const middle = low + high >> 1; if (messages[middle].timestamp <= message.timestamp) low = middle + 1; else high = middle; }
       messages.splice(low, 0, message);
-      return { messages: messages.slice(-MESSAGE_WINDOW) };
+      const threadMessages = peer && state.threadPeer === peer
+        ? [...state.threadMessages.filter(m => m.id !== message.id || m.peer !== message.peer), message].sort((a, b) => a.timestamp - b.timestamp).slice(-MESSAGE_WINDOW)
+        : state.threadMessages;
+      return { messages: messages.slice(-MESSAGE_WINDOW), threadMessages };
     });
     // The subscription persists visible updates. Older messages still need durable receipts.
     if (!bitchatSessionStore.getState().messages.some(m => m.id === message.id && m.peer === message.peer)) {
@@ -134,6 +137,43 @@ class BitchatService {
         await platform.history.save('mesh', id, JSON.stringify(message));
       }).catch(() => bitchatSessionStore.setState({ error: true }));
     }
+    if (peer && !message.outgoing) void this.refreshMeshUnread().catch(() => bitchatSessionStore.setState({ error: true }));
+  }
+  private threadBefore?: number;
+  private threadLoad = 0;
+  async showThread(peer: string | undefined, older = false): Promise<void> {
+    const version = ++this.threadLoad;
+    if (!older) {
+      this.threadBefore = undefined;
+      bitchatSessionStore.setState(state => ({ threadPeer: peer, threadMessages: state.threadPeer === peer ? state.threadMessages : [] }));
+    }
+    const load = platform.history.loadMeshThread;
+    if (!peer || !load || older && !this.threadBefore) return;
+    const rows = await historyOperation(() => load(peer, older ? this.threadBefore : undefined));
+    if (version !== this.threadLoad || bitchatSessionStore.getState().threadPeer !== peer) return;
+    this.threadBefore = rows[0]?.sequence;
+    const page = rows.map(row => JSON.parse(row.value) as BitchatMessage).filter(message => messageIsFresh(message));
+    bitchatSessionStore.setState(state => {
+      const combined = new Map(page.map(message => [message.id + message.peer, message]));
+      const floor = page[0]?.timestamp ?? 0;
+      for (const message of state.threadMessages) if (older || message.timestamp >= floor) combined.set(message.id + message.peer, message);
+      const sorted = [...combined.values()].sort((a, b) => a.timestamp - b.timestamp);
+      return { threadMessages: older ? sorted.slice(0, MESSAGE_WINDOW) : sorted.slice(-MESSAGE_WINDOW) };
+    });
+  }
+  async refreshMeshUnread(): Promise<void> {
+    const read = platform.history.meshUnread;
+    if (!read) return;
+    const epoch = sessionIntent();
+    await historyOperation(async () => {
+      const rows = await read();
+      if (epoch !== sessionIntent()) return;
+      const unread = new Map(rows.map(row => {
+        const message = JSON.parse(row.value) as BitchatMessage;
+        return [message.peer, { name: message.name, count: row.count }] as const;
+      }));
+      bitchatSessionStore.setState({ unread });
+    });
   }
   private async rememberPeer(peer: BitchatPeer, newlyOnline: boolean) {
     if (!peer.noisePublicKey || !peer.signingPublicKey) return;
@@ -149,7 +189,7 @@ class BitchatService {
   }
   private carrierPeers(entry?: PendingMessage) {
     return bitchatSessionStore.getState().peers.filter(peer => this.session?.directPeers().includes(peer.id) && peer.lastSeen > 0 && !contactsService.get(peer.id)?.blocked &&
-      (!entry?.courier?.boundFormat || entry.courier.deposited.length < 3 && !entry.courier.deposited.includes(peer.noisePublicKey!)));
+      (!entry?.courier?.timed || entry.courier.deposited.length < 3 && !entry.courier.deposited.includes(peer.noisePublicKey!)));
   }
   private flush(peer: string): Promise<void> {
     const existing = this.flushes.get(peer); if (existing) return existing;
@@ -164,7 +204,7 @@ class BitchatService {
     if (contact.blocked) return;
     await this.sendFavoriteNotice(peer); await this.flushReceipts(peer);
     const available = (entry: PendingMessage) => !!this.session && bitchatSessionStore.getState().peers.some(p => p.id === peer && p.lastSeen > 0 && Date.now() - p.lastSeen < 60000) ||
-      !!this.mailbox && this.internetConnections > 0 && contact.favorite && !!contact.noiseBoundNpub || !!this.prekeys && (this.carrierPeers(entry).length > 0 || !!this.network?.canDrop() && (!entry.courier?.boundFormat || !entry.courier.dropAccepted));
+      !!this.mailbox && this.internetConnections > 0 && contact.favorite && !!contact.noiseBoundNpub || !!this.prekeys && (this.carrierPeers(entry).length > 0 || !!this.network?.canDrop() && (!entry.courier?.timed || !entry.courier.dropAccepted));
     await this.outbox.flush(peer, async entry => {
       const session = this.session;
       const live = bitchatSessionStore.getState().peers.find(p => p.id === peer && p.lastSeen > 0 && Date.now() - p.lastSeen < 60000);
@@ -175,13 +215,14 @@ class BitchatService {
           senderId: entry.message.peer, recipientId: peer, timestamp: entry.message.timestamp }, entry.message.peer, peer); return { delivery: 'sent' }; } catch { /* Try sealed mail. */ }
       }
       if (!session || !this.prekeys || !this.identity) throw new Error('Peer has no available route');
-      let dispatch: CourierDispatch = entry.courier?.boundFormat ? { ...entry.courier, deposited: [...entry.courier.deposited] } : { wire: '', boundFormat: true, deposited: [] };
+      let dispatch: CourierDispatch = entry.courier?.timed ? { ...entry.courier, deposited: [...entry.courier.deposited] } : { wire: '', timed: true, deposited: [] };
       if (!dispatch.wire) {
         const recipient = hexToBytes(contact.noiseKey);
         const known = bitchatSessionStore.getState().peers.find(p => p.id === peer && p.authenticatedCapabilities && p.noisePublicKey === contact.noiseKey);
         const signer = known?.signingPublicKey ?? (contact.verified ? contact.signingKey : undefined);
         const prekey = signer ? await this.prekeys.assign(recipient, entry.message.id, signer) : undefined;
-        const plain = join(Uint8Array.of(1), encodeTlv([[0, bytes(entry.message.id)], [1, bytes(entry.message.content)]]));
+        const wireId = timedCourierId(entry.message.id, entry.message.timestamp, entry.expiresAt);
+        const plain = join(Uint8Array.of(1), encodeTlv([[0, bytes(wireId)], [1, bytes(entry.message.content)]]));
         try { dispatch.wire = base64.encode(encodeCourier({ tag: courierTag(recipient, Math.floor(Date.now() / 86400000)), expiry: entry.expiresAt, copies: 4,
           prekeyId: prekey?.id, ciphertext: sealCourier(plain, this.identity.noiseSeed, prekey?.publicKey ?? recipient, prekey?.id) })); } finally { plain.fill(0); }
       }
@@ -197,7 +238,7 @@ class BitchatService {
   private async publishPrekeys(force = false) {
     if (!this.session || !this.prekeys || !this.connection || !bitchatSessionStore.getState().peers.some(peer => peer.lastSeen > 0) || !force && Date.now() - this.lastPrekeys < 60000) return;
     const session = this.session, prekeys = this.prekeys; this.lastPrekeys = Date.now();
-    const payload = await prekeys.bundle(); if (session !== this.session) return;
+    const payload = await prekeys.bundle(); if (!payload || session !== this.session) return;
     try { await session.sendExtension(BitchatType.prekeys, payload); } catch (error) { this.lastPrekeys = 0; throw error; }
   }
   private flushAll() {
@@ -261,14 +302,16 @@ class BitchatService {
     try {
       if (opened.changed) void this.publishPrekeys(true).catch(() => bitchatSessionStore.setState({ error: true }));
       if (opened.payload[0] !== 1) return true;
-      const fields = decodeTlv(opened.payload.subarray(1)), id = text(fields.get(0) ?? new Uint8Array()), content = text(fields.get(1) ?? new Uint8Array());
-      if (!id || !content.trim()) return true;
+      const fields = decodeTlv(opened.payload.subarray(1)), wireId = text(fields.get(0) ?? new Uint8Array()), content = text(fields.get(1) ?? new Uint8Array());
+      const { id, sentAt, expiresAt } = courierMessageId(wireId), now = Date.now();
+      if (!id || !content.trim() || sentAt !== undefined && sentAt > now + 60000 || expiresAt !== undefined && expiresAt <= now) return true;
       const sender = peerId(opened.sender), contact = contactsService.get(sender);
       if (blockedUsers.has('mesh:' + sender) || contact?.blocked || contact && contact.noiseKey !== bytesToHex(opened.sender)) return true;
-      const message: BitchatMessage = { id, peer: sender, recipient: peerId(this.identity.noisePublicKey), name: contact?.name ?? sender, content, timestamp: Date.now(), outgoing: false, delivery: 'delivered' };
-      const existing = await historyOperation(() => platform.history.get('mesh', id + sender));
-      if (!existing) { await saveMessage('mesh', id + sender, message); this.mergeMessage(message); }
-      await this.queueReceipt(sender, id, 'delivered');
+      const message: BitchatMessage = { id, peer: sender, recipient: peerId(this.identity.noisePublicKey), name: contact?.name ?? sender, content, timestamp: now, courierWireId: wireId === id ? undefined : wireId, outgoing: false, delivery: 'delivered' };
+      const accepted = await historyOperation(() => platform.history.acceptCourier(bytesToHex(opened.sender), id, id + sender, JSON.stringify(message)));
+      if (accepted === 'rejected') return false;
+      if (accepted === 'new') this.mergeMessage(message);
+      await this.queueReceipt(sender, wireId, 'delivered');
       return true;
     } finally { opened.payload.fill(0); }
   }
@@ -383,8 +426,8 @@ class BitchatService {
   private historyVersion = 0;
   clearMessages(): void {
     meshGroupsStore.setState(s => ({ messages: [], historyEpoch: s.historyEpoch + 1 }));
-    ++this.historyVersion; this.before = undefined;
-    bitchatSessionStore.setState({ messages: [] });
+    ++this.historyVersion; ++this.threadLoad; this.before = undefined; this.threadBefore = undefined;
+    bitchatSessionStore.setState({ messages: [], threadMessages: [], unread: undefined });
   }
   deleteConversation(peer: string): Promise<void> {
     if (!/^[0-9a-f]{16}$/.test(peer)) return Promise.reject(new Error('Invalid peer identity'));
@@ -398,8 +441,10 @@ class BitchatService {
         if (epoch !== sessionIntent()) throw new Error('Conversation deletion canceled by identity erasure');
         await platform.history.deleteConversation('mesh', peer, pending.map(message => message.id + message.peer));
         if (epoch !== sessionIntent()) return;
-        bitchatSessionStore.setState(state => ({ messages: state.messages.filter(message => !message.recipient || (message.outgoing ? message.recipient : message.peer) !== peer) }));
+        bitchatSessionStore.setState(state => ({ messages: state.messages.filter(message => !message.recipient || (message.outgoing ? message.recipient : message.peer) !== peer), threadMessages: state.threadPeer === peer ? [] : state.threadMessages }));
+        if (bitchatSessionStore.getState().threadPeer === peer) ++this.threadLoad;
       });
+      await this.refreshMeshUnread();
       const page = await loadMessages<BitchatMessage>('mesh');
       if (epoch !== sessionIntent() || version !== this.historyVersion) return;
       this.before = page.before === undefined ? this.before : Math.min(this.before ?? page.before, page.before);
@@ -420,6 +465,7 @@ class BitchatService {
     if (version !== this.historyVersion) return;
     this.before = page.before; this.hydrated = true;
     bitchatSessionStore.setState({ messages: page.messages });
+    await this.refreshMeshUnread();
   }
   async latest(): Promise<void> { this.hydrated = false; await this.restore(); }
   async older(): Promise<void> {
@@ -616,6 +662,7 @@ class BitchatService {
   }
   private async receipt(id: string, sender: string, delivery: 'sent' | 'delivered' | 'read' | 'failed') {
     if (delivery === 'sent' || delivery === 'failed') return;
+    id = courierMessageId(id).id;
     await this.outbox.acknowledge(sender, id, delivery);
     const key = id + bitchatSessionStore.getState().id;
     const value = await historyOperation(() => platform.history.get('mesh', key));
@@ -683,14 +730,23 @@ class BitchatService {
   }
   read(peer: string, id: string): Promise<void> { return this.track(this.readInternal(peer, id)); }
   private async readInternal(peer: string, id: string): Promise<void> {
-    await this.queueReceipt(peer, id, 'read');
-    bitchatSessionStore.setState((state) => ({ messages: state.messages.map((m) =>
-      !m.outgoing && m.peer === peer && m.id === id ? { ...m, delivery: 'read' } : m) }));
+    const wireId = await historyOperation(async () => {
+      const key = id + peer, saved = await platform.history.get('mesh', key);
+      const message = saved ? JSON.parse(saved) as BitchatMessage : undefined;
+      if (message?.delivery === 'delivered') await platform.history.save('mesh', key, JSON.stringify({ ...message, delivery: 'read' }));
+      return message?.courierWireId ?? id;
+    });
+    await this.queueReceipt(peer, wireId, 'read');
+    const mark = (m: BitchatMessage): BitchatMessage =>
+      !m.outgoing && m.peer === peer && m.id === id ? { ...m, delivery: 'read' } : m;
+    bitchatSessionStore.setState(state => ({ messages: state.messages.map(mark), threadMessages: state.threadMessages.map(mark) }));
+    await this.refreshMeshUnread();
     if (this.session) { try { await this.flushReceipts(peer); } catch { /* Keep the durable acknowledgment for reconnect. */ } }
   }
   private async replayGroups(id?: string) {
     const groups = this.groups;
-    for (const packet of this.session?.groupArchive?.(id) ?? []) {
+    const wireId = id && groups?.wireId(id);
+    for (const packet of this.session?.groupArchive?.(wireId) ?? []) {
       if (!groups || groups !== this.groups) return;
       try { await groups.receiveMessage(packet.payload); } catch { /* Opaque cache entries may belong to another key or contain invalid ciphertext. */ }
     }
@@ -743,7 +799,7 @@ class BitchatService {
   removeGroupMember(id: string, fingerprint: string) {
     return this.track((async () => { const groups = this.groups; if (!groups) throw new Error('Join Bluetooth first'); await groups.remove(id, fingerprint); await this.syncGroups(); })());
   }
-  resetLocalState() { this.conversationVersions.clear(); this.deletions.clear(); meshGroupsStore.setState(s => ({ groups: [], messages: [], self: '', historyEpoch: s.historyEpoch + 1 })); this.hydrated = false; this.before = undefined; ++this.historyVersion; bitchatSessionStore.setState(empty, true); }
+  resetLocalState() { this.conversationVersions.clear(); this.deletions.clear(); meshGroupsStore.setState(s => ({ groups: [], messages: [], self: '', historyEpoch: s.historyEpoch + 1 })); this.hydrated = false; this.before = undefined; this.threadBefore = undefined; ++this.historyVersion; ++this.threadLoad; bitchatSessionStore.setState(empty, true); }
   removeIdentity(account: string): Promise<void> {
     return this.transition(async () => {
       if (this.account === account) await this.stopInternal();

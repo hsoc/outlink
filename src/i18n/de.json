@@ -24,7 +24,6 @@
     "title": "Bitchat",
     "default_name": "Outlink",
     "description": "Chatte über Bluetooth mit Bitchat-Nutzern in der Nähe, ohne Internetverbindung.",
-    "privacy": "Beim Beitritt sind dein Name und deine Geräteidentität für Nutzer in der Nähe sichtbar. Nearby-Chats pausieren, solange dieser Raum geöffnet ist. Nachrichten werden beim Verlassen gelöscht.",
     "name": "Dein öffentlicher Name",
     "join": "Raum in der Nähe betreten",
     "public": "Öffentliches Mesh",
@@ -65,5 +64,19 @@
       "indigo": "Indigo",
       "slate": "Schiefer"
     }
+  },
+  "mobile": {
+    "geo_privacy": "Standortkanäle sind öffentlich. Relay-Betreiber und Zuhörer sehen Nachrichten, Namen und Gebiet.",
+    "bridge_notice": "Der öffentliche Chat läuft über die Internet-Brücke für dieses Gebiet und ist unverschlüsselt.",
+    "network_privacy": "Beide Optionen sind standardmäßig aus. Relays sehen IP-Adresse und Gebietscode. Private Nachrichten bleiben verschlüsselt. Im Hintergrund pausiert die Verbindung außer bei aktivierter Android-Hintergrundverbindung mit verbundenem Mesh.",
+    "wipe_confirm": "Identität, lokale Daten und gespeicherte Cashu-Token werden endgültig gelöscht. Sichere Kopien bis zur Einlösung aufbewahren.",
+    "quick_erase_hint": "Dreimal innerhalb von 1,5 Sekunden tippen löscht Identität und alle lokalen Daten einschließlich Cashu-Token sofort ohne Bestätigung.",
+    "channel_rotation_hint": "Die öffentliche Identität wechselt täglich. Alte Schlüssel empfangen 48 Stunden lang private Nachrichten. Name und Sendezeiten können dich weiterhin identifizieren."
+  },
+  "cashu": {
+    "risk": "Wer eine Kopie hat, kann den Token ausgeben. Offline-Empfang beweist weder Gültigkeit noch Schutz vor doppeltem Ausgeben. In einer vertrauenswürdigen Wallet einlösen.",
+    "erase": "Sicherung bis zur Einlösung behalten. Chatverlauf löschen behält Token, vollständiges Löschen entfernt sie. Kopien in der Zwischenablage und auf anderen Geräten bleiben.",
+    "copy_warning": "Bargeld-Token wird in die Systemzwischenablage kopiert. Nur in eine vertrauenswürdige Cashu-Wallet einfügen. Kopieren ist keine Einlösung und kein Zahlungsnachweis.",
+    "confirm": "{{amount}} Sats über {{mint}} an die Bluetooth-Identität {{peer}} übertragen? Dieselben Nachweise nicht aus einer anderen Wallet senden. Die Übertragung kann unvollständig sein; nur mit diesem Empfänger erneut versuchen."
   }
 }

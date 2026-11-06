@@ -77,10 +77,11 @@ An initial batch has eight unused keys; it replenishes when fewer than three
 remain. Generated timestamps strictly increase, including same-millisecond
 consumption. IDs never wrap/reuse. A key is consumed only after successful
 ciphertext authentication, and that state commits before delivery. Consumed
-keys remain for 48 hours to accept duplicate deliveries, then are pruned; unused
-keys rotate after 30 days. At most 256 consumed grace keys plus eight unused keys
-are retained. Exhausting that grace quota fails closed rather than discarding
-unexpired keys. Forward-secrecy benefits begin when the private key is deleted.
+keys remain for eight days plus two minutes to cover the full accepted bundle
+and courier delivery windows. Unused keys stay in the bounded batch until first
+use. At most 256 consumed keys are retained, with eight fresh consumptions per
+sender in the grace window. The runtime stops advertising when capacity is
+exhausted. Forward-secrecy benefits begin when the private key is deleted.
 
 Public bundles require matching owner/sender Noise identity and valid inner and
 outer Ed25519 signatures against the signing key bound by encrypted Noise state.
@@ -96,7 +97,12 @@ for 24 hours, alongside public announcements/text.
 Courier packets (`0x04`) are directed. The receiver first checks its candidate
 recipient tags for the previous/current/next UTC day. Noise X authenticates the
 original sender inside the seal; blocked full Noise identities are rejected.
-Duplicate inner message IDs do not create duplicate conversation entries.
+A persistent keyed replay ledger binds the authenticated sender and inner message
+ID, atomically with acceptance. It survives chat expiration and Clear local history.
+New Outlink courier IDs carry authenticated send and expiry times within the
+existing opaque message-ID field. Legacy mail has no authenticated send time,
+so a first delivery may still be old. The ledger caps entries at 4,096 per sender and 65,536 per identity and
+rejects new mail when full rather than forgetting accepted IDs.
 
 A deposit for someone else requires an outer signature, the claimed sender to
 match the ingress binding, and a Noise-authenticated direct physical link.
