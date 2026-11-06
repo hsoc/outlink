@@ -18,7 +18,7 @@ export type BitchatPeer = { id: string; name: string; fingerprint: string; lastS
 export type BitchatMessage = { id: string; peer: string; recipient?: string; name: string; content: string;
   timestamp: number; channelThread?: string; bridge?: { pubkey: string; radioHint?: string }; outgoing: boolean; delivery: 'queued' | 'carried' | 'sending' | 'sent' | 'delivered' | 'read' | 'failed' };
 type KnownPeer = BitchatPeer & { ingress: string; noiseKey: Uint8Array; signingKey: Uint8Array };
-type Negotiation = { handshake: BitchatHandshake; at: number; promise: Promise<void>;
+type Negotiation = { handshake: BitchatHandshake; at: number; ingress?: string; promise: Promise<void>;
   resolve: () => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> };
 type Callbacks = { groupState?(peer: BitchatPeer, payload: Uint8Array, invite: boolean): Promise<void>; extension?(packet: BitchatPacket, context: ExtensionContext): Promise<boolean>; peer: (peer: BitchatPeer) => void; message: (message: BitchatMessage) => void | false | Promise<void | false>;
   receipt: (id: string, sender: string, status: 'sent' | 'delivered' | 'read' | 'failed') => void; error: (error: Error) => void };
@@ -36,6 +36,7 @@ export class BitchatSession {
   private readonly signingKey: Uint8Array;
   private readonly peers = new Map<string, KnownPeer>();
   private readonly links = new Set<string>();
+  private readonly admissionTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly seen = new Map<string, number>();
   private readonly privateSeen = new Map<string, number>();
   private readonly ciphers = new Map<string, { cipher: BitchatCipher; at: number }>();
@@ -49,6 +50,7 @@ export class BitchatSession {
   private running = false;
   private queue: Promise<void> = Promise.resolve();
   private queued = 0;
+  private readonly queuedByLink = new Map<string, number>();
   private readonly relays = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly sends = new Map<string, Promise<void>>();
   private readonly gossip: GossipCache;
@@ -83,12 +85,20 @@ export class BitchatSession {
     this.subscriptions = [
       this.transport.addListener('onPeer', (e) => {
         if (!this.running || typeof e.endpointId !== 'string') return;
-        if (this.links.size >= 64 && !this.links.has(e.endpointId)) return;
-        this.links.add(e.endpointId);
+        const endpoint = e.endpointId;
+        if (!this.links.has(endpoint)) {
+          if (this.links.size >= 64) { this.disconnectUnadmitted(endpoint); return; }
+          this.links.add(endpoint);
+          this.admissionTimers.set(endpoint, setTimeout(() => {
+            this.admissionTimers.delete(endpoint);
+            this.disconnectUnadmitted(endpoint);
+          }, 15000));
+        }
         void this.broadcast(this.announcement(), undefined, e.endpointId).catch((error) => this.report(error));
       }),
       this.transport.addListener('onConnection', (e) => {
         if (e.state !== 'disconnected' || typeof e.endpointId !== 'string') return;
+        this.admitLink(e.endpointId);
         this.rates.delete(e.endpointId); this.links.delete(e.endpointId); this.authenticatedLinks.delete(e.endpointId); this.pingResponses.delete(e.endpointId); this.directHints.delete(e.endpointId); this.refreshTopology(); this.outboundTimes.delete(e.endpointId);
         this.syncRequests.delete(e.endpointId); this.syncResponses.delete(e.endpointId);
         const wait = this.sendWaits.get(e.endpointId);
@@ -103,14 +113,20 @@ export class BitchatSession {
       this.transport.addListener('onMessage', (e) => {
         if (!this.running || typeof e.endpointId !== 'string' || !(e.payload instanceof Uint8Array)) return;
         if (!this.links.has(e.endpointId)) return;
-        const endpoint = e.endpointId, wire = e.payload.slice(), now = Date.now();
+        const endpoint = e.endpointId, now = Date.now();
+        const queued = this.queuedByLink.get(endpoint) ?? 0;
         const rate = this.rates.get(endpoint) ?? { at: now, count: 0 };
         if (now - rate.at >= 1000) { rate.at = now; rate.count = 0; }
-        if (rate.count++ >= 64 || this.queued >= 128 || wire.length > 128 * 1024 + 512) return;
         this.rates.set(endpoint, rate);
-        this.queued++;
-        this.queue = this.queue.then(async () => { await new Promise(resolve => setTimeout(resolve, 0)); if (this.running) await this.receive(wire, endpoint); })
-          .catch(() => { /* Reject malformed or unauthenticated radio traffic silently. */ }).finally(() => { this.queued--; });
+        if (rate.count++ >= 64 || this.queued >= 128 || queued >= 32 || e.payload.length > 128 * 1024 + 512) return;
+        const wire = e.payload.slice();
+        this.queued++; this.queuedByLink.set(endpoint, queued + 1);
+        this.queue = this.queue.then(async () => { await new Promise(resolve => setTimeout(resolve, 0)); if (this.running && this.links.has(endpoint)) await this.receive(wire, endpoint); })
+          .catch(() => { /* Reject malformed or unauthenticated radio traffic silently. */ }).finally(() => {
+            this.queued--;
+            const remaining = (this.queuedByLink.get(endpoint) ?? 1) - 1;
+            if (remaining) this.queuedByLink.set(endpoint, remaining); else this.queuedByLink.delete(endpoint);
+          });
       }),
     ];
     try {
@@ -126,6 +142,16 @@ export class BitchatSession {
     if (value === this.name) return;
     this.name = value;
     if (this.running && this.links.size) void this.broadcast(this.announcement()).catch(error => this.report(error));
+  }
+  private disconnectUnadmitted(endpoint: string) {
+    this.links.delete(endpoint);
+    this.rates.delete(endpoint);
+    void this.transport.disconnectAsync?.(endpoint).catch(error => this.report(error));
+  }
+  private admitLink(endpoint: string) {
+    const timer = this.admissionTimers.get(endpoint);
+    if (timer) clearTimeout(timer);
+    this.admissionTimers.delete(endpoint);
   }
   private tick(): void {
     if (!this.running) return;
@@ -392,7 +418,7 @@ export class BitchatSession {
     if (reassembled) {
       // Each shard is floodable, but complete packets are authenticated before display.
       if (packet.ttl > 1 && packet.payload[12] !== BitchatType.sync) this.forward(packet, ingress);
-      const complete = await this.fragments.accept(packet, Date.now(), inflate);
+      const complete = await this.fragments.accept(packet, Date.now(), inflate, ingress);
       if (!complete || !this.running) return; packet = complete;
       if (this.seen.has(packetId(packet)) && (packet.type !== BitchatType.announce || solicited)) return;
     }
@@ -410,7 +436,16 @@ export class BitchatSession {
       const previous = this.peers.get(packet.sender);
       if (previous && (!previous.noiseKey.every((v, i) => v === noiseKey[i]) ||
           !previous.signingKey.every((v, i) => v === signingKey[i]))) return;
-      if (!previous && this.peers.size >= 256) return;
+      if (!previous && this.peers.size >= 256) {
+        const stale = [...this.peers.values()].find(candidate => !candidate.lastSeen && !this.ciphers.has(candidate.id) &&
+          !this.negotiations.has(candidate.id) && !this.verificationWaits.has(candidate.id));
+        if (!stale) return;
+        this.peers.delete(stale.id); this.routing.remove(stale.id);
+        this.challengeNonces.delete(stale.id); this.rekeyAt.delete(stale.id);
+        for (const [link, id] of this.directHints) if (id === stale.id) this.directHints.delete(link);
+        for (const [link, id] of this.authenticatedLinks) if (id === stale.id) this.authenticatedLinks.delete(link);
+      }
+      if (!solicited && packet.ttl === BITCHAT_TTL) this.admitLink(ingress);
       const peer: KnownPeer = { id: packet.sender, name, noiseKey, signingKey, ingress,
         authenticatedCapabilities: previous?.authenticatedCapabilities && this.ciphers.has(packet.sender),
         capabilities: previous?.authenticatedCapabilities && this.ciphers.has(packet.sender) ? previous.capabilities : (capability?.[0] ?? 0) | (capability?.[1] ?? 0) << 8, direct: packet.ttl === BITCHAT_TTL && !solicited, authenticatedLink: this.authenticatedDirect(packet.sender), noisePublicKey: bytesToHex(noiseKey), signingPublicKey: bytesToHex(signingKey), fingerprint: bytesToHex(sha256(noiseKey)), lastSeen: solicited ? previous?.lastSeen ?? 0 : Date.now(), secure: this.ciphers.has(packet.sender) };
@@ -499,11 +534,14 @@ export class BitchatSession {
         if (entry?.handshake.initiator && this.id < peer.id) return;
         if (entry && !entry.handshake.initiator) return;
         if (!entry && Date.now() - (this.rekeyAt.get(peer.id) ?? 0) < 5000) return;
+        const responders = [...this.negotiations.values()].filter(value => value.ingress !== undefined);
+        if (responders.length >= 8 || responders.filter(value => value.ingress === ingressForHandshake).length >= 2) return;
         this.rekeyAt.set(peer.id, Date.now());
         if (entry) {
           // Preserve callers waiting for our collided initiation when becoming responder.
           entry.handshake.destroy(); entry.handshake = new BitchatHandshake(false, this.identity.noiseSeed);
         } else entry = this.newNegotiation(peer.id, false);
+        entry.ingress = ingressForHandshake;
         entry.handshake.read(packet.payload);
         await this.broadcast(this.packet(BitchatType.handshake, entry.handshake.write(), peer.id));
         return;
@@ -604,6 +642,8 @@ export class BitchatSession {
     this.retired.forEach(v => v.cipher.destroy()); this.retired.clear(); this.rekeyAt.clear();
     for (const wait of this.verificationWaits.values()) { clearTimeout(wait.timer); wait.reject(new Error('Bitchat stopped')); }
     this.verificationWaits.clear(); this.challengeNonces.clear();
+    for (const timer of this.admissionTimers.values()) clearTimeout(timer);
+    this.admissionTimers.clear();
     this.fragments.clear(); this.links.clear(); this.peers.clear(); this.seen.clear(); this.privateSeen.clear(); this.rates.clear();
     // Stop native writes so a stalled link cannot hold the bearer lease open.
     await this.transport.stopSessionAsync();

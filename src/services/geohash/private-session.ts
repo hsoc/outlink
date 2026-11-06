@@ -10,7 +10,7 @@ import { bytes } from '@/services/bitchat/bitchat-wire';
 import { migrationProof, validMigration } from './identity-migration';
 import type { ChannelIdentitySet } from './channel-identities';
 type Ack = { peer: string; own?: string; id: string; status: 'delivered' | 'read'; expires: number };
-export type GeoThread = { peer: string; head: string; keys: string[]; local: string; initiated?: boolean; migrationAt?: number; retired?: { key: string; expires: number }[] };
+export type GeoThread = { peer: string; head: string; keys: string[]; local: string; initiated?: boolean; incomingSince?: number; migrationAt?: number; retired?: { key: string; expires: number }[] };
 type Notice = { root: string; own: string; target: string; payload: RotationPayload; expires: number; lastAttempt: number; attempts: number };
 export type PrivateDependencies = {
   records: ProtocolStorage; outbox: OutboxStorage; hash?: string; legacyPubkey?: string;
@@ -64,18 +64,33 @@ export class GeoPrivateSession {
   private async loadRoster(): Promise<GeoThread[]> {
     const records = await this.deps.records.list<Partial<GeoThread> & { peer: string }>('geo-peers', 100);
     const result: GeoThread[] = records.map(entry => {
-      const thread: GeoThread = { peer: entry.peer, head: entry.head ?? entry.peer, keys: entry.keys ?? [entry.peer], local: entry.local ?? this.deps.legacyPubkey ?? this.pubkey, initiated: entry.initiated === true, migrationAt: entry.migrationAt, retired: entry.retired ?? [] };
+      const thread: GeoThread = { peer: entry.peer, head: entry.head ?? entry.peer, keys: entry.keys ?? [entry.peer], local: entry.local ?? this.deps.legacyPubkey ?? this.pubkey, initiated: entry.initiated === true, incomingSince: Number.isSafeInteger(entry.incomingSince) ? entry.incomingSince : undefined, migrationAt: entry.migrationAt, retired: entry.retired ?? [] };
       if (!publicKey(thread.peer) || !publicKey(thread.head) || !publicKey(thread.local) || !Array.isArray(thread.keys) || thread.keys.length > 4 || !thread.keys.every(publicKey) || !thread.keys.includes(thread.head)) throw new Error('Invalid private conversation');
       if (!Array.isArray(thread.retired) || thread.retired.length > 3 || thread.retired.some(e => !publicKey(e.key) || !Number.isSafeInteger(e.expires))) throw new Error('Invalid remote grace identities');
       return thread;
     });
     this.threads = result; this.publishThreads(); return result;
   }
-  private async thread(key: string, own?: string): Promise<GeoThread | undefined> {
+  private async thread(key: string, own?: string, incoming = false): Promise<GeoThread | undefined> {
     const threads = await this.roster(), existing = threads.find(t => t.peer === key || t.head === key || t.keys.includes(key));
     if (existing || !own) return existing;
-    if (threads.length >= 100) throw new Error('Private conversation quota exceeded');
-    const created = { peer: key, head: key, keys: [key], local: own };
+    const now = Date.now();
+    const unanswered = threads.filter(thread => !thread.initiated && thread.incomingSince !== undefined);
+    const remove = async (thread: GeoThread) => {
+      await this.deps.records.remove('geo-peers', thread.peer);
+      threads.splice(threads.indexOf(thread), 1);
+    };
+    for (const expired of unanswered.filter(thread => now - thread.incomingSince! >= 86400000)) await remove(expired);
+    if (incoming && (threads.length >= 100 || threads.filter(thread => !thread.initiated && thread.incomingSince !== undefined).length >= 32)) {
+      this.publishThreads();
+      return;
+    }
+    if (threads.length >= 100) {
+      const victim = unanswered.find(thread => threads.includes(thread));
+      if (!victim) throw new Error('Private conversation quota exceeded');
+      await remove(victim);
+    }
+    const created = { peer: key, head: key, keys: [key], local: own, incomingSince: incoming ? now : undefined };
     await this.deps.records.put('geo-peers', key, created); threads.push(created); this.publishThreads(); return created;
   }
   private acceptsSender(thread: GeoThread, sender: string) { return thread.head === sender || !!thread.retired?.some(entry => entry.key === sender && entry.expires > Date.now()); }
@@ -143,8 +158,8 @@ export class GeoPrivateSession {
       return;
     }
     if (bytes(payload.content).length > 4096 || !payload.content.trim()) return;
-    const thread = (await this.thread(sender, own))!;
-    if (this.deps.blocked?.(sender, thread.keys) || !this.acceptsSender(thread, sender)) return;
+    const thread = await this.thread(sender, own, true);
+    if (!thread || this.deps.blocked?.(sender, thread.keys) || !this.acceptsSender(thread, sender)) return;
     // A known peer explicitly reaching the new inbox can renew an expired pair.
     if (!this.hasOwn(thread.local) && own === this.pubkey && sender === thread.head) await this.saveThread(thread, { ...thread, local: own });
     const previous = await this.deps.get(payload.id + sender);

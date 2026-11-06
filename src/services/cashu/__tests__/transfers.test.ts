@@ -4,12 +4,13 @@ import { inspectToken, tokenParts } from '../token';
 import { encoded, proof } from '../test-support/token';
 import { platform } from '@/platform';
 import { invalidateSessionIntent } from '@/services/history/lifecycle';
-jest.mock('@/platform', () => ({ platform: { records: { get: jest.fn(), set: jest.fn(), list: jest.fn() } } }));
+jest.mock('@/platform', () => ({ platform: { records: { get: jest.fn(), set: jest.fn(), remove: jest.fn(), list: jest.fn() } } }));
 const records = new Map<string, string>(), peer = 'ab'.repeat(8), other = 'cd'.repeat(8);
 beforeEach(async () => {
   await cashuTransfers.idle(); records.clear(); cashuTransfers.reset(); jest.clearAllMocks();
   jest.mocked(platform.records.get).mockImplementation(async (scope, id) => records.get(scope + id) ?? null);
   jest.mocked(platform.records.set).mockImplementation(async (scope, id, value) => { records.set(scope + id, value); });
+  jest.mocked(platform.records.remove).mockImplementation(async (scope, id) => { records.delete(scope + id); });
   jest.mocked(platform.records.list).mockImplementation(async () => [...records.values()].map((value, sequence) => ({ value, sequence: sequence + 1 })));
 });
 it('persists sender recovery before transmission and prevents assigning overlapping proofs twice', async () => {
@@ -52,7 +53,23 @@ it('does not resurrect payment UI when erasure starts during persistence', async
 });
 
 it('refuses new transfers at the storage quota without evicting any existing tokens', async () => {
-  jest.mocked(platform.records.list).mockResolvedValueOnce(Array.from({ length: 128 }, (_, sequence) => ({ sequence, value: JSON.stringify({ id: String(sequence), peer, outgoing: false, at: sequence, total: 1, parts: {} }) })));
+  jest.mocked(platform.records.list).mockResolvedValueOnce(Array.from({ length: 128 }, (_, sequence) => ({ sequence, value: JSON.stringify({ id: String(sequence), peer, outgoing: false, at: sequence, total: 1, parts: {}, wire: encoded() }) })));
   await expect(cashuTransfers.prepare(peer, encoded())).rejects.toThrow();
   expect(platform.records.set).not.toHaveBeenCalled();
+});
+
+it('limits incomplete transfers per sender, expires them, and preserves outgoing tokens', async () => {
+  const frame = tokenParts(encoded())[0], id = inspectToken(encoded()).id;
+  const fake = (n: number) => frame.replace(id, n.toString(16).padStart(64, '0'));
+  for (let n = 1; n <= 4; n++) await cashuTransfers.receive(peer, fake(n));
+  await expect(cashuTransfers.receive(peer, fake(5))).rejects.toThrow('Transfer storage full');
+  const outgoing = await cashuTransfers.prepare(other, encoded());
+  const future = Date.now() + 86400001;
+  const clock = jest.spyOn(Date, 'now').mockReturnValue(future);
+  try {
+    await cashuTransfers.restore();
+    expect(cashuStore.getState().transfers).toEqual([outgoing]);
+    await cashuTransfers.receive(peer, fake(5));
+    expect(await cashuTransfers.token(outgoing)).toBe(encoded());
+  } finally { clock.mockRestore(); }
 });

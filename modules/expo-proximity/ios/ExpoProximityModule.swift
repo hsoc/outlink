@@ -22,6 +22,7 @@ public final class ExpoProximityModule: Module {
   private var peripheralManager: CBPeripheralManager?
   private var mailboxCharacteristic: CBMutableCharacteristic?
   private var peripherals: [String: CBPeripheral] = [:]
+  private var peripheralAdmission: [String: UUID] = [:]
   private var serviceDiscoveryEndpoints = Set<String>()
   private var mailboxByEndpoint: [String: CBCharacteristic] = [:]
   private var subscribedCentrals: [String: CBCentral] = [:]
@@ -127,6 +128,7 @@ public final class ExpoProximityModule: Module {
         self.peripheralManager?.removeAllServices()
         self.mailboxCharacteristic = nil
         self.peripherals.removeAll()
+        self.peripheralAdmission.removeAll()
         self.serviceDiscoveryEndpoints.removeAll()
         self.mailboxByEndpoint.removeAll()
         self.subscribedCentrals.removeAll()
@@ -146,6 +148,9 @@ public final class ExpoProximityModule: Module {
           if let peripheral = self.peripherals.removeValue(forKey: rawEndpoint) {
             self.central?.cancelPeripheralConnection(peripheral)
           }
+          self.peripheralAdmission.removeValue(forKey: rawEndpoint)
+          self.rssiByEndpoint.removeValue(forKey: rawEndpoint)
+          self.signalEmittedAtByEndpoint.removeValue(forKey: rawEndpoint)
           self.serviceDiscoveryEndpoints.remove(rawEndpoint)
           self.mailboxByEndpoint.removeValue(forKey: rawEndpoint)
         } else if endpointId.hasPrefix("p:") {
@@ -298,8 +303,17 @@ public final class ExpoProximityModule: Module {
     advertisementData: [String: Any], rssi RSSI: NSNumber)
   {
     let endpoint = peripheral.identifier.uuidString
+    if peripherals[endpoint] == nil {
+      guard peripherals.count < 16 else { return }
+      peripherals[endpoint] = peripheral
+      let admission = UUID()
+      peripheralAdmission[endpoint] = admission
+      bluetoothQueue.asyncAfter(deadline: .now() + 15) { [weak self] in
+        guard let self, self.peripheralAdmission[endpoint] == admission else { return }
+        self.central?.cancelPeripheralConnection(peripheral)
+      }
+    }
     recordSignal(endpoint: endpoint, rssi: RSSI.intValue)
-    peripherals[endpoint] = peripheral
     peripheral.delegate = bluetoothDelegate
     if peripheral.state == .disconnected {
       central.connect(peripheral)
@@ -310,6 +324,7 @@ public final class ExpoProximityModule: Module {
 
   fileprivate func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
     let endpoint = peripheral.identifier.uuidString
+    guard peripherals[endpoint] === peripheral else { central.cancelPeripheralConnection(peripheral); return }
     let endpointId = "c:\(endpoint)"
     let generation = activateConnectionGeneration(endpointId: endpointId)
     sendEvent("onConnection", [
@@ -322,6 +337,11 @@ public final class ExpoProximityModule: Module {
     error: Error?)
   {
     let endpoint = peripheral.identifier.uuidString
+    guard peripherals[endpoint] === peripheral else { return }
+    peripherals.removeValue(forKey: endpoint)
+    peripheralAdmission.removeValue(forKey: endpoint)
+    rssiByEndpoint.removeValue(forKey: endpoint)
+    signalEmittedAtByEndpoint.removeValue(forKey: endpoint)
     serviceDiscoveryEndpoints.remove(endpoint)
     mailboxByEndpoint.removeValue(forKey: endpoint)
     let endpointId = "c:\(endpoint)"
@@ -381,7 +401,10 @@ public final class ExpoProximityModule: Module {
       "notification state endpoint=c:\(peripheral.identifier.uuidString) notifying=\(characteristic.isNotifying) error=\(error?.localizedDescription ?? "none")"
     )
     if error == nil, characteristic.uuid == mailboxUUID, characteristic.isNotifying {
-      let endpoint = "c:\(peripheral.identifier.uuidString)"
+      let rawEndpoint = peripheral.identifier.uuidString
+      guard peripherals[rawEndpoint] === peripheral else { return }
+      peripheralAdmission.removeValue(forKey: rawEndpoint)
+      let endpoint = "c:\(rawEndpoint)"
       sendEvent("onPeer", ["endpointId": endpoint, "generation": connectionGenerations[endpoint] ?? 0,
         "rssi": rssiByEndpoint[peripheral.identifier.uuidString] ?? 0])
       return
@@ -605,6 +628,12 @@ private final class ExpoProximityBluetoothDelegate: NSObject, CBCentralManagerDe
 
   func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
     owner?.centralManager(central, didConnect: peripheral)
+  }
+
+  func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral,
+    error: Error?)
+  {
+    owner?.centralManager(central, didDisconnectPeripheral: peripheral, error: error)
   }
 
   func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral,

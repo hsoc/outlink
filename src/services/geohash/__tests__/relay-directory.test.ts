@@ -1,4 +1,6 @@
 /** @jest-environment node */
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex } from '@noble/hashes/utils.js';
 import { areaRelays, parseRelayDirectory, RelayDirectoryRefresh, RELAY_DIRECTORY_URL } from '../relay-directory';
 import expected from '@/services/bitchat/test-support/area-relay-vectors.json';
 it('matches independently computed great-circle rankings for three regions and normalizes default-port aliases', () => {
@@ -8,6 +10,7 @@ it('matches independently computed great-circle rankings for three regions and n
 });
 
 const csv = 'Relay URL,Latitude,Longitude\r\nnew.example.com,57.64911,10.40744\r\nother.example.com,0,0\r\n';
+const digest = bytesToHex(sha256(new TextEncoder().encode(csv)));
 it('rejects malformed, conflicting, nonpublic and oversized directory data', () => {
   expect(parseRelayDirectory(csv)).toHaveLength(2);
   for (const bad of ['wrong\na,1,2', csv.replace('57.64911', 'NaN'), csv.replace('57.64911', '91'), csv.replace('new.example.com', '127.0.0.1'), csv.replace('new.example.com', 'a.local'), csv.replace('new.example.com', 'evil.com/path'), csv + 'new.example.com,1,2\n', 'x'.repeat(524289)]) expect(() => parseRelayDirectory(bad)).toThrow();
@@ -16,14 +19,14 @@ it('coalesces updates, caches for a day, retries failures with backoff and prese
   const storage = { getItem: jest.fn(async () => null as string | null), setItem: jest.fn(async () => {}) };
   let now = 100000000;
   const fetcher = jest.fn(async () => ({ ok: true, headers: { get: () => null }, text: async () => csv } as unknown as Response));
-  const client = new RelayDirectoryRefresh(storage, fetcher, () => now);
+  const client = new RelayDirectoryRefresh(storage, fetcher, () => now, digest);
   await Promise.all([client.refresh(), client.refresh()]); expect(fetcher).toHaveBeenCalledTimes(1);
   expect(fetcher).toHaveBeenCalledWith(RELAY_DIRECTORY_URL, expect.objectContaining({ redirect: 'error' }));
   expect(areaRelays('u4pruy')[0]).toBe('wss://new.example.com/');
   now += 3600001; await client.refresh(); expect(fetcher).toHaveBeenCalledTimes(1);
   now += 86400000; fetcher.mockRejectedValueOnce(new Error('offline')); await client.refresh(); await client.refresh(); expect(fetcher).toHaveBeenCalledTimes(2);
   expect(areaRelays('u4pruy')[0]).toBe('wss://new.example.com/');
-  const cached = new RelayDirectoryRefresh({ ...storage, getItem: async () => JSON.stringify({ at: now, csv }) }, fetcher, () => now);
+  const cached = new RelayDirectoryRefresh({ ...storage, getItem: async () => JSON.stringify({ at: now, csv }) }, fetcher, () => now, digest);
   await cached.refresh(); expect(fetcher).toHaveBeenCalledTimes(2);
 });
 it('cancels late fetches without installing or persisting them', async () => {
@@ -33,4 +36,14 @@ it('cancels late fetches without installing or persisting them', async () => {
   const work = client.refresh(); await Promise.resolve(); await Promise.resolve(); client.stop();
   resolve({ ok: true, headers: { get: () => null }, text: async () => csv } as unknown as Response); await work;
   expect(storage.setItem).not.toHaveBeenCalled();
+});
+
+it('rejects valid-looking remote and cached replacements that lack the pinned digest', async () => {
+  const storage = { getItem: async () => JSON.stringify({ at: 0, csv }), setItem: jest.fn(async () => {}) };
+  const fetcher = jest.fn(async () => ({ ok: true, headers: { get: () => null }, text: async () => csv } as unknown as Response));
+  const before = areaRelays('u4pruy');
+  await new RelayDirectoryRefresh(storage, fetcher).refresh();
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  expect(storage.setItem).not.toHaveBeenCalled();
+  expect(areaRelays('u4pruy')).toEqual(before);
 });

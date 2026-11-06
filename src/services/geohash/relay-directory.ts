@@ -1,3 +1,6 @@
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex } from '@noble/hashes/utils.js';
+import provenance from '../../../docs/protocols/relay-directory-provenance.json';
 import directory from './relay-directory.json';
 import { geohashBounds, normalizeGeohash } from './geohash';
 let currentDirectory = directory;
@@ -16,7 +19,7 @@ export function areaRelays(input: string): string[] {
   if (cache.size >= 32) cache.delete(cache.keys().next().value!); cache.set(hash, relays); return [...relays];
 }
 
-export const RELAY_DIRECTORY_URL = 'https://raw.githubusercontent.com/permissionlesstech/bitchat/refs/heads/main/relays/online_relays_gps.csv';
+export const RELAY_DIRECTORY_URL = `https://raw.githubusercontent.com/permissionlesstech/bitchat/${provenance.revision}/relays/online_relays_gps.csv`;
 type Row = [string, number, number];
 const MAX_DIRECTORY_BYTES = 512 * 1024;
 export function parseRelayDirectory(csv: string): Row[] {
@@ -44,14 +47,19 @@ export class RelayDirectoryRefresh {
   private controller?: AbortController;
   private generation = 0;
   constructor(private readonly storage: { getItem(key: string): Promise<string | null>; setItem(key: string, value: string): Promise<void> },
-    private readonly fetcher: typeof fetch = fetch, private readonly now = Date.now) {}
+    private readonly fetcher: typeof fetch = fetch, private readonly now = Date.now, private readonly expectedHash = provenance.sha256) {}
   refresh(): Promise<void> {
     if (this.pending) return this.pending;
     const generation = this.generation;
     const work = this.run(generation).finally(() => { if (this.pending === work) this.pending = undefined; });
     this.pending = work; return work;
   }
-  private install(csv: string) { currentDirectory = parseRelayDirectory(csv); cache.clear(); }
+  private checkedDirectory(csv: string) {
+    if (csv.length > MAX_DIRECTORY_BYTES || bytesToHex(sha256(new TextEncoder().encode(csv))) !== this.expectedHash)
+      throw new Error('Relay directory digest mismatch');
+    return parseRelayDirectory(csv);
+  }
+  private install(rows: Row[]) { currentDirectory = rows; cache.clear(); }
   private async run(generation: number) {
     if (!this.loaded) {
       this.loaded = true;
@@ -61,7 +69,7 @@ export class RelayDirectoryRefresh {
         if (cached && cached.length <= 2 * MAX_DIRECTORY_BYTES + 256) {
           const value = JSON.parse(cached);
           if (typeof value.csv === 'string' && Number.isFinite(value.at) && value.at <= this.now()) {
-            this.install(value.csv);
+            this.install(this.checkedDirectory(value.csv));
             if (this.now() - value.at < 86400000) { this.nextRefresh = value.at + 86400000; return; }
           }
         }
@@ -74,10 +82,10 @@ export class RelayDirectoryRefresh {
     try {
       const response = await this.fetcher(RELAY_DIRECTORY_URL, { signal: controller.signal, redirect: 'error' });
       if (!response.ok || Number(response.headers.get('content-length') ?? 0) > MAX_DIRECTORY_BYTES) return;
-      const csv = await response.text(); parseRelayDirectory(csv);
+      const csv = await response.text(), rows = this.checkedDirectory(csv);
       if (generation !== this.generation || controller.signal.aborted) return;
       await this.storage.setItem('mobile.relay-directory', JSON.stringify({ at: this.now(), csv }));
-      if (generation === this.generation && !controller.signal.aborted) { this.install(csv); this.nextRefresh = this.now() + 86400000; }
+      if (generation === this.generation && !controller.signal.aborted) { this.install(rows); this.nextRefresh = this.now() + 86400000; }
     } catch { /* Offline or malformed updates never replace a working directory. */ }
     finally { clearTimeout(timer); if (this.controller === controller) this.controller = undefined; }
   }

@@ -40,9 +40,9 @@ Settings → Offline delivery and internet links provides separate controls:
 
 The bundled directory contains 441 public address/location entries from the
 pinned reference; [provenance](relay-directory-provenance.json) records its source
-and checksum. Automatic area-relay mode now refreshes this public directory with validation,
-a durable cache and bundled fallback; see [refresh lifecycle](connection-and-internet.md).
-Upstream directory changes can change rendezvous relay selection. There is no Tor implementation.
+and checksum. Automatic area-relay mode fetches that exact revision and
+checks the digest before using either a download or a cached copy. Directory
+updates require a reviewed pin change and an app update.
 Area sockets are shared when bridge and gateway use the same hash. Up to three
 area pools are retained, with configured areas protected from eviction by a
 neighbor's uplink; each pool has at most five addresses. The private/custom pool

@@ -2,7 +2,7 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 import { BITCHAT_MAX_PACKET, BitchatType, decodePacket, encodePacket, join,
   type BitchatPacket, type InflateRaw } from './bitchat-wire';
 
-type Assembly = { packet: BitchatPacket; count: number; type: number; at: number;
+type Assembly = { packet: BitchatPacket; count: number; type: number; at: number; ingress?: string;
   bytes: number; chunks: Map<number, Uint8Array> };
 export function fragmentPacket(packet: BitchatPacket, mtu: number, fragmentId: Uint8Array): Uint8Array[] {
   const wire = encodePacket(packet, (packet.type === BitchatType.handshake || packet.type === BitchatType.encrypted));
@@ -26,7 +26,7 @@ export class BitchatFragments {
   private remove(key: string): void {
     const a = this.pending.get(key); if (a) this.totalBytes -= a.bytes; this.pending.delete(key);
   }
-  async accept(packet: BitchatPacket, now: number, inflate?: InflateRaw): Promise<BitchatPacket | null> {
+  async accept(packet: BitchatPacket, now: number, inflate?: InflateRaw, ingress?: string): Promise<BitchatPacket | null> {
     for (const [key, a] of this.pending) if (now - a.at > 30_000) this.remove(key);
     const p = packet.payload;
     if (p.length <= 13) throw new Error('Invalid Bitchat fragment');
@@ -37,9 +37,9 @@ export class BitchatFragments {
     const key = `${packet.sender}:${bytesToHex(p.subarray(0, 8))}`;
     let a = this.pending.get(key);
     if (!a) {
-      if (this.pending.size >= 32 || [...this.pending.keys()].filter((k) => k.startsWith(packet.sender + ':')).length >= 4)
+      if (this.pending.size >= 32 || ingress !== undefined && [...this.pending.values()].filter(value => value.ingress === ingress).length >= 8 || [...this.pending.keys()].filter((k) => k.startsWith(packet.sender + ':')).length >= 4)
         throw new Error('Bitchat fragment quota');
-      a = { packet, count, type, at: now, bytes: 0, chunks: new Map() }; this.pending.set(key, a);
+      a = { packet, count, type, ingress, at: now, bytes: 0, chunks: new Map() }; this.pending.set(key, a);
     }
     if (a.count !== count || a.type !== type || a.packet.timestamp !== packet.timestamp ||
         a.packet.recipient !== packet.recipient) { this.remove(key); throw new Error('Conflicting Bitchat fragments'); }

@@ -102,12 +102,12 @@ export class GossipCache {
     if (this.packets.has(id)) return;
     if (packet.type === 1 || packet.type === 36) for (const [key, old] of this.packets) if (old.type === packet.type && old.sender === packet.sender) this.remove(key);
     this.packets.set(id, packet); this.total += packet.payload.length;
-    if (persist) this.onChange?.(id, packet);
     if (packet.type === 36) {
       const bundles = [...this.packets].filter(([, value]) => value.type === 36).sort(([, a], [, b]) => a.timestamp - b.timestamp);
       while (bundles.length > 200) this.remove(bundles.shift()![0]);
     }
     while (this.packets.size > 1000 || this.total > 8 * 1024 * 1024) this.remove(this.packets.keys().next().value!);
+    if (persist && this.packets.has(id)) this.onChange?.(id, packet);
   }
   request(now = Date.now()): Uint8Array {
     const packets = this.entries(now).filter(packet => [1, 2, 36, 37].includes(packet.type)).sort((a, b) => b.timestamp - a.timestamp);

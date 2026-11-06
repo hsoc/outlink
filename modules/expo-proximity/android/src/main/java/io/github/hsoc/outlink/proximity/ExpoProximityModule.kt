@@ -63,6 +63,8 @@ class ExpoProximityModule : Module() {
   private val writeQueues = mutableMapOf<String, ArrayDeque<ByteArray>>()
   private val writePromises = mutableMapOf<String, Promise>()
   private val connectionGenerations = mutableMapOf<String, Long>()
+  private var nextConnectionGeneration = 0L
+  private var activeServerCallback: BluetoothGattServerCallback? = null
   private val activeConnectionEndpoints = mutableSetOf<String>()
   private var scanStopRunnable: Runnable? = null
   private val isScanning get() = discoveryConnections.isScanning
@@ -193,6 +195,8 @@ class ExpoProximityModule : Module() {
         mtuByEndpoint.clear()
         signalEmittedAtByEndpoint.clear()
         activeConnectionEndpoints.clear()
+        connectionGenerations.clear()
+        activeServerCallback = null
         gattServer?.close()
         gattServer = null
         promise.resolve()
@@ -207,6 +211,9 @@ class ExpoProximityModule : Module() {
         if (endpointId.startsWith("c:")) {
           activeConnectionEndpoints.remove(endpointId)
           mailboxes.remove(rawEndpoint)
+          mtuByEndpoint.remove(rawEndpoint)
+          signalEmittedAtByEndpoint.remove(rawEndpoint)
+          connectionGenerations.remove(endpointId)
           gatts.remove(rawEndpoint)?.let {
             it.disconnect()
             it.close()
@@ -278,7 +285,8 @@ class ExpoProximityModule : Module() {
     sendEvent("onBluetoothState", mapOf("state" to if (bluetoothAdapter.isEnabled) "poweredOn" else "poweredOff"))
     if (!bluetoothAdapter.isEnabled) error("Bluetooth is powered off")
     if (gattServer == null) {
-      val server = bluetoothManager.openGattServer(appContext.reactContext, serverCallback)
+      val callback = newServerCallback()
+      val server = bluetoothManager.openGattServer(appContext.reactContext, callback)
       val service = BluetoothGattService(SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY)
       val mailbox = BluetoothGattCharacteristic(
         MAILBOX_UUID,
@@ -294,8 +302,12 @@ class ExpoProximityModule : Module() {
       )
       service.addCharacteristic(mailbox)
       serverMailbox = mailbox
-      if (!server.addService(service)) error("Unable to publish the nearby GATT service")
+      if (!server.addService(service)) {
+        server.close()
+        error("Unable to publish the nearby GATT service")
+      }
       gattServer = server
+      activeServerCallback = callback
     }
     // The callback owns both the pending start and the active advertisement.
     // Scanning can start before onStartSuccess arrives; it must not restart it.
@@ -396,80 +408,106 @@ class ExpoProximityModule : Module() {
 
   private val clientCallback = object : BluetoothGattCallback() {
     override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
-      val endpoint = gatt.device.address
-      if (newState == BluetoothProfile.STATE_CONNECTED) {
-        gatts[endpoint] = gatt
-        val endpointId = "c:$endpoint"
-        val generation = activateConnectionGeneration(endpointId)
-        sendEvent("onConnection", mapOf("endpointId" to endpointId, "state" to "connected", "generation" to generation))
-        if (!gatt.requestMtu(MAXIMUM_ATT_MTU)) gatt.discoverServices()
-      } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-        mailboxes.remove(endpoint)
-        mtuByEndpoint.remove(endpoint)
-        gatts.remove(endpoint)
-        gatt.close()
-        val endpointId = "c:$endpoint"
-        val generation = connectionGenerations[endpointId] ?: 0
-        activeConnectionEndpoints.remove(endpointId)
-        rejectWrite(endpointId, "ERR_PROXIMITY_DISCONNECTED", "The nearby peer disconnected.")
-        sendEvent("onConnection", mapOf("endpointId" to endpointId, "state" to "disconnected", "generation" to generation))
+      handler.post {
+        if (gatts[gatt.device.address] !== gatt) return@post
+        val endpoint = gatt.device.address
+        if (newState == BluetoothProfile.STATE_CONNECTED) {
+          val endpointId = "c:$endpoint"
+          val generation = activateConnectionGeneration(endpointId)
+          sendEvent("onConnection", mapOf("endpointId" to endpointId, "state" to "connected", "generation" to generation))
+          if (!gatt.requestMtu(MAXIMUM_ATT_MTU)) gatt.discoverServices()
+        } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+          mailboxes.remove(endpoint)
+          mtuByEndpoint.remove(endpoint)
+          signalEmittedAtByEndpoint.remove(endpoint)
+          gatts.remove(endpoint)
+          gatt.close()
+          val endpointId = "c:$endpoint"
+          val generation = connectionGenerations.remove(endpointId) ?: 0
+          activeConnectionEndpoints.remove(endpointId)
+          rejectWrite(endpointId, "ERR_PROXIMITY_DISCONNECTED", "The nearby peer disconnected.")
+          sendEvent("onConnection", mapOf("endpointId" to endpointId, "state" to "disconnected", "generation" to generation))
+        }
       }
     }
 
     override fun onServiceChanged(gatt: BluetoothGatt) {
-      val endpoint = gatt.device.address
-      val endpointId = "c:$endpoint"
-      val generation = connectionGenerations[endpointId] ?: 0
-      activeConnectionEndpoints.remove(endpointId)
-      mailboxes.remove(endpoint)
-      mtuByEndpoint.remove(endpoint)
-      gatts.remove(endpoint)
-      rejectWrite(endpointId, "ERR_PROXIMITY_DISCONNECTED", "The nearby peer changed its GATT service.")
-      gatt.disconnect()
-      gatt.close()
-      sendEvent("onConnection", mapOf("endpointId" to endpointId, "state" to "disconnected", "generation" to generation))
+      handler.post {
+        if (gatts[gatt.device.address] !== gatt) return@post
+        val endpoint = gatt.device.address
+        val endpointId = "c:$endpoint"
+        val generation = connectionGenerations.remove(endpointId) ?: 0
+        activeConnectionEndpoints.remove(endpointId)
+        mailboxes.remove(endpoint)
+        mtuByEndpoint.remove(endpoint)
+        gatts.remove(endpoint)
+        rejectWrite(endpointId, "ERR_PROXIMITY_DISCONNECTED", "The nearby peer changed its GATT service.")
+        gatt.disconnect()
+        gatt.close()
+        sendEvent("onConnection", mapOf("endpointId" to endpointId, "state" to "disconnected", "generation" to generation))
+      }
     }
 
     override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) {
-      mtuByEndpoint[gatt.device.address] =
-        if (status == BluetoothGatt.GATT_SUCCESS) mtu else DEFAULT_ATT_MTU
-      gatt.discoverServices()
+      handler.post {
+        if (gatts[gatt.device.address] !== gatt) return@post
+        mtuByEndpoint[gatt.device.address] =
+          if (status == BluetoothGatt.GATT_SUCCESS) mtu else DEFAULT_ATT_MTU
+        gatt.discoverServices()
+      }
     }
 
     override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
-      if (status != BluetoothGatt.GATT_SUCCESS) return
-      val service = gatt.getService(SERVICE_UUID) ?: return
-      val endpoint = gatt.device.address
-      val mailbox = service.getCharacteristic(MAILBOX_UUID) ?: return
-      mailboxes[endpoint] = mailbox
-      if (!subscribeToMailbox(gatt, mailbox)) gatt.disconnect()
+      handler.post {
+        if (gatts[gatt.device.address] !== gatt) return@post
+        if (status != BluetoothGatt.GATT_SUCCESS) { gatt.disconnect(); return@post }
+        val service = gatt.getService(SERVICE_UUID) ?: run { gatt.disconnect(); return@post }
+        val endpoint = gatt.device.address
+        val mailbox = service.getCharacteristic(MAILBOX_UUID) ?: run { gatt.disconnect(); return@post }
+        mailboxes[endpoint] = mailbox
+        if (!subscribeToMailbox(gatt, mailbox)) gatt.disconnect()
+      }
     }
 
     override fun onDescriptorWrite(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
-      if (descriptor.uuid != CCCD_UUID) return
-      if (descriptor.characteristic.uuid == MAILBOX_UUID && status == BluetoothGatt.GATT_SUCCESS) {
-        sendEvent("onPeer", mapOf("endpointId" to "c:${gatt.device.address}",
-          "generation" to (connectionGenerations["c:${gatt.device.address}"] ?: 0L)))
+      handler.post {
+        if (gatts[gatt.device.address] !== gatt) return@post
+        if (descriptor.uuid != CCCD_UUID) return@post
+        if (descriptor.characteristic.uuid == MAILBOX_UUID && status == BluetoothGatt.GATT_SUCCESS) {
+          sendEvent("onPeer", mapOf("endpointId" to "c:${gatt.device.address}",
+            "generation" to (connectionGenerations["c:${gatt.device.address}"] ?: 0L)))
+        }
       }
     }
 
     @Deprecated("Deprecated in Android 13")
     override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
-      if (characteristic.uuid == MAILBOX_UUID) emitMailbox("c:${gatt.device.address}", characteristic.value)
+      val frame = characteristic.value?.copyOf() ?: return
+      handler.post {
+        if (gatts[gatt.device.address] !== gatt) return@post
+        if (characteristic.uuid == MAILBOX_UUID) emitMailbox("c:${gatt.device.address}", frame)
+      }
     }
 
     override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray) {
-      if (characteristic.uuid == MAILBOX_UUID) emitMailbox("c:${gatt.device.address}", value)
+      val frame = value.copyOf()
+      handler.post {
+        if (gatts[gatt.device.address] !== gatt) return@post
+        if (characteristic.uuid == MAILBOX_UUID) emitMailbox("c:${gatt.device.address}", frame)
+      }
     }
 
     override fun onCharacteristicWrite(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
-      val endpoint = "c:${gatt.device.address}"
-      if (status != BluetoothGatt.GATT_SUCCESS) {
-        writeQueues.remove(endpoint)
-        writePromises.remove(endpoint)?.reject("ERR_PROXIMITY_WRITE", "BLE write failed ($status).", null)
-        return
+      handler.post {
+        if (gatts[gatt.device.address] !== gatt) return@post
+        val endpoint = "c:${gatt.device.address}"
+        if (status != BluetoothGatt.GATT_SUCCESS) {
+          writeQueues.remove(endpoint)
+          writePromises.remove(endpoint)?.reject("ERR_PROXIMITY_WRITE", "BLE write failed ($status).", null)
+          return@post
+        }
+        writeNext(endpoint, gatt, characteristic)
       }
-      writeNext(endpoint, gatt, characteristic)
     }
   }
 
@@ -548,71 +586,89 @@ class ExpoProximityModule : Module() {
     }
   }
 
-  private val serverCallback = object : BluetoothGattServerCallback() {
+  private fun newServerCallback(): BluetoothGattServerCallback = object : BluetoothGattServerCallback() {
     override fun onConnectionStateChange(device: android.bluetooth.BluetoothDevice, status: Int, newState: Int) {
-      val endpoint = "p:${device.address}"
       handler.post {
+        if (activeServerCallback !== this) return@post
+        val endpoint = "p:${device.address}"
         if (newState == BluetoothProfile.STATE_CONNECTED && gatts[device.address] == null) {
           discoveryConnections.defer(device.address, 10_000)
         }
-      }
-      if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-        val generation = connectionGenerations[endpoint] ?: 0
-        activeConnectionEndpoints.remove(endpoint)
-        subscribedDevices.remove(endpoint)
-        rejectWrite(endpoint, "ERR_PROXIMITY_DISCONNECTED", "The nearby peer disconnected.")
-        sendEvent("onConnection", mapOf("endpointId" to endpoint, "state" to "disconnected", "generation" to generation))
+        if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+          val generation = connectionGenerations.remove(endpoint) ?: 0
+          activeConnectionEndpoints.remove(endpoint)
+          subscribedDevices.remove(endpoint)
+          rejectWrite(endpoint, "ERR_PROXIMITY_DISCONNECTED", "The nearby peer disconnected.")
+          sendEvent("onConnection", mapOf("endpointId" to endpoint, "state" to "disconnected", "generation" to generation))
+        }
       }
     }
 
     override fun onMtuChanged(device: android.bluetooth.BluetoothDevice, mtu: Int) {
-      mtuByEndpoint[device.address] = mtu
+      handler.post {
+        if (activeServerCallback !== this) return@post
+        mtuByEndpoint[device.address] = mtu
+      }
     }
 
     override fun onCharacteristicReadRequest(device: android.bluetooth.BluetoothDevice, requestId: Int, offset: Int, characteristic: BluetoothGattCharacteristic) {
-      gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_REQUEST_NOT_SUPPORTED, offset, null)
+      handler.post {
+        if (activeServerCallback !== this) return@post
+        gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_REQUEST_NOT_SUPPORTED, offset, null)
+      }
     }
 
     override fun onCharacteristicWriteRequest(device: android.bluetooth.BluetoothDevice, requestId: Int, characteristic: BluetoothGattCharacteristic, preparedWrite: Boolean, responseNeeded: Boolean, offset: Int, value: ByteArray) {
-      if (characteristic.uuid == MAILBOX_UUID) {
-        val endpoint = "p:${device.address}"
-        subscribedDevices[endpoint] = device
-        if (endpoint !in activeConnectionEndpoints) {
-          val generation = activateConnectionGeneration(endpoint)
-          sendEvent("onConnection", mapOf("endpointId" to endpoint, "state" to "connected", "generation" to generation))
+      val frame = value.copyOf()
+      handler.post {
+        if (activeServerCallback !== this) return@post
+        if (characteristic.uuid == MAILBOX_UUID) {
+          val endpoint = "p:${device.address}"
+          subscribedDevices[endpoint] = device
+          if (endpoint !in activeConnectionEndpoints) {
+            val generation = activateConnectionGeneration(endpoint)
+            sendEvent("onConnection", mapOf("endpointId" to endpoint, "state" to "connected", "generation" to generation))
+          }
+          acceptFrame(endpoint, frame)
         }
-        acceptFrame(endpoint, value)
+        if (responseNeeded) gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
       }
-      if (responseNeeded) gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
     }
 
     override fun onDescriptorWriteRequest(device: android.bluetooth.BluetoothDevice, requestId: Int, descriptor: BluetoothGattDescriptor, preparedWrite: Boolean, responseNeeded: Boolean, offset: Int, value: ByteArray) {
-      if (descriptor.uuid == CCCD_UUID) {
-        val endpoint = "p:${device.address}"
-        if (descriptor.characteristic.uuid == MAILBOX_UUID) {
-          if (value.contentEquals(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)) {
-            subscribedDevices[endpoint] = device
-            val generation = activateConnectionGeneration(endpoint)
-            sendEvent("onConnection", mapOf("endpointId" to endpoint, "state" to "connected", "generation" to generation))
-            sendEvent("onPeer", mapOf("endpointId" to endpoint, "generation" to generation))
-          } else {
-            subscribedDevices.remove(endpoint)
+      val frame = value.copyOf()
+      handler.post {
+        if (activeServerCallback !== this) return@post
+        if (descriptor.uuid == CCCD_UUID) {
+          val endpoint = "p:${device.address}"
+          if (descriptor.characteristic.uuid == MAILBOX_UUID) {
+            if (frame.contentEquals(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)) {
+              subscribedDevices[endpoint] = device
+              val generation = activateConnectionGeneration(endpoint)
+              sendEvent("onConnection", mapOf("endpointId" to endpoint, "state" to "connected", "generation" to generation))
+              sendEvent("onPeer", mapOf("endpointId" to endpoint, "generation" to generation))
+            } else {
+              subscribedDevices.remove(endpoint)
+            }
           }
+          @Suppress("DEPRECATION")
+          run { descriptor.value = frame }
         }
-        @Suppress("DEPRECATION")
-        run { descriptor.value = value }
+        if (responseNeeded) gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
       }
-      if (responseNeeded) gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
     }
 
     override fun onNotificationSent(device: android.bluetooth.BluetoothDevice, status: Int) {
-      val endpoint = "p:${device.address}"
-      if (status != BluetoothGatt.GATT_SUCCESS) {
-        writeQueues.remove(endpoint)
-        writePromises.remove(endpoint)?.reject("ERR_PROXIMITY_WRITE", "BLE notification failed ($status).", null)
-        return
+      handler.post {
+        if (activeServerCallback !== this) return@post
+        val endpoint = "p:${device.address}"
+        if (status != BluetoothGatt.GATT_SUCCESS) {
+          writeQueues.remove(endpoint)
+          writePromises.remove(endpoint)?.reject("ERR_PROXIMITY_WRITE", "BLE notification failed ($status).", null)
+          return@post
+        }
+        indicateNext(endpoint)
       }
-      indicateNext(endpoint)
     }
   }
 
@@ -656,7 +712,7 @@ class ExpoProximityModule : Module() {
   private fun activateConnectionGeneration(endpoint: String): Long {
     if (endpoint in activeConnectionEndpoints) return connectionGenerations[endpoint] ?: 0
     activeConnectionEndpoints.add(endpoint)
-    val next = (connectionGenerations[endpoint] ?: 0) + 1
+    val next = ++nextConnectionGeneration
     connectionGenerations[endpoint] = next
     return next
   }

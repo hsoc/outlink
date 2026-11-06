@@ -46,7 +46,9 @@ sender owns the conversation and can acknowledge only messages addressed to that
 exact key. Neither short IDs nor nicknames authorize a receipt. Private content
 is never submitted as a public event or public mesh carrier.
 
-Each channel identity has at most 100 conversations, 100 queued messages per
+Each channel identity has at most 100 conversations. At most 32 new incoming-only
+threads can occupy that quota. Their routing records expire after 24 hours and
+can be displaced by a locally started conversation. There are 100 queued messages per
 recipient, and 200 deferred receipts. Private text is limited to 4096 UTF-8 bytes.
 The existing outbox stores before sending, retains entries for 24 hours, and
 limits available-route attempts to eight, at least thirty seconds apart. Relay
@@ -76,7 +78,8 @@ a mesh is also joined. Push registration remains absent.
 ## Directory refresh
 
 Automatic area-relay use fetches the upstream public CSV from the fixed HTTPS
-address recorded in `RELAY_DIRECTORY_URL`. A valid cached directory is used for
+address recorded in `RELAY_DIRECTORY_URL`, pinned to the bundled revision. Both
+cached and downloaded CSV data must match the bundled SHA-256 digest. A valid cached directory is used for
 24 hours; failures retry no more than hourly. Concurrent requests share one fetch.
 Requests have an eight-second timeout and reject redirects. Input has a 512 KiB
 text limit, at most 5000 rows, the expected CSV header, public DNS host syntax,
@@ -94,9 +97,8 @@ There is no fetch at app startup or for Bluetooth-only operation. Custom relay
 mode bypasses the directory. Automatic public channels check hourly while joined;
 active gateways/bridges check through their foreground maintenance loop. Leaving
 or backgrounding cancels a fetch; identity wipe waits for pending cache work.
-The HTTPS directory operator can observe the fetcher's IP address, and the live
-directory is trusted to supply public relay locations, not identities or message
-contents. Tor and high-difficulty proof-of-work remain unimplemented.
+The HTTPS directory operator can observe the fetcher's IP address. A reviewed
+app update is required to change the trusted relay list. Tor and high-difficulty proof-of-work remain unimplemented.
 
 ## Automated verification
 

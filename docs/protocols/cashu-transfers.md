@@ -61,9 +61,9 @@ Records bind sender/recipient, direction, token digest and part count. Persisten
 assembly tolerates reordered and duplicate parts; conflicting parts or a wrong
 completed digest are rejected. Writes are serialized, finish before UI publication,
 and use existing authenticated encrypted protected-record storage. Quotas cap
-storage at 128 incoming/outgoing transfers, including partial transfers, with no
-automatic eviction of money. A full store requires manual recovery and full erasure
-before more transfers; do not use this initial version for high-volume receiving.
+storage at 128 records. Incomplete incoming transfers are limited to 32 total
+and four per sender. They expire after 24 hours and can be evicted to prepare an
+outgoing token. Completed tokens are never automatically evicted.
 Metadata-only UI state excludes tokens and proof secrets. Outgoing proof-secret
 fingerprints prevent accidental local reassignment, including overlapping proofs
 in differently encoded tokens; this cannot stop spending from another wallet.

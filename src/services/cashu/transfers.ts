@@ -1,6 +1,6 @@
 import { createStore } from 'zustand/vanilla';
 import { sessionIntent } from '@/services/history/lifecycle';
-import { putRecord, readRecord, readRecords } from '@/services/bitchat/compatibility/storage';
+import { putRecord, readRecord, readRecords, removeRecord } from '@/services/bitchat/compatibility/storage';
 import { digest, inspectToken, parsePart, tokenParts } from './token';
 export type Transfer = { id: string; peer: string; outgoing: boolean; at: number; total: number; parts: Record<string, string>; wire?: string; mint?: string; amount?: string; claims?: string[] };
 export type TransferSummary = Omit<Transfer, 'wire' | 'parts' | 'claims'> & { complete: boolean; received: number };
@@ -21,15 +21,33 @@ function publish(record: Transfer) {
 async function save(record: Transfer, guard: () => void) {
   guard(); await putRecord(scope, key(record.peer, record.id, record.outgoing), record); guard(); publish(record);
 }
+const partial = (row: Transfer) => !row.outgoing && !row.wire;
+async function discardPartial(row: Transfer, guard: () => void) {
+  guard();
+  await removeRecord(scope, key(row.peer, row.id, false));
+  guard();
+  cashuStore.setState(state => ({ transfers: state.transfers.filter(item => item.outgoing || item.peer !== row.peer || item.id !== row.id) }));
+}
+async function retained(guard: () => void) {
+  const rows = await readRecords<Transfer>(scope, 128);
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  for (const row of rows.filter(row => partial(row) && row.at <= cutoff)) await discardPartial(row, guard);
+  return rows.filter(row => !partial(row) || row.at > cutoff);
+}
 export const cashuTransfers = {
-  restore() { return serial(async guard => { const rows = await readRecords<Transfer>(scope, 128); guard(); cashuStore.setState({ transfers: rows.map(summary).sort((a, b) => b.at - a.at) }); }); },
+  restore() { return serial(async guard => { const rows = await retained(guard); guard(); cashuStore.setState({ transfers: rows.map(summary).sort((a, b) => b.at - a.at) }); }); },
   prepare(peer: string, input: string) {
     return serial(async guard => {
       if (!/^[0-9a-f]{16}$/.test(peer)) throw new Error('Invalid recipient');
-      const token = inspectToken(input), rows = await readRecords<Transfer>(scope, 128); guard();
+      const token = inspectToken(input), rows = await retained(guard); guard();
       const existing = rows.find(row => row.outgoing && row.id === token.id && row.peer === peer);
       if (existing) return summary(existing);
-      if (rows.length >= 128 || rows.some(row => row.outgoing && row.claims?.some(claim => token.claims.includes(claim)))) throw new Error('Token already assigned or transfer storage full');
+      if (rows.some(row => row.outgoing && row.claims?.some(claim => token.claims.includes(claim)))) throw new Error('Token already assigned');
+      if (rows.length >= 128) {
+        const victim = rows.filter(partial).sort((a, b) => a.at - b.at)[0];
+        if (!victim) throw new Error('Transfer storage full');
+        await discardPartial(victim, guard);
+      }
       const record: Transfer = { ...token, peer, outgoing: true, at: Date.now(), total: tokenParts(token.wire).length, parts: {} };
       await save(record, guard); return summary(record);
     });
@@ -39,8 +57,14 @@ export const cashuTransfers = {
       if (!/^[0-9a-f]{16}$/.test(peer)) throw new Error('Invalid sender');
       const part = parsePart(content), recordKey = key(peer, part.id, false);
       let record = await readRecord<Transfer>(scope, recordKey); guard();
+      if (record && partial(record) && Date.now() - record.at >= 86400000) {
+        await discardPartial(record, guard);
+        record = null;
+      }
       if (!record) {
-        if ((await readRecords<Transfer>(scope, 128)).length >= 128) throw new Error('Transfer storage full');
+        const rows = await retained(guard), incoming = rows.filter(partial);
+        if (rows.length >= 128 || incoming.length >= 32 || incoming.filter(row => row.peer === peer).length >= 4)
+          throw new Error('Transfer storage full');
         record = { id: part.id, peer, outgoing: false, at: Date.now(), total: part.total, parts: {} };
       }
       if (record.total !== part.total || record.parts[part.index] && record.parts[part.index] !== part.data) throw new Error('Conflicting transfer part');
