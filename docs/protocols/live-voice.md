@@ -5,7 +5,11 @@ that conversation. Listening starts off and resets when you switch conversations
 leave the screen, or background the app. Hold the radio icon while speaking and
 release to stop. The first hold requests microphone permission if needed. Hold
 again if the permission dialog interrupts the gesture. A burst lasts at most
-15 seconds. The app pauses live playback while you talk.
+15 seconds. The app pauses live playback while you talk. While holding the radio
+icon, the message box shows animated transmission activity bars and elapsed time.
+These bars indicate activity, rather than measured microphone amplitude or
+recipient delivery. Releasing restores the text draft. Reduced-motion mode
+keeps the activity bars still.
 
 Public Mesh bursts are signed and audible to anyone on the mesh who chooses to
 listen. Nearby DMs require an established Noise session before microphone

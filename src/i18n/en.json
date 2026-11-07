@@ -313,6 +313,8 @@
     "mint": "Mint: {{mint}}"
   },
   "mesh_media": {
+    "recording": "Recording voice note…",
+    "recorded": "Voice note ready to send",
     "image_offer": "Image from {{name}} · {{size}} KiB",
     "voice_offer": "Voice note from {{name}} · {{size}} KiB",
     "choose_image": "Choose image",

@@ -3,7 +3,10 @@
 Tap the image icon beside **Send**, choose an image, then tap the same control
 when it changes to a send icon. Tap the microphone icon to record a voice note
 of up to 15 seconds, then tap its send icon. The microphone
-is requested only when recording starts. Accepted voice notes play on demand.
+is requested only when recording starts. Accepted voice notes play on demand. While recording, the message box shows
+microphone-level bars and elapsed time. At the recording limit it shows that the
+voice note is ready to send; use the send or cancel icon below. The text draft
+is preserved.
 Outlink accepts JPEG, PNG, WebP and MPEG-4 audio. The current limit is 96 KiB per
 attachment. Large images are resized and converted to JPEG before sending.
 

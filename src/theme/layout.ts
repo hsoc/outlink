@@ -10,6 +10,7 @@ export const density = {
     headerActionSize: 40,
     headerActionIconSize: 24,
     composerActionSize: 40,
+    audioCapture: { waveHeight: 24, barWidth: 4, barCount: 32, iconSize: 18 },
     tabIconSize: 24,
     iconButtonSize: 36,
     inputHeight: 48,

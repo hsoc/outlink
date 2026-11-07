@@ -157,7 +157,9 @@ visibility explicit and leave media unopened until the recipient accepts it.
 Live Nearby voice uses an explicit listening toggle and a hold-to-talk control.
 Keep Send and compact, accessibility-labelled media actions on one row, with
 Send using the remaining width. Stop capture and playback when the active
-conversation loses focus.
+conversation loses focus. While capturing audio, replace the composer visually with
+a compact waveform or transmission activity display and elapsed time. Preserve
+the draft and composer geometry; respect reduced-motion preferences.
 
 Cashu transfers are explicit actions inside Nearby private conversations, with a
 Settings entry for received/recovery records. Review shows the stated amount, mint

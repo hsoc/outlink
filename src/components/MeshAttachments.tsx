@@ -1,5 +1,6 @@
 import { ImagePlus, Mic, Send, X } from 'lucide-react-native';
 import { ComposerAction } from './ComposerAction';
+import { PushToTalkCaptureDisplay, VoiceNoteCaptureDisplay } from './AudioCaptureDisplay';
 import { LivePushToTalk } from './LivePushToTalk';
 import { liveVoiceStore } from '@/services/bitchat/live-voice';
 import { useCallback, useRef, useState, type ReactNode } from 'react';
@@ -22,7 +23,7 @@ import { platform } from '@/platform';
 import { spacing } from '@/theme';
 import { sessionIntent } from '@/services/history/lifecycle';
 
-const recordingOptions = { ...RecordingPresets.HIGH_QUALITY, sampleRate: 24000, numberOfChannels: 1, bitRate: 24000 };
+const recordingOptions = { ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true, sampleRate: 24000, numberOfChannels: 1, bitRate: 24000 };
 const remove = (file?: File) => { if (file?.exists) file.delete(); };
 
 export function MeshAttachments({ peer, canSend, joined, onOpenPeer, input, send }: { peer?: string; canSend: boolean; joined: boolean; onOpenPeer(id: string): void; input: ReactNode; send: ReactNode }) {
@@ -175,7 +176,14 @@ export function MeshAttachments({ peer, canSend, joined, onOpenPeer, input, send
     {joined && voice.speaker && <AppText variant="caption" accessibilityLiveRegion="polite">{t('live_voice.speaker', { name: voice.speaker })}</AppText>}
     {joined && voice.error && <AppText variant="caption" tone="danger" accessibilityLiveRegion="polite">{t('live_voice.failed')}</AppText>}
     {joined && !peer && <AppText variant="caption" tone="muted">{t('live_voice.public_notice')}</AppText>}
-    {input}
+    <View>
+      <View pointerEvents={recording || voice.talking ? 'none' : 'auto'} accessibilityElementsHidden={recording || voice.talking}
+        importantForAccessibility={recording || voice.talking ? 'no-hide-descendants' : 'auto'}
+        style={{ opacity: recording || voice.talking ? 0 : 1 }}>{input}</View>
+      {(recording || voice.talking) && <View style={{ position: 'absolute', inset: 0 }}>
+        {recording ? <VoiceNoteCaptureDisplay recorder={recorder} /> : <PushToTalkCaptureDisplay />}
+      </View>}
+    </View>
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
       <View style={{ flex: 1, minWidth: 0 }}>{send}</View>
       {showActions && (recording
