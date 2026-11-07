@@ -1,5 +1,6 @@
 import { meshAttachments, meshAttachmentStore } from '@/services/bitchat/mesh-attachments';
 import { MeshAttachments } from '@/components/MeshAttachments';
+import { ConversationErrorNotice } from '@/components/ConversationErrorNotice';
 import { messageTime } from '@/lib/message-time';
 import { conversationActivity, conversationActivityStore, conversationScope } from '@/services/mentions/conversation-activity';
 import { LocationInfo } from '@/components/common/LocationInfo';
@@ -142,7 +143,9 @@ export default function Chats() {
   };
   const privateMeshMessages = useMemo(() => mesh.threadPeer === recipient ? mesh.threadMessages : [], [mesh.threadPeer, mesh.threadMessages, recipient]);
   useEffect(() => {
-    void bitchatService.showThread(mode === 'mesh' ? recipient : undefined).catch(() => setActionError('other'));
+    let current = true;
+    void bitchatService.showThread(mode === 'mesh' ? recipient : undefined).catch(() => { if (current) setActionError('other'); });
+    return () => { current = false; };
   }, [mode, recipient]);
   const messages = useMemo(() => (mode === 'geo' ? geoRecipient ? geo.privateMessages.filter(m => m.channelThread === geoRecipient || m.peer === geoRecipient || m.recipient === geoRecipient) : geo.messages : recipient ? privateMeshMessages : mesh.messages.filter(m => !m.recipient)).filter(m => !blockedKeys.has(messageUserKey(m))), [blockedKeys, mode, recipient, mesh.messages, privateMeshMessages, geo.messages, geo.privateMessages, geoRecipient]);
   useEffect(() => {
@@ -176,6 +179,8 @@ export default function Chats() {
   async function operate(task: () => Promise<void>, action: 'join' | 'send' | 'other' = 'other') {
     if (working) return;
     setWorking(true); setActionError(null);
+    if (mode === 'mesh') bitchatSessionStore.setState({ error: false });
+    else geohashStore.setState({ error: false });
     try { await task(); } catch { setActionError(action); } finally { setWorking(false); }
   }
   useFocusEffect(useCallback(() => {
@@ -427,13 +432,9 @@ export default function Chats() {
           onOpenPeer={setRecipient} canSend={active && !busy && (recipient ? selectedOnline : canSendPublicMesh)} input={composerInput} send={composerSend} />
           : <>{composerInput}{composerSend}</>}
       </>}
-      {actionError && <AppText variant="caption" tone="danger" accessibilityLiveRegion="polite">
-        {t(actionError === 'send' ? 'mobile.send_failed' : actionError === 'join' ? (mode === 'mesh' ? 'mobile.mesh_join_failed' : 'mobile.geo_join_failed') : 'mobile.operation_failed')}
-      </AppText>}
-      {!actionError && workspace.error && <AppText variant="caption" tone="danger" accessibilityLiveRegion="polite">{t('mobile.storage_failed')}</AppText>}
-      {!actionError && !workspace.error && (mesh.error || geo.error) && <AppText variant="caption" tone="danger" accessibilityLiveRegion="polite">
-        {t('mobile.operation_failed')}
-      </AppText>}
+      {!actionError && workspace.error
+        ? <AppText variant="caption" tone="danger" accessibilityLiveRegion="polite">{t('mobile.storage_failed')}</AppText>
+        : <ConversationErrorNotice mode={mode} actionError={actionError} onDismissAction={() => setActionError(null)} />}
       {wipeStatus === 'done' && <AppText variant="caption" tone="muted" accessibilityLiveRegion="polite">{t('mobile.wipe_done')}</AppText>}
     </KeyboardAvoidingView>}
     <ScreenHeader back={false} left={<View><QuickEraseButton onErase={quickErase} busy={wiping} /></View>} right={<AppButton label={t('mobile.settings')} variant="text" disabled={wiping} onPress={() => router.push('/settings')} />} />

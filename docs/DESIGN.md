@@ -183,3 +183,8 @@ including its original white “bitchat” lettering and white canvas. Preserve 
 artwork when generating platform sizes. Use a white launch-screen background and
 keep the complete mark within Android adaptive-icon masks; do not retain a retired
 monochrome symbol. The header and quick-erase control share the configured app icon.
+
+Conversation operation errors have an explicit Dismiss control. Show background
+transport errors only in their corresponding Nearby or Location view. Dismissing
+a notice acknowledges it without deleting data or changing the connection;
+subsequent failures can appear again. Keep storage failure warnings separate.
