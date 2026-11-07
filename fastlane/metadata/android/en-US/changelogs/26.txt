@@ -1,0 +1,1 @@
+Fixes opening received images and voice notes. Adds live recording bars and timers for voice notes and push-to-talk, while preserving text drafts.
