@@ -1,0 +1,1 @@
+Location channels and enabled DMs can stay connected in the Android background without joining Nearby. Fixes opening received images and voice notes. Adds recording bars and timers for voice notes and push-to-talk. Makes operation errors dismissible.
