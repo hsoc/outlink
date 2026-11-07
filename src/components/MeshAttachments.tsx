@@ -32,7 +32,7 @@ export function MeshAttachments({ peer, canSend, joined, onOpenPeer, input, send
   const offers = useStore(meshAttachmentStore, state => state.offers);
   const recorder = useAudioRecorder(recordingOptions);
   const player = useAudioPlayer();
-  const [recording, setRecording] = useState(false), [busy, setBusy] = useState(false), [status, setStatus] = useState<'failed' | 'sent'>();
+  const [recording, setRecording] = useState(false), [busy, setBusy] = useState(false), [status, setStatus] = useState<'failed' | 'open_failed' | 'sent'>();
   const [preview, setPreview] = useState<{ file: File; image: boolean }>();
   const [picked, setPicked] = useState<{ source: File; mime: string; width: number; height: number }>();
   const selection = useRef<typeof picked>(undefined);
@@ -45,7 +45,7 @@ export function MeshAttachments({ peer, canSend, joined, onOpenPeer, input, send
   useFocusEffect(useCallback(() => {
     const reset = () => {
       generation.current++;
-      try { player.replace(null); } catch { /* The native player may already be released. */ }
+      try { player.pause(); } catch { /* The native player may already be released. */ }
       try { remove(file.current); } catch { /* Startup and identity erase also clean the cache. */ }
       file.current = undefined;
       setPreview(undefined); setRecording(false);
@@ -61,12 +61,12 @@ export function MeshAttachments({ peer, canSend, joined, onOpenPeer, input, send
     const subscription = platform.appState.addChangeListener(state => { if (state !== 'active' && !picking.current) reset(); });
     return () => { subscription(); reset(); };
   }, [clearSelection, player, recorder]));
-  const operate = async (task: (valid: () => boolean) => Promise<void>) => {
+  const operate = async (task: (valid: () => boolean) => Promise<void>, failure: 'failed' | 'open_failed' = 'failed') => {
     if (busy) return;
     const current = generation.current, intent = sessionIntent();
     const valid = () => current === generation.current && intent === sessionIntent() && platform.appState.currentState() === 'active';
     setBusy(true); setStatus(undefined);
-    try { await task(valid); } catch { if (valid()) setStatus('failed'); } finally { setBusy(false); }
+    try { await task(valid); } catch { if (valid()) setStatus(failure); } finally { setBusy(false); }
   };
   const sendFile = async (source: File, mime: string, valid: () => boolean) => {
     if (!source.size || source.size > MESH_MEDIA_LIMIT) throw new Error('Attachment too large');
@@ -140,20 +140,20 @@ export function MeshAttachments({ peer, canSend, joined, onOpenPeer, input, send
     }
   });
   const close = () => {
-    player.replace(null);
+    player.pause();
     remove(file.current); file.current = undefined; setPreview(undefined);
   };
   const accept = (offer: AttachmentOffer) => operate(async valid => {
     if (!valid() || blockedUsers.has('mesh:' + offer.peer) || contactsService.get(offer.peer)?.blocked) return;
-    const media = meshAttachments.accept(offer.id);
+    const media = meshAttachments.get(offer.id);
     if (!media) return;
-    try {
-      close();
-      const accepted = new File(platform.meshMediaCache.save(offer.id, mediaExtensions[media.mime], media.data));
-      file.current = accepted;
-      setPreview({ file: accepted, image: media.mime.startsWith('image/') });
-    } finally { media.data.fill(0); }
-  });
+    close();
+    const accepted = new File(platform.meshMediaCache.save(offer.id, mediaExtensions[media.mime], media.data));
+    meshAttachments.accept(offer.id);
+    file.current = accepted;
+    setPreview({ file: accepted, image: media.mime.startsWith('image/') });
+    media.data.fill(0);
+  }, 'open_failed');
   const showActions = joined || !!picked;
   return <View style={{ gap: spacing.xs }}>
     {joined && !peer && [...new Map(offers.filter(offer => offer.privateMessage).map(offer => [offer.peer, offer])).values()].map(offer =>
@@ -192,6 +192,6 @@ export function MeshAttachments({ peer, canSend, joined, onOpenPeer, input, send
             onPress={() => void (recording ? finish(true) : record())} />)}
       {joined && <LivePushToTalk peer={peer} canTalk={canSend} disabled={recording || busy} />}
     </View>
-    {status && <AppText variant="caption" tone={status === 'failed' ? 'danger' : 'muted'} accessibilityLiveRegion="polite">{t(`mesh_media.${status}`)}</AppText>}
+    {status && <AppText variant="caption" tone={status === 'sent' ? 'muted' : 'danger'} accessibilityLiveRegion="polite">{t(`mesh_media.${status}`)}</AppText>}
   </View>;
 }

@@ -16,7 +16,9 @@ history, Internet relays, courier mail, or the offline outbox.
 
 The receiving app shows an offer with sender, type and size. It holds at most
 eight offers in memory, with up to two per sender and a five-minute lifetime.
-**Accept attachment** creates a temporary local preview file. **Decline** removes
+**Accept attachment** creates a temporary local preview file. If preview saving
+fails, the offer stays available for another attempt until it expires. Receiving does not require microphone or photo-library permission.
+**Decline** removes
 the offer without writing its contents. Closing the preview, leaving the screen,
 backgrounding, restarting or erasing the identity clears preview files. Public
 visibility and recipient acceptance are independent. A successful send does not

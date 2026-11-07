@@ -323,6 +323,7 @@
     "play": "Play voice note",
     "close": "Close attachment",
     "accepted_image": "Accepted image",
+    "open_failed": "Could not open the received attachment. Try accepting it again. If this continues, check available device storage.",
     "failed": "Could not send or open the attachment. Check permissions, Bluetooth, and the 96 KiB size limit.",
     "sent": "Sent to the mesh. Recipient acceptance is separate.",
     "public_notice": "Public Mesh attachments can be read by anyone on the mesh.",

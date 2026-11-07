@@ -21,6 +21,7 @@ export const meshAttachments = {
     pending.set(id, { media, timer: setTimeout(() => meshAttachments.decline(id), 5 * 60 * 1000) });
     meshAttachmentStore.setState({ offers: [...offers, { id, peer, name, privateMessage, size: media.data.length, mime: media.mime }] });
   },
+  get(id: number) { return pending.get(id)?.media; },
   accept: remove,
   decline(id: number) { remove(id)?.data.fill(0); },
   clear() {

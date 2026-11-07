@@ -23,3 +23,17 @@ it('keeps incoming bytes out of the visible store until explicitly accepted', ()
   meshAttachments.decline(meshAttachmentStore.getState().offers[0].id);
   expect(data.every(byte => byte === 0)).toBe(true);
 });
+
+it('preserves a received offer and its bytes until preview creation succeeds', () => {
+  const data = image();
+  meshAttachments.offer('peer', 'Alice', { mime: 'image/jpeg', data }, false);
+  const [offer] = meshAttachmentStore.getState().offers;
+  const pending = meshAttachments.get(offer.id);
+  expect(pending?.data).toEqual(image());
+  // A failed preview write leaves the offer available for retry or decline.
+  expect(meshAttachmentStore.getState().offers).toEqual([offer]);
+  expect(meshAttachments.get(offer.id)).toBe(pending);
+  expect(meshAttachments.accept(offer.id)).toBe(pending);
+  expect(meshAttachments.get(offer.id)).toBeUndefined();
+  expect(meshAttachmentStore.getState().offers).toEqual([]);
+});
