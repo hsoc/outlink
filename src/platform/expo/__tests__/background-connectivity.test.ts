@@ -33,9 +33,11 @@ it('requires explicit Android notification permission and exposes no iOS or old-
 });
 it('waits for native startup, propagates failure, and forwards neutral notification copy', async () => {
   native.startBackgroundAsync.mockRejectedValueOnce(new Error('Not allowed'));
-  await expect(backgroundConnectivityAdapter.start('Outlink', 'Connected', 'Stop')).rejects.toThrow('Not allowed');
-  await backgroundConnectivityAdapter.start('Outlink', 'Connected', 'Stop');
-  expect(native.startBackgroundAsync).toHaveBeenLastCalledWith('Outlink', 'Connected', 'Stop');
+  await expect(backgroundConnectivityAdapter.start('Outlink', 'Connected', 'Stop', false, true)).rejects.toThrow('Not allowed');
+  await backgroundConnectivityAdapter.start('Outlink', 'Connected', 'Stop', false, true);
+  expect(native.startBackgroundAsync).toHaveBeenLastCalledWith('Outlink', 'Connected', 'Stop', false, true);
+  await backgroundConnectivityAdapter.start('Outlink', 'Connected', 'Stop', true, true);
+  expect(native.startBackgroundAsync).toHaveBeenLastCalledWith('Outlink', 'Connected', 'Stop', true, true);
   expect(await backgroundConnectivityAdapter.running()).toBe(true);
   await backgroundConnectivityAdapter.stop(); expect(native.stopBackgroundAsync).toHaveBeenCalled();
 });

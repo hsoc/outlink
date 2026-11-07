@@ -126,6 +126,7 @@ pinned official client; see [the protocol boundary](../protocols/channel-identit
 
 Background-connectivity lifecycle and platform-adapter tests additionally cover
 permission denial, native startup failures, retained sessions, disabling while
-backgrounded, lost service, internet-only fallback, identity-wipe invalidation,
+backgrounded, lost service, Location-only retention, leaving either transport while the other
+remains joined, releasing the last session, identity-wipe invalidation,
 opt-in persistence, and Headless JS stop races. These do not validate native
 service/OS behavior; see [background connectivity](../protocols/background-connectivity.md).

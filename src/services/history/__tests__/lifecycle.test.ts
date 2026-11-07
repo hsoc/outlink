@@ -80,12 +80,53 @@ it('fails closed when native startup fails, permissions are denied, or the servi
   await lost.lifecycle.change('background');
   expect(lost.policy.failed).toHaveBeenCalledTimes(1); expect(lost.mesh.stop).toHaveBeenCalled();
 });
-it('never starts a new foreground service from background, or for an internet-only session', async () => {
+it('never starts a new foreground service from the background', async () => {
   const race = backgroundSetup(); await race.lifecycle.change('background');
   expect(race.policy.start).not.toHaveBeenCalled(); expect(race.mesh.stop).toHaveBeenCalled();
-  const geoOnly = backgroundSetup(); geoOnly.mesh.connection = undefined;
-  await geoOnly.lifecycle.change('active'); await geoOnly.lifecycle.change('background');
-  expect(geoOnly.policy.start).not.toHaveBeenCalled(); expect(geoOnly.geo.stop).toHaveBeenCalled();
+});
+it('keeps Location-only public and private connections without starting Bluetooth', async () => {
+  const { mesh, geo, policy, lifecycle } = backgroundSetup();
+  mesh.connection = undefined;
+  await lifecycle.change('active');
+  expect(policy.start).toHaveBeenLastCalledWith(false, true);
+  await lifecycle.change('background'); await lifecycle.change('active');
+  expect(geo.stop).not.toHaveBeenCalled(); expect(geo.join).not.toHaveBeenCalled();
+  expect(mesh.start).not.toHaveBeenCalled(); expect(mesh.stop).not.toHaveBeenCalled();
+});
+it('keeps the remaining transport when leaving one, and releases the service after leaving both', async () => {
+  const { mesh, geo, policy, lifecycle } = backgroundSetup();
+  await lifecycle.change('active');
+  expect(policy.start).toHaveBeenLastCalledWith(true, true);
+  mesh.connection = undefined;
+  await lifecycle.change('active');
+  expect(policy.start).toHaveBeenLastCalledWith(false, true);
+  await lifecycle.change('background');
+  expect(geo.stop).not.toHaveBeenCalled(); expect(policy.stop).not.toHaveBeenCalled();
+  geo.connection = undefined;
+  await lifecycle.change('background');
+  expect(policy.stop).toHaveBeenCalled();
+  const meshOnly = backgroundSetup(); meshOnly.geo.connection = undefined;
+  await meshOnly.lifecycle.change('active');
+  expect(meshOnly.policy.start).toHaveBeenLastCalledWith(true, false);
+  await meshOnly.lifecycle.change('background');
+  expect(meshOnly.mesh.stop).not.toHaveBeenCalled();
+});
+it('pauses and resumes Location-only sessions when disabled, and reports a missing service', async () => {
+  const { mesh, geo, lifecycle, enable } = backgroundSetup(); mesh.connection = undefined;
+  await lifecycle.change('active'); await lifecycle.change('background');
+  enable(false); await lifecycle.change('background');
+  expect(geo.stop).toHaveBeenCalledTimes(1);
+  await lifecycle.change('active'); expect(geo.join).toHaveBeenCalledTimes(1);
+  expect(mesh.start).not.toHaveBeenCalled();
+  const lost = backgroundSetup(); lost.mesh.connection = undefined;
+  await lost.lifecycle.change('active'); lost.loseService(); await lost.lifecycle.change('background');
+  expect(lost.policy.failed).toHaveBeenCalled(); expect(lost.geo.stop).toHaveBeenCalled();
+});
+it('does not hold the service with no joined sessions', async () => {
+  const { mesh, geo, policy, lifecycle } = backgroundSetup();
+  mesh.connection = undefined; geo.connection = undefined;
+  await lifecycle.change('active');
+  expect(policy.start).not.toHaveBeenCalled(); expect(policy.stop).toHaveBeenCalled();
 });
 it('does not resume paused connections after an identity wipe and releases the keeper on disposal', async () => {
   const { mesh, geo, policy, lifecycle, enable } = backgroundSetup();

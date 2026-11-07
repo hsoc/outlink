@@ -49,7 +49,8 @@ present a new identity as authenticated continuity in another client.
 
 Background connectivity is opt-in and visibly platform-limited. Its Android switch
 explains battery use and requires a visible ongoing notification with a Stop
-action. Public Mesh denotes Bluetooth broadcast; internet channels use their area-code selector and retain public-channel context
+action. The switch applies to joined Nearby or Location messaging independently;
+notification copy must remain accurate for either transport. Public Mesh denotes Bluetooth broadcast; internet channels use their area-code selector and retain public-channel context
 for accessibility.
 
 A Public Mesh composer with no available peer or enabled bridge route labels its

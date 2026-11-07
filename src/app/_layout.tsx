@@ -19,7 +19,7 @@ import { SystemColorSchemeProvider } from '@/theme';
 import { useThemeStore } from '@/stores/theme.store';
 import { platform } from '@/platform';
 import { bitchatService, bitchatSessionStore } from '@/services/bitchat/bitchat.service';
-import { geohashService } from '@/services/geohash/geohash.service';
+import { geohashService, geohashStore } from '@/services/geohash/geohash.service';
 export default function Layout() {
   const [ready, setReady] = useState(false);
   const [recovered, setRecovered] = useState(false);
@@ -41,7 +41,7 @@ export default function Layout() {
     void useThemeStore.getState().load().finally(() => { if (alive) setReady(true); });
     const lifecycle = createSessionLifecycle(bitchatService, geohashService, {
       enabled: () => workspaceStore.getState().keepBackground === true && platform.backgroundConnectivity.supported(),
-      start: () => platform.backgroundConnectivity.start(i18n.t('mobile.background_notification_title'), i18n.t('mobile.background_notification_body'), i18n.t('mobile.background_stop')),
+      start: (mesh, internet) => platform.backgroundConnectivity.start(i18n.t('mobile.background_notification_title'), i18n.t('mobile.background_notification_body'), i18n.t('mobile.background_stop'), mesh, internet),
       running: () => platform.backgroundConnectivity.running(),
       stop: () => platform.backgroundConnectivity.stop(),
       failed: () => workspaceStore.setState({ keepBackground: false, backgroundError: true }),
@@ -49,14 +49,15 @@ export default function Layout() {
     const refresh = () => { void lifecycle.change(platform.appState.currentState()).catch(() => workspaceStore.setState({ backgroundError: true })); };
     const unsubscribePreference = workspaceStore.subscribe((state, previous) => { if (state.keepBackground !== previous.keepBackground) refresh(); });
     const unsubscribeMesh = bitchatSessionStore.subscribe((state, previous) => { if (state.active !== previous.active) refresh(); });
+    const unsubscribeGeo = geohashStore.subscribe((state, previous) => { if (state.active !== previous.active) refresh(); });
     const unsubscribeStop = platform.backgroundConnectivity.onStop(() => {
-      if (bitchatService.connection && workspaceStore.getState().keepBackground) workspaceStore.setState({ keepBackground: false });
+      if ((bitchatService.connection || geohashService.connection) && workspaceStore.getState().keepBackground) workspaceStore.setState({ keepBackground: false });
     });
     const cleanupHistory = () => { void pruneChatHistory().catch(() => bitchatSessionStore.setState({ error: true })); };
     cleanupHistory();
     const historyTimer = setInterval(cleanupHistory, 60000);
     const remove = platform.appState.addChangeListener(state => { if (state === 'active') cleanupHistory(); void lifecycle.change(state).catch(() => {}); });
-    return () => { i18n.off('languageChanged', privateCopy); i18n.off('languageChanged', mentionCopy); alive = false; clearInterval(historyTimer); remove(); unsubscribePreference(); unsubscribeMesh(); unsubscribeStop(); lifecycle.dispose(); };
+    return () => { i18n.off('languageChanged', privateCopy); i18n.off('languageChanged', mentionCopy); alive = false; clearInterval(historyTimer); remove(); unsubscribePreference(); unsubscribeMesh(); unsubscribeGeo(); unsubscribeStop(); lifecycle.dispose(); };
   }, [recovered]);
   return <GestureHandlerRootView style={{ flex: 1 }}><SafeAreaProvider><KeyboardProvider><SystemColorSchemeProvider>
     {ready ? <Stack screenOptions={{ headerShown: false }} /> : <AppScreen>

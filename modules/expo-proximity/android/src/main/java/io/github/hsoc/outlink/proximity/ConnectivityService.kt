@@ -7,6 +7,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
@@ -22,12 +23,17 @@ import com.facebook.react.jstasks.HeadlessJsTaskContext
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import java.util.UUID
 
-/** User-visible, non-restarting lease on the existing React/Bluetooth runtime. */
+/** User-visible, non-restarting lease on the existing messaging runtime. */
 class ConnectivityService : Service(), HeadlessJsTaskEventListener {
   private var taskId: Int? = null
   private var context: ReactContext? = null
   private var wakeLock: PowerManager.WakeLock? = null
   private var taskToken = ""
+
+  override fun onCreate() {
+    super.onCreate()
+    stopRequestedByApp = false
+  }
 
   override fun onBind(intent: Intent?): IBinder? = null
 
@@ -36,8 +42,10 @@ class ConnectivityService : Service(), HeadlessJsTaskEventListener {
     if (intent == null || intent.action == ACTION_STOP) {
       stopSelf(); return START_NOT_STICKY
     }
-    if (running) return START_NOT_STICKY
     try {
+      val mesh = intent.getBooleanExtra("mesh", false)
+      val internet = intent.getBooleanExtra("internet", false)
+      check(mesh || internet) { "Join a messaging session before starting background connectivity" }
       val title = checkNotNull(intent.getStringExtra("title"))
       val body = checkNotNull(intent.getStringExtra("body"))
       val stopLabel = checkNotNull(intent.getStringExtra("stop"))
@@ -69,8 +77,14 @@ class ConnectivityService : Service(), HeadlessJsTaskEventListener {
         .setPriority(Notification.PRIORITY_LOW)
         .addAction(Notification.Action.Builder(null, stopLabel, stop).build())
         .build()
-      if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
-      else startForeground(NOTIFICATION, notification)
+      if (Build.VERSION.SDK_INT >= 29) {
+        var types = if (mesh) ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE else 0
+        if (internet && Build.VERSION.SDK_INT >= 34) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING
+        startForeground(NOTIFICATION, notification, types)
+      } else startForeground(NOTIFICATION, notification)
+      modes = (if (mesh) 1 else 0) or (if (internet) 2 else 0)
+      // Updating transports reuses the existing notification, task and wake lock.
+      if (running) return START_NOT_STICKY
       context = react
       taskToken = UUID.randomUUID().toString()
       token = taskToken
@@ -98,13 +112,13 @@ class ConnectivityService : Service(), HeadlessJsTaskEventListener {
   override fun onTaskRemoved(rootIntent: Intent?) { stopSelf(); super.onTaskRemoved(rootIntent) }
 
   override fun onDestroy() {
-    running = false; token = null
+    running = false; modes = 0; token = null
     context?.let { react ->
       HeadlessJsTaskContext.getInstance(react).removeTaskEventListener(this)
       if (react.hasActiveReactInstance()) {
         val emitter = react.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
         emitter.emit("OutlinkConnectivityTaskStopped", Arguments.createMap().apply { putString("token", taskToken) })
-        emitter.emit("OutlinkConnectivityStopped", null)
+        if (!stopRequestedByApp) emitter.emit("OutlinkConnectivityStopped", null)
       }
       taskId?.let { HeadlessJsTaskContext.getInstance(react).finishTask(it) }
     }
@@ -115,10 +129,17 @@ class ConnectivityService : Service(), HeadlessJsTaskEventListener {
   }
 
   companion object {
+    @Volatile private var stopRequestedByApp = false
+    fun stopFromApp(context: Context) {
+      stopRequestedByApp = true
+      context.stopService(Intent(context, ConnectivityService::class.java))
+    }
     const val ACTION_STOP = "io.github.hsoc.outlink.STOP_CONNECTIVITY"
     private const val CHANNEL = "outlink-connectivity"
     private const val NOTIFICATION = 7141
     @Volatile var running = false
+      private set
+    @Volatile var modes: Int = 0
       private set
     @Volatile var token: String? = null
       private set

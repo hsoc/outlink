@@ -90,27 +90,26 @@ class ExpoProximityModule : Module() {
     AsyncFunction("backgroundRunningAsync") { ConnectivityService.running }
     AsyncFunction("backgroundTokenAsync") { ConnectivityService.token }
     AsyncFunction("stopBackgroundAsync") {
-      appContext.reactContext?.stopService(Intent(appContext.reactContext, ConnectivityService::class.java))
+      appContext.reactContext?.let { ConnectivityService.stopFromApp(it) }
       Unit
     }
-    AsyncFunction("startBackgroundAsync") { title: String, body: String, stop: String, promise: Promise ->
+    AsyncFunction("startBackgroundAsync") { title: String, body: String, stop: String, mesh: Boolean, internet: Boolean, promise: Promise ->
       handler.post {
         val context = appContext.reactContext
         if (context == null || appContext.currentActivity == null) {
           promise.reject("ERR_BACKGROUND", "Open Outlink to start background connectivity", null)
-        } else if (ConnectivityService.running) {
-          promise.resolve()
         } else {
           try {
             val intent = Intent(context, ConnectivityService::class.java)
+              .putExtra("mesh", mesh).putExtra("internet", internet)
               .putExtra("title", title.take(128)).putExtra("body", body.take(256)).putExtra("stop", stop.take(64))
             if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(intent) else context.startService(intent)
             val deadline = SystemClock.elapsedRealtime() + 5_000L
             fun confirm() {
-              if (ConnectivityService.running) promise.resolve()
+              if (ConnectivityService.running && ConnectivityService.modes == ((if (mesh) 1 else 0) or (if (internet) 2 else 0))) promise.resolve()
               else if (SystemClock.elapsedRealtime() >= deadline) {
-                context.stopService(intent)
-                promise.reject("ERR_BACKGROUND", "Background connectivity could not start; check notifications and Bluetooth permissions", null)
+                ConnectivityService.stopFromApp(context)
+                promise.reject("ERR_BACKGROUND", "Background connectivity could not start; check notifications and connection permissions", null)
               } else handler.postDelayed({ confirm() }, 50L)
             }
             confirm()
@@ -124,7 +123,7 @@ class ExpoProximityModule : Module() {
     OnActivityEntersBackground { voiceForeground = false; liveAudio.stopCapture(); liveAudio.stopPlayback() }
     OnDestroy {
       liveAudio.stopCapture(); liveAudio.stopPlayback()
-      appContext.reactContext?.let { it.stopService(Intent(it, ConnectivityService::class.java)) }
+      appContext.reactContext?.let { ConnectivityService.stopFromApp(it) }
     }
 
     Events("onPeer", "onSignal", "onMessage", "onConnection", "onBluetoothState", "onVoiceFrame")
@@ -198,7 +197,7 @@ class ExpoProximityModule : Module() {
 
     AsyncFunction("stopSessionAsync") { promise: Promise ->
       handler.post {
-        appContext.reactContext?.let { it.stopService(Intent(it, ConnectivityService::class.java)) }
+        // The shared messaging lifecycle owns background service shutdown.
         stopScan()
         discoveryConnections.stopSession()
         rejectAllWrites("ERR_PROXIMITY_STOPPED", "The nearby session stopped.")

@@ -15,10 +15,11 @@
   <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" />
   <uses-permission android:name="android.permission.WAKE_LOCK" />
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
   <application>
     <service android:name="io.github.hsoc.outlink.proximity.ConnectivityService" android:exported="false"
-      android:stopWithTask="true" android:foregroundServiceType="connectedDevice" />
+      android:stopWithTask="true" android:foregroundServiceType="connectedDevice|remoteMessaging" />
   </application>
 </manifest>

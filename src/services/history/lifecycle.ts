@@ -6,7 +6,7 @@ interface MeshConnection { account: string; name: string }
 interface GeoConnection { hash: string; name: string; relays: string[] }
 interface BackgroundPolicy {
   enabled(): boolean;
-  start(): Promise<void>;
+  start(mesh: boolean, internet: boolean): Promise<void>;
   running(): Promise<boolean>;
   stop(): Promise<void>;
   failed(): void;
@@ -40,13 +40,13 @@ export function createSessionLifecycle(
               if (g && !disposed && resumeEpoch === intentEpoch) await geo.join(g.hash, g.name, g.relays).catch(() => {});
             }
           }
-          if (policy?.enabled() && mesh.connection) {
-            try { await policy.start(); } catch { await stopKeeper(); policy.failed(); }
+          if (policy?.enabled() && (mesh.connection || geo.connection)) {
+            try { await policy.start(!!mesh.connection, !!geo.connection); } catch { await stopKeeper(); policy.failed(); }
           } else await stopKeeper();
         } else if (state === 'background' || background) {
           background = true;
           let keep = false;
-          if (policy?.enabled() && mesh.connection) {
+          if (policy?.enabled() && (mesh.connection || geo.connection)) {
             try { keep = await policy.running(); } catch { /* Pause when native status is unavailable. */ }
             if (!keep) policy.failed();
           }

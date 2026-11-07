@@ -35,11 +35,12 @@ radio behaviour can still link activity; rotation is not an anonymity guarantee.
 By default, both transports stop on background. Pending operations are cancelled or rejected,
 connections/timers are released, private session key material is cleared, and
 message history is retained. Foreground resumption reconnects sessions that were
-active before backgrounding. The opt-in Android connected-device foreground service
-retains an already joined mesh and existing relay sessions, with an ongoing
+active before backgrounding. The opt-in Android foreground service uses connected-device and remote-messaging
+types as applicable and retains joined mesh or Location sessions independently, with an ongoing
 notification, a scoped CPU wake lock, and an active Headless JS task for timers.
 The platform port confirms native service state; failure falls back to pausing.
-Internet-only sessions and iOS use the default pause/resume path.
+Location-only sessions use the same opt-in service without requiring Bluetooth;
+iOS uses the default pause/resume path.
 See [background lifecycle](protocols/background-connectivity.md). Cold launch restores history and selections without
 opening a transport until Join. History uses an asynchronous SQLite platform port,
 indexed by keyed room/message identifiers and insertion sequence, with 200-record pages and a 512-record
