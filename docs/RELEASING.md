@@ -139,3 +139,14 @@ application when upgrading any of these dependencies. Expect longer Android
 builds, and verify both Android 15+ and an older supported Android version before
 claiming complete window/inset compatibility. See
 [Android system-bar warnings](security/android-optimization.md#android-15-system-bar-warnings).
+
+
+## AGP 9 validation
+
+The Android app and React Native source build use AGP 9.0.1 and Kotlin 2.2.10,
+with the existing Gradle 9.3.1 wrapper and CI JDK 21. Expo/native plugins currently
+require the official AGP 9 legacy-DSL and external-Kotlin compatibility settings.
+Review the versioned Gradle-plugin patches as part of dependency upgrades.
+Before publishing a build using this migration, require native compilation, R8
+report/signature validation and the optimized startup smoke check. Bundle export
+and JavaScript tests alone cannot validate the toolchain or runtime performance.

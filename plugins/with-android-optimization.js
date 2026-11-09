@@ -1,6 +1,6 @@
 const { withGradleProperties, withAppBuildGradle } = require('expo/config-plugins');
 
-/** Persist release-only R8 settings across clean Expo prebuilds. */
+/** Persist R8 settings and transitional AGP 9 compatibility across clean prebuilds. */
 module.exports = function withAndroidOptimization(config) {
   config = withGradleProperties(config, result => {
     const settings = {
@@ -8,6 +8,9 @@ module.exports = function withAndroidOptimization(config) {
       'android.enableShrinkResourcesInReleaseBuilds': 'true',
       'android.enableR8.fullMode': 'true',
       'android.r8.optimizedResourceShrinking': 'true',
+      // Expo native plugins still depend on the legacy DSL and kotlin-android.
+      'android.newDsl': 'false',
+      'android.builtInKotlin': 'false',
     };
     result.modResults = result.modResults.filter(entry => !(entry.type === 'property' && Object.hasOwn(settings, entry.key)));
     for (const [key, value] of Object.entries(settings)) result.modResults.push({ type: 'property', key, value });

@@ -52,3 +52,26 @@ test('local mention alerts do not enable remote push registration', async () => 
   assert.ok(!adapter.includes("from 'expo-notifications';"));
   assert.ok(!/getExpoPushTokenAsync|getDevicePushTokenAsync/.test(adapter));
 });
+
+
+test('Android composite builds align AGP 9 and Kotlin versions', async () => {
+  const catalogs = await Promise.all([
+    'node_modules/@react-native/gradle-plugin/gradle/libs.versions.toml',
+    'node_modules/react-native/gradle/libs.versions.toml',
+  ].map(path => readFile(path, 'utf8')));
+  const version = (catalog, name) => catalog.match(new RegExp(`^${name} = "([^"\\n]+)"`, 'm'))?.[1];
+  const agp = version(catalogs[0], 'agp'), kotlin = version(catalogs[0], 'kotlin');
+  assert.match(agp, /^9\./);
+  assert.equal(version(catalogs[1], 'agp'), agp);
+  assert.equal(version(catalogs[1], 'kotlin'), kotlin);
+  assert.ok(kotlin.startsWith('2.2.'));
+  for (const path of [
+    'node_modules/expo-modules-core/expo-module-gradle-plugin/build.gradle.kts',
+    'node_modules/expo-modules-autolinking/android/expo-gradle-plugin/build.gradle.kts',
+  ]) {
+    assert.ok((await readFile(path, 'utf8')).includes(`kotlin("jvm") version "${kotlin}"`));
+  }
+  const sourceProperties = await readFile('node_modules/react-native/gradle.properties', 'utf8');
+  assert.match(sourceProperties, /^android.newDsl=false$/m);
+  assert.match(sourceProperties, /^android.builtInKotlin=false$/m);
+});

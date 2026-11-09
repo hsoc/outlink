@@ -7,8 +7,9 @@ properties and selects `proguard-android-optimize.txt` on every clean prebuild.
 It fails if the template no longer exposes the expected default rules file.
 No runtime dependency, packer, custom DEX rewriting or JavaScript obfuscator is added.
 
-The current React Native Gradle plugin pins AGP 8.12.0. Optimized resource shrinking
-is explicitly enabled for that version. Framework/JNI/reflection consumer rules
+The Android toolchain is prepared for AGP 9.0.1 and Kotlin 2.2.10 through versioned
+React Native/Expo build-plugin patches. Both the app plugin and the React Native
+source build use matching versions. Optimized resource shrinking is enabled. Framework/JNI/reflection consumer rules
 from React Native, Expo and native dependencies remain in force, as do the Expo
 app template's Reanimated/TurboModule rules. There is no blanket keep for the
 Outlink package, no blanket warning suppression, and no logging-removal rule.
@@ -142,3 +143,36 @@ Sources: [Material 1.14.0 system-bar compatibility helpers](https://github.com/m
 [Expo 57 source-build configuration](https://docs.expo.dev/versions/v57.0.0/sdk/build-properties/),
 [React Native 0.86 StatusBar deprecations](https://reactnative.dev/docs/0.86/statusbar),
 [Android 15 edge-to-edge changes](https://developer.android.com/about/versions/15/behavior-changes-15#edge-to-edge).
+
+
+## AGP 9 migration
+
+AGP 9.0.1 is pinned in both React Native Gradle version catalogs. The React Native
+Gradle plugin and Expo Gradle-plugin compilers align on Kotlin 2.2.10. The existing
+Gradle 9.3.1 wrapper and CI JDK 21 meet AGP 9 requirements. NDK/ABI settings retain
+the explicitly selected versions.
+
+Expo and native dependencies still use `BaseExtension`, legacy variant APIs and
+`kotlin-android`. Google-supported transitional properties `android.newDsl=false`
+and `android.builtInKotlin=false` are applied in generated app properties and the
+included React Native source build. These opt-outs are temporary AGP 9 migration
+settings and require removal before upgrading to AGP 10. They do not disable R8.
+
+Full-mode code optimization, optimized resource shrinking, mapping/report
+validation and the signed-release emulator startup gate remain enabled. Changes
+to optimizer behavior need a newly built APK/AAB,
+JNI/reflection/startup validation and measured memory/startup comparisons. The
+existing APK size measurements above describe AGP 8 builds and do not establish
+AGP 9 memory or performance improvements.
+
+Sources: [AGP 9.0.1 requirements and changes](https://developer.android.com/build/releases/agp-9-0-0-release-notes),
+[AGP 9 Kotlin migration and temporary opt-outs](https://developer.android.com/build/migrate-to-built-in-kotlin#opt-out).
+
+Local migration validation passed clean Android prebuild, all six mobile
+configuration checks, the three R8 report tests, TypeScript, lint and patch
+application against integrity-verified original archives. Gradle with JDK 21
+compiled the React Native and Expo build plugins, selected Kotlin 2.2.10/KSP
+2.2.10-2.0.2 and reached native project configuration. It then stopped because
+NDK 27.1.12297006 is absent and its SDK license is not accepted on this host.
+Native compilation, R8 output and device performance are still unverified for
+this migration.
