@@ -184,3 +184,6 @@ this migration.
 
 React Native registers its root-wide Android library configuration once per build.
 This prevents repeated `finalizeDsl` calls on already configured libraries under AGP 9.
+
+Expo source-set paths resolve to directories before registration, as required by
+AGP 9; the existing `preBuild` dependency still generates the package list first.

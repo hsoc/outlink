@@ -53,7 +53,7 @@ diff --git a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/ex
  import com.android.build.api.variant.AndroidComponentsExtension
  import com.android.build.gradle.BaseExtension
  import com.android.build.gradle.internal.tasks.factory.dependsOn
-@@ -88,7 +89,7 @@
+@@ -88,13 +89,13 @@
 
      // Adds the generated file to the source set.
      project.extensions.getByType(AndroidComponentsExtension::class.java).finalizeDsl { ext ->
@@ -62,3 +62,10 @@ diff --git a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/ex
          .sourceSets
          .getByName("main")
          .java
+-        .srcDirs(getPackageListDir(project), getInlineModulesDir(project))
++        .srcDirs(getPackageListDir(project).get().asFile, getInlineModulesDir(project).get().asFile)
+     }
+   }
+
+   fun getPackageListDir(project: Project): Provider<Directory> {
+     return project.layout.buildDirectory.dir(generatedFilesSrcDir)
