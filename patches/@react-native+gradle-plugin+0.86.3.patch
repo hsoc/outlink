@@ -13,4 +13,23 @@ diff --git a/node_modules/@react-native/gradle-plugin/gradle/libs.versions.toml 
 +kotlin = "2.2.10"
  assertj = "3.25.1"
  ktfmt = "0.22.0"
- 
+
+diff --git a/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/ReactPlugin.kt b/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/ReactPlugin.kt
+--- a/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/ReactPlugin.kt
++++ b/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/ReactPlugin.kt
+@@ -98,8 +98,13 @@
+     }
+
+     // Library Only Configuration
+-    configureBuildConfigFieldsForLibraries(project)
+-    configureNamespaceForLibraries(project)
++    val rootProperties = project.rootProject.extensions.extraProperties
++    val libraryConfigurationKey = "com.facebook.react.libraryConfigurationRegistered"
++    if (!rootProperties.has(libraryConfigurationKey)) {
++      rootProperties.set(libraryConfigurationKey, true)
++      configureBuildConfigFieldsForLibraries(project)
++      configureNamespaceForLibraries(project)
++    }
+     project.pluginManager.withPlugin("com.android.library") {
+       configureCodegen(project, extension, rootExtension, isLibrary = true)
+     }

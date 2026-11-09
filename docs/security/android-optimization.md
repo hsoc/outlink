@@ -181,3 +181,6 @@ compiled the React Native and Expo build plugins, selected Kotlin 2.2.10/KSP
 NDK 27.1.12297006 is absent and its SDK license is not accepted on this host.
 Native compilation, R8 output and device performance are still unverified for
 this migration.
+
+React Native registers its root-wide Android library configuration once per build.
+This prevents repeated `finalizeDsl` calls on already configured libraries under AGP 9.
