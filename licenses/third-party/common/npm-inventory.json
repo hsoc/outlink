@@ -1,6 +1,6 @@
 {
-  "reviewed": "2026-11-06",
-  "lockfileSha256": "2dac7381def4869bd66d9c34e5d57fc92666e641819e571033bbe15952f851b4",
+  "reviewed": "2026-11-09",
+  "lockfileSha256": "aa4756173863a6e87d0617e1da7c18c229756f71e3b696a9d752322ad2391937",
   "scope": "All locked non-development npm packages on all platforms. Includes build utilities; not an exact binary inventory.",
   "packages": [
     {
@@ -1583,9 +1583,9 @@
     },
     {
       "name": "@expo/schema-utils",
-      "version": "57.0.2",
+      "version": "57.0.3",
       "license": "MIT",
-      "integrity": "sha512-fMu/jyN0l1Wzv7XkeWR4IYCx1M8ryui3FdBNGrWwbRgJ7EhxXxK8E2jxP2W3pbgUwUY0V3hG8+GyfCZwny+Lxw==",
+      "integrity": "sha512-HcxLkgZbutEjhMVqOPw+MsSjQSqLLG6KtdjbNltms5AN7LibbGe32ae8TRnjeRcelE0+dGOdjdby8seGAO01IQ==",
       "repository": "https://github.com/expo/expo.git",
       "homepage": "https://github.com/expo/expo/tree/main/packages/@expo/schema-utils#readme",
       "licenseFiles": [
@@ -4610,6 +4610,20 @@
       "integrity": "sha512-uyBeJwxIuXzWXXNrnRub5pcF8VzQsiOz0VBTWDpMG2UztmaFyfAz6pI/GCwRtWpHhiOpLoJj79WLdg1GMB+9cg==",
       "repository": "https://github.com/expo/expo.git",
       "homepage": "https://docs.expo.dev/versions/latest/sdk/blur-view/",
+      "licenseFiles": [
+        {
+          "source": "LICENSE",
+          "sha256": "fb3ca4a837f5779e83cef89b78253a8949cfb9429c340309f62d0465ec6610b4"
+        }
+      ]
+    },
+    {
+      "name": "expo-build-properties",
+      "version": "57.0.23",
+      "license": "MIT",
+      "integrity": "sha512-O4N2m2ce4G1p4AvCZHhqpAIfHsQjbKxbvMOEMjuFh+MuAfgoxKyHa6tgsI2BFQxiPIBDL4aVWk8UEqeHXMmDfA==",
+      "repository": "https://github.com/expo/expo.git",
+      "homepage": "https://docs.expo.dev/versions/latest/sdk/build-properties",
       "licenseFiles": [
         {
           "source": "LICENSE",
@@ -8400,6 +8414,19 @@
       "version": "7.8.5",
       "license": "ISC",
       "integrity": "sha512-Y7/KDsb8LjooZpwaqGyulO6DQlksgCncchHGk+sZIY4SBvUocMBEFH5Ur1fI4dV+Jvl0w6cjvucaIi40puRioA==",
+      "repository": "git+https://github.com/npm/node-semver.git",
+      "licenseFiles": [
+        {
+          "source": "LICENSE",
+          "sha256": "4ec3d4c66cd87f5c8d8ad911b10f99bf27cb00cdfcff82621956e379186b016b"
+        }
+      ]
+    },
+    {
+      "name": "semver",
+      "version": "7.8.6",
+      "license": "ISC",
+      "integrity": "sha512-9lpSSU4Mly3mrtruwLs1eLK6+gzbzqeBFwRNjIjE+9LuDpWdYctrQlQ3ej1Ilgi7gknpsTRnPoLP8DpCHqHIJw==",
       "repository": "git+https://github.com/npm/node-semver.git",
       "licenseFiles": [
         {

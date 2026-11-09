@@ -1,0 +1,12 @@
+diff --git a/node_modules/react-native-keyboard-controller/android/src/main/java/com/reactnativekeyboardcontroller/modules/statusbar/StatusBarManagerCompatModuleImpl.kt b/node_modules/react-native-keyboard-controller/android/src/main/java/com/reactnativekeyboardcontroller/modules/statusbar/StatusBarManagerCompatModuleImpl.kt
+--- a/node_modules/react-native-keyboard-controller/android/src/main/java/com/reactnativekeyboardcontroller/modules/statusbar/StatusBarManagerCompatModuleImpl.kt
++++ b/node_modules/react-native-keyboard-controller/android/src/main/java/com/reactnativekeyboardcontroller/modules/statusbar/StatusBarManagerCompatModuleImpl.kt
+@@ -44,6 +44,8 @@
+     color: Int,
+     animated: Boolean,
+   ) {
++    // Keep legacy color handling below Android 15 only.
++    if (Build.VERSION.SDK_INT >= 35) return
+     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+       if (!isEnabled()) {
+         return original.setColor(color.toDouble(), animated)

@@ -106,7 +106,8 @@ names and selected Gradle/Prefab Java thread stacks, terminates the process grou
 and fails visibly. Failure/cancellation uploads `android-build-diagnostics` for
 seven days, including Gradle and relevant CMake logs. Signing secrets are removed
 from the native process environment; environment dumps and signing files are not
-collected. The normal 90-minute outer job limit is unchanged. A diagnostic pass
+collected. The Android outer job limit is 180 minutes to accommodate the patched React Native
+and Hermes source build. The 15-minute no-output watchdog remains active. A diagnostic pass
 can distinguish a native configuration stall from a slow but progressing build.
 
 The failed 1.1.1 tag is retained as provenance; the corrected stable release is
@@ -126,3 +127,15 @@ publication. Archive **android-r8-reports** mappings for crash debugging; Action
 retains these artifacts for 90 days. See [Android optimization](security/android-optimization.md)
 for scope, measurements and device-testing limitations. Local Android build
 reporting also requires Python 3 (standard library only).
+
+
+## Android system-bar dependency patches
+
+Android builds compile React Native and Hermes from source through Expo
+BuildProperties so the versioned React Native system-bar patch takes effect.
+Keyboard Controller and Expo Image Picker have corresponding native compatibility
+patches, and the React Native Screens patch selects Material 1.14.0. Review patch
+application when upgrading any of these dependencies. Expect longer Android
+builds, and verify both Android 15+ and an older supported Android version before
+claiming complete window/inset compatibility. See
+[Android system-bar warnings](security/android-optimization.md#android-15-system-bar-warnings).

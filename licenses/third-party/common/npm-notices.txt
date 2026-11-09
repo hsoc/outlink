@@ -843,7 +843,7 @@ LICENSE
   Text: fb3ca4a837f5779e83cef89b78253a8949cfb9429c340309f62d0465ec6610b4
 ========================================
 
-@expo/schema-utils@57.0.2
+@expo/schema-utils@57.0.3
 License: MIT
 Source: https://github.com/expo/expo.git
 LICENSE
@@ -2451,6 +2451,13 @@ LICENSE
 ========================================
 
 expo-blur@57.0.3
+License: MIT
+Source: https://github.com/expo/expo.git
+LICENSE
+  Text: fb3ca4a837f5779e83cef89b78253a8949cfb9429c340309f62d0465ec6610b4
+========================================
+
+expo-build-properties@57.0.23
 License: MIT
 Source: https://github.com/expo/expo.git
 LICENSE
@@ -4463,6 +4470,13 @@ LICENSE
 ========================================
 
 semver@7.8.5
+License: ISC
+Source: git+https://github.com/npm/node-semver.git
+LICENSE
+  Text: 4ec3d4c66cd87f5c8d8ad911b10f99bf27cb00cdfcff82621956e379186b016b
+========================================
+
+semver@7.8.6
 License: ISC
 Source: git+https://github.com/npm/node-semver.git
 LICENSE

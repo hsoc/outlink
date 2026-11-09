@@ -1,0 +1,57 @@
+diff --git a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/statusbar/StatusBarModule.kt b/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/statusbar/StatusBarModule.kt
+--- a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/statusbar/StatusBarModule.kt
++++ b/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/statusbar/StatusBarModule.kt
+@@ -68,7 +68,8 @@
+   override fun getTypedExportedConstants(): Map<String, Any> {
+     val currentActivity = reactApplicationContext.currentActivity
+     val statusBarColor =
+-        currentActivity?.window?.statusBarColor?.let { color ->
++        if (Build.VERSION.SDK_INT >= 35) "transparent"
++        else currentActivity?.window?.statusBarColor?.let { color ->
+           String.format("#%06X", 0xFFFFFF and color)
+         } ?: "black"
+     return mapOf(
+@@ -79,6 +80,8 @@
+ 
+   @Suppress("DEPRECATION")
+   override fun setColor(colorDouble: Double, animated: Boolean) {
++    // Android 15+ draws the status-bar background through the app window.
++    if (Build.VERSION.SDK_INT >= 35) return
+     val color = colorDouble.toInt()
+     val activity = reactApplicationContext.getCurrentActivity()
+     if (activity == null) {
+diff --git a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/view/WindowUtil.kt b/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/view/WindowUtil.kt
+--- a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/view/WindowUtil.kt
++++ b/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/view/WindowUtil.kt
+@@ -125,7 +125,7 @@
+ 
+ @Suppress("DEPRECATION")
+ private fun Window.statusBarHide() {
+-  if (isEdgeToEdgeFeatureFlagOn) {
++  if (isEdgeToEdgeFeatureFlagOn || Build.VERSION.SDK_INT >= 35) {
+     WindowInsetsControllerCompat(this, decorView).run {
+       systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+       hide(WindowInsetsCompat.Type.statusBars())
+@@ -144,7 +144,7 @@
+ 
+ @Suppress("DEPRECATION")
+ private fun Window.statusBarShow() {
+-  if (isEdgeToEdgeFeatureFlagOn) {
++  if (isEdgeToEdgeFeatureFlagOn || Build.VERSION.SDK_INT >= 35) {
+     WindowInsetsControllerCompat(this, decorView).run {
+       systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+       show(WindowInsetsCompat.Type.statusBars())
+@@ -167,10 +167,11 @@
+   val insetsController = WindowInsetsControllerCompat(this, decorView)
+   val isDarkMode = UiModeUtils.isDarkMode(context)
+ 
+-  statusBarColor = Color.TRANSPARENT
++  // Modern Android draws these backgrounds behind the window's inset areas.
++  if (Build.VERSION.SDK_INT < 35) statusBarColor = Color.TRANSPARENT
+ 
+   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+-    navigationBarColor = Color.TRANSPARENT
++    if (Build.VERSION.SDK_INT < 35) navigationBarColor = Color.TRANSPARENT
+ 
+     val attributes = intArrayOf(android.R.attr.enforceNavigationBarContrast)
+     val typedArray = context.theme.obtainStyledAttributes(attributes)

@@ -106,14 +106,39 @@ Play's analysis even when Outlink does not request cropping.
 Outlink's `AppScreen` sets only status-bar icon style. Its deprecated
 `backgroundColor` and `translucent` props were removed. The Expo 57 edge-to-edge
 window and existing safe-area views own the background and content insets.
-This application-level cleanup does not remove dependency bytecode references.
-The remaining Play entries require dependency-level migration and a newly built
-APK/AAB scan before they can be considered cleared. Obfuscated names are specific
-to each build, so always use the matching mapping artifact.
+The follow-up native migration uses versioned `patch-package` patches:
+
+- React Native 0.86.3 reads and writes legacy status-bar colors only below API 35.
+  Its edge-to-edge setup skips legacy bar colors on Android 15+, and hiding/showing
+  the status bar uses inset controllers instead of old cutout modes there.
+- Keyboard Controller 1.21.9 skips its legacy color setter on Android 15+.
+- Expo Image Picker 57.0.21 sets decor fitting, `ALWAYS` cutouts and contrast
+  directly on Android 15+, retaining its older compatibility path below API 35.
+- React Native Screens 4.26.2 uses Material 1.14.0, whose bottom-sheet utilities
+  guard legacy bar APIs below API 35. The version is pinned in its Gradle patch.
+
+Expo BuildProperties enables `android.buildReactNativeFromSource` so the React
+Native patch is compiled instead of using the published Android AAR. The setting
+also builds Hermes from source and substantially increases Android build time.
+The Android job allows 180 minutes, preserving the no-output watchdog.
+`npm ci` reapplies the exact-version patches and
+fails if they no longer apply. Dependency upgrades must review these patches.
+
+Legacy APIs remain in branches used on older supported Android versions, so a
+static Play scan can still report references. A newly built APK/AAB and Play scan
+are required before claiming the warning list is clear. Obfuscated names are
+specific to each build, so always use the matching mapping artifact.
+
+Local validation covers 352 Jest tests, TypeScript, lint, mobile configuration,
+license consistency, fresh-archive patch application, clean Android prebuild
+and Android/iOS bundle exports.
+Native compilation and Android 15/16 device validation remain outstanding.
 
 Validate status/navigation icons, portrait and landscape cutouts, keyboard
 opening, modal sheets and the image picker on Android 15/16 and an older supported
 Android version. Static checks and bundle export do not establish this visual QA.
 
-Sources: [React Native 0.86 StatusBar deprecations](https://reactnative.dev/docs/0.86/statusbar),
+Sources: [Material 1.14.0 system-bar compatibility helpers](https://github.com/material-components/material-components-android/blob/1.14.0/lib/java/com/google/android/material/internal/EdgeToEdgeUtils.java),
+[Expo 57 source-build configuration](https://docs.expo.dev/versions/v57.0.0/sdk/build-properties/),
+[React Native 0.86 StatusBar deprecations](https://reactnative.dev/docs/0.86/statusbar),
 [Android 15 edge-to-edge changes](https://developer.android.com/about/versions/15/behavior-changes-15#edge-to-edge).

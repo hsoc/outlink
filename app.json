@@ -109,7 +109,13 @@
         }
       ],
       "./plugins/with-local-notifications",
-      "./plugins/with-android-optimization"
+      "./plugins/with-android-optimization",
+      [
+        "expo-build-properties",
+        {
+          "android": { "buildReactNativeFromSource": true }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false,
