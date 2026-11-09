@@ -83,3 +83,13 @@ test('Android composite builds align AGP 9 and Kotlin versions', async () => {
   assert.match(sourceProperties, /^android.newDsl=false$/m);
   assert.match(sourceProperties, /^android.builtInKotlin=false$/m);
 });
+
+
+test('native animation libraries register React before Kotlin script configuration', async () => {
+  for (const packageName of ['react-native-worklets', 'react-native-reanimated']) {
+    const source = await readFile(`node_modules/${packageName}/android/build.gradle.kts`, 'utf8');
+    const plugins = source.match(/^plugins \{([\s\S]*?)^\}/m)?.[1] ?? '';
+    assert.ok(plugins.includes('id("com.facebook.react")'), packageName);
+    assert.ok(!source.includes('apply(plugin = "com.facebook.react")'), packageName);
+  }
+});

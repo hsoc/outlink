@@ -1,0 +1,21 @@
+diff --git a/node_modules/react-native-worklets/android/build.gradle.kts b/node_modules/react-native-worklets/android/build.gradle.kts
+--- a/node_modules/react-native-worklets/android/build.gradle.kts
++++ b/node_modules/react-native-worklets/android/build.gradle.kts
+@@ -9,6 +9,7 @@
+     id("maven-publish")
+     id("com.diffplug.spotless") version "8.1.0"
+     id("org.jetbrains.kotlin.android")
++    id("com.facebook.react")
+ }
+
+ fun safeExtGet(prop: String, fallback: Any?): Any? =
+@@ -112,9 +113,6 @@
+ fun isFlagEnabled(featureFlags: Map<String, String>, flagName: String): Boolean =
+     featureFlags.containsKey(flagName) && featureFlags[flagName] == "true"
+
+-if (project != rootProject) {
+-    apply(plugin = "com.facebook.react")
+-}
+
+ val featureFlags = getStaticFeatureFlags()
+

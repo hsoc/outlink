@@ -151,7 +151,9 @@ AGP 9.0.1 is pinned in both React Native Gradle version catalogs. The React Nati
 Gradle plugin and Expo Gradle-plugin compilers align on Kotlin 2.2.10. Expo
 Gradle plugins also compile against AGP 9.0.1. Library target SDK configuration
 uses `lint.targetSdk` and `testOptions.targetSdk` instead of the removed
-`LibraryDefaultConfig.targetSdk` setter. The existing
+`LibraryDefaultConfig.targetSdk` setter. Worklets and Reanimated register the
+React plugin in their initial plugins block so codegen callbacks precede AGP 9
+DSL finalization. The existing
 Gradle 9.3.1 wrapper and CI JDK 17 meet AGP 9 requirements. NDK/ABI settings retain
 the explicitly selected versions.
 
