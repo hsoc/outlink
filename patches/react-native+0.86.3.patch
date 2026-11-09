@@ -1,3 +1,38 @@
+diff --git a/node_modules/react-native/ReactAndroid/build.gradle.kts b/node_modules/react-native/ReactAndroid/build.gradle.kts
+--- a/node_modules/react-native/ReactAndroid/build.gradle.kts
++++ b/node_modules/react-native/ReactAndroid/build.gradle.kts
+@@ -4,6 +4,8 @@
+  * This source code is licensed under the MIT license found in the
+  * LICENSE file in the root directory of this source tree.
+  */
++
++@file:Suppress("DEPRECATION")
+
+ import com.android.build.gradle.internal.tasks.factory.dependsOn
+ import com.facebook.react.internal.PrivateReactExtension
+@@ -629,8 +631,8 @@
+             "src/main/res/views/view",
+         )
+     )
+-    java.exclude("com/facebook/react/processing")
+-    java.exclude("com/facebook/react/module/processing")
++    (java as org.gradle.api.tasks.util.PatternFilterable).exclude("com/facebook/react/processing")
++    (java as org.gradle.api.tasks.util.PatternFilterable).exclude("com/facebook/react/module/processing")
+   }
+
+   lint {
+diff --git a/node_modules/react-native/ReactAndroid/hermes-engine/build.gradle.kts b/node_modules/react-native/ReactAndroid/hermes-engine/build.gradle.kts
+--- a/node_modules/react-native/ReactAndroid/hermes-engine/build.gradle.kts
++++ b/node_modules/react-native/ReactAndroid/hermes-engine/build.gradle.kts
+@@ -4,6 +4,8 @@
+  * This source code is licensed under the MIT license found in the
+  * LICENSE file in the root directory of this source tree.
+  */
++
++@file:Suppress("DEPRECATION")
+
+ import com.facebook.react.internal.PrivateReactExtension
+ import com.facebook.react.tasks.internal.*
 diff --git a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/statusbar/StatusBarModule.kt b/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/statusbar/StatusBarModule.kt
 --- a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/statusbar/StatusBarModule.kt
 +++ b/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/statusbar/StatusBarModule.kt
@@ -12,7 +47,7 @@ diff --git a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/r
          } ?: "black"
      return mapOf(
 @@ -79,6 +80,8 @@
- 
+
    @Suppress("DEPRECATION")
    override fun setColor(colorDouble: Double, animated: Boolean) {
 +    // Android 15+ draws the status-bar background through the app window.
@@ -24,7 +59,7 @@ diff --git a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/r
 --- a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/view/WindowUtil.kt
 +++ b/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/view/WindowUtil.kt
 @@ -125,7 +125,7 @@
- 
+
  @Suppress("DEPRECATION")
  private fun Window.statusBarHide() {
 -  if (isEdgeToEdgeFeatureFlagOn) {
@@ -33,7 +68,7 @@ diff --git a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/r
        systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
        hide(WindowInsetsCompat.Type.statusBars())
 @@ -144,7 +144,7 @@
- 
+
  @Suppress("DEPRECATION")
  private fun Window.statusBarShow() {
 -  if (isEdgeToEdgeFeatureFlagOn) {
@@ -44,15 +79,15 @@ diff --git a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/r
 @@ -167,10 +167,11 @@
    val insetsController = WindowInsetsControllerCompat(this, decorView)
    val isDarkMode = UiModeUtils.isDarkMode(context)
- 
+
 -  statusBarColor = Color.TRANSPARENT
 +  // Modern Android draws these backgrounds behind the window's inset areas.
 +  if (Build.VERSION.SDK_INT < 35) statusBarColor = Color.TRANSPARENT
- 
+
    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
 -    navigationBarColor = Color.TRANSPARENT
 +    if (Build.VERSION.SDK_INT < 35) navigationBarColor = Color.TRANSPARENT
- 
+
      val attributes = intArrayOf(android.R.attr.enforceNavigationBarContrast)
      val typedArray = context.theme.obtainStyledAttributes(attributes)
 diff --git a/node_modules/react-native/gradle/libs.versions.toml b/node_modules/react-native/gradle/libs.versions.toml

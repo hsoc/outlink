@@ -187,3 +187,8 @@ This prevents repeated `finalizeDsl` calls on already configured libraries under
 
 Expo source-set paths resolve to directories before registration, as required by
 AGP 9; the existing `preBuild` dependency still generates the package list first.
+
+React Native/Hermes source scripts explicitly suppress legacy Gradle DSL
+deprecations during this transitional opt-out. React Native source exclusions use
+Gradle’s `PatternFilterable` interface, preserving the existing processor filters
+after AGP 9 narrowed the source-directory interface.
