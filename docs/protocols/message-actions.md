@@ -12,7 +12,10 @@ backdrop; assistive technology can invoke the Message actions long-press action.
   from discovered public keys without permanently saving or trusting the contact;
   missing details show a rediscovery hint. Location opens the private composer and
   offers an explicit Enable/Reconnect private messaging action when needed. Opening
-  the conversation alone does not enable internet messaging. A bridged Nostr sender
+  the conversation alone does not enable internet messaging or leave the joined
+  public area. In a Location DM, Back or `#area` returns to public chat without
+  reconnecting. From public chat, `#area` opens the area editor and Leave
+  disconnects the area session. A bridged Nostr sender
   cannot be assumed to be a Bluetooth contact: an explanation offers Contacts instead.
 - **Hug user:** posts `* 🫂 YourName hugs Alice *` to the current conversation.
 - **Slap user:** posts `* 🐟 YourName slaps Alice around a bit with a large trout *`.
