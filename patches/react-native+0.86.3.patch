@@ -21,6 +21,14 @@ diff --git a/node_modules/react-native/ReactAndroid/build.gradle.kts b/node_modu
    }
 
    lint {
+@@ -694,6 +696,7 @@
+ }
+
+ dependencies {
++  implementation("androidx.collection:collection:1.5.0")
+   api(libs.androidx.appcompat)
+   api(libs.androidx.appcompat.resources)
+   api(libs.androidx.autofill)
 diff --git a/node_modules/react-native/ReactAndroid/hermes-engine/build.gradle.kts b/node_modules/react-native/ReactAndroid/hermes-engine/build.gradle.kts
 --- a/node_modules/react-native/ReactAndroid/hermes-engine/build.gradle.kts
 +++ b/node_modules/react-native/ReactAndroid/hermes-engine/build.gradle.kts
@@ -48,7 +56,15 @@ diff --git a/node_modules/react-native/ReactAndroid/hermes-engine/build.gradle.k
 diff --git a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/statusbar/StatusBarModule.kt b/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/statusbar/StatusBarModule.kt
 --- a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/statusbar/StatusBarModule.kt
 +++ b/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/statusbar/StatusBarModule.kt
-@@ -68,7 +68,8 @@
+@@ -9,6 +9,7 @@
+
+ import android.animation.ArgbEvaluator
+ import android.animation.ValueAnimator
++import android.os.Build
+ import android.view.Window
+ import android.view.WindowManager
+ import androidx.core.view.ViewCompat
+@@ -68,7 +69,8 @@
    override fun getTypedExportedConstants(): Map<String, Any> {
      val currentActivity = reactApplicationContext.currentActivity
      val statusBarColor =
@@ -58,7 +74,7 @@ diff --git a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/r
            String.format("#%06X", 0xFFFFFF and color)
          } ?: "black"
      return mapOf(
-@@ -79,6 +80,8 @@
+@@ -79,6 +81,8 @@
 
    @Suppress("DEPRECATION")
    override fun setColor(colorDouble: Double, animated: Boolean) {

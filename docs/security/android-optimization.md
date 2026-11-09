@@ -196,3 +196,8 @@ after AGP 9 narrowed the source-directory interface.
 Hermes extraction accepts the `meta-hermes-` archive prefix after the upstream
 repository rename, as well as the original `facebook-hermes-` prefix. The pinned
 Hermes version remains unchanged.
+
+The React Native source build declares AndroidX Collection 1.5.0 directly for
+`MutableIntObjectMap`, already used by its mounting manager. The standalone React
+Native composite otherwise resolves only Collection 1.1.0 through AppCompat, even
+though the application resolves 1.5.0. Status-bar SDK guards import `android.os.Build`.
