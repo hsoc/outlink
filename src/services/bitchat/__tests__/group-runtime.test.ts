@@ -2,7 +2,7 @@
 import { ed25519, x25519 } from '@noble/curves/ed25519.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
-import { GroupRuntime, type GroupInfo } from '../compatibility/group-runtime';
+import { GroupRuntime, type GroupInfo, type GroupMessage } from '../compatibility/group-runtime';
 import { decodeGroupState, encodeGroupState, sealGroupMessage } from '../compatibility/group-protocol';
 import { memoryStorage } from '../test-support/protocol-storage';
 import type { BitchatIdentity, BitchatPeer } from '../bitchat-session';
@@ -12,7 +12,7 @@ function peer(id: BitchatIdentity): BitchatPeer {
   return { id: fingerprint.slice(0, 16), fingerprint, name: 'Peer', secure: true, lastSeen: Date.now(), capabilities: 8, authenticatedCapabilities: true, signingPublicKey: bytesToHex(ed25519.getPublicKey(id.signingSeed)) };
 }
 function node(n: number) {
-  const id = identity(n), store = memoryStorage(), io = { state: jest.fn(async (_peer: string, _data: Uint8Array, _invite: boolean) => {}), broadcast: jest.fn(async (_data: Uint8Array) => {}), changed: jest.fn((_groups: GroupInfo[]) => {}), message: jest.fn(async () => {}) };
+  const id = identity(n), store = memoryStorage(), io = { state: jest.fn(async (_peer: string, _data: Uint8Array, _invite: boolean) => {}), broadcast: jest.fn(async (_data: Uint8Array) => {}), changed: jest.fn((_groups: GroupInfo[]) => {}), message: jest.fn(async (_message: GroupMessage) => {}) };
   const runtime = new GroupRuntime(id, store, io);
   return { id, store, io, runtime, peer: peer(id) };
 }
@@ -77,4 +77,14 @@ it('rejects noncreator management, stale/outsider messages, rollback and post-st
 it('does not publish a mutation whose encrypted record write fails', async () => {
   const a = node(1); jest.spyOn(a.store, 'put').mockRejectedValueOnce(new Error('disk'));
   await expect(a.runtime.create('Crew', 'Alice')).rejects.toThrow('disk'); expect(a.io.changed).not.toHaveBeenCalled();
+});
+
+it('expands social actions before signing and encrypting group messages', async () => {
+  const a = node(1), b = node(2);
+  const id = await a.runtime.create('Crew', 'Alice'); await a.runtime.invite(id, b.peer); await a.runtime.sync(b.peer);
+  await b.runtime.receiveState(a.peer, a.io.state.mock.calls.at(-1)![1], true); await b.runtime.accept(id);
+  await a.runtime.send(id, 'Alice', '/hug Bob');
+  expect(a.io.message.mock.calls.at(-1)![0]).toMatchObject({ content: '* 🫂 Alice hugs Bob *' });
+  await b.runtime.receiveMessage(a.io.broadcast.mock.calls.at(-1)![0]);
+  expect(b.io.message.mock.calls.at(-1)![0]).toMatchObject({ content: '* 🫂 Alice hugs Bob *', outgoing: false });
 });

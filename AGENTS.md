@@ -88,7 +88,9 @@ cleanup categories; full identity erasure invalidates and drains both queues.
 # Message actions
 
 Read `docs/protocols/message-actions.md` before changing action routing or blocks.
-Keep normal tap mentions separate from long-press actions. Copy exact text through
+Keep normal tap mentions separate from long-press actions, including Bluetooth
+groups. Group DM actions validate the full roster fingerprint; social actions
+use only the encrypted group send path and preserve drafts. Copy exact text through
 the native port; hug/slap are ordinary `/me` text sent to the pressed conversation,
 without replacing drafts. Restore identity-based encrypted block rules before
 network startup, suppress alerts for blocked senders, preserve known Nostr aliases,

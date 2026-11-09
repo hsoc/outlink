@@ -1,6 +1,6 @@
 # Message actions and blocking
 
-In Nearby and Location channels (public or private), press and hold message text
+In Nearby, private Bluetooth groups and Location channels (public or private), press and hold message text
 to open a small menu. A normal tap still inserts a mention. Long-press does not
 also insert a mention. The action sheet supports OS Back, Cancel, and tapping the
 backdrop; assistive technology can invoke the Message actions long-press action.
@@ -24,11 +24,18 @@ backdrop; assistive technology can invoke the Message actions long-press action.
 
 Hug and slap use Bitchat's ordinary `* ... *` action text with no new protocol
 field. `/me text`, `/hug name` and `/slap name` expand at the service send boundary
-for Nearby and Location public/private conversations, before size checks, signing,
+for Nearby, Bluetooth groups and Location public/private conversations, before size checks, signing,
 persistence and local echo. The sender uses the current base nickname. Incoming
 Bitchat actions retain their wire text. Legacy `/me text` history displays as
 `* Sender text *` without rewriting received content or the exact Copy value.
-They post in the pressed public/private conversation and preserve any draft.
+They post in the pressed public/private/group conversation and preserve any draft.
+Group actions pass through the normal encrypted group send boundary and never
+enter Public Mesh, bridges, internet channels or courier paths. Message user
+leaves the group view for a separate Nearby DM, checking any discovered/saved
+contact against the author’s full roster fingerprint. A missing contact can open
+the private composer for rediscovery; it does not grant trust or save membership
+as a contact. Group blocks use the same persistent mesh-author block as Nearby,
+without removing anyone from the roster.
 Normal send limits, consent, route availability and errors apply. Hug and slap
 are disabled when their route is unavailable; Message user is only disabled while busy. Menus are dismissed
 on navigation/erasure, and stale actions cannot execute in a different thread.

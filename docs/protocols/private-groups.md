@@ -33,6 +33,15 @@ an explicit new invitation at a higher epoch (the creator can remove and invite
 you again). If the creator leaves, remaining members can still use their existing
 keys, but membership administration stops. There is no ownership transfer.
 
+Press and hold a message’s text for **Copy message**, **Message user**, **Hug user**,
+**Slap user**, or **Block user**. Your own messages offer Copy only. A normal tap
+still inserts a mention. Hug/slap post an encrypted action to that group and keep
+your draft. Message user opens a separate Nearby DM with the author; an offline
+or undiscovered author may require rediscovery before sending. Blocking hides
+that mesh identity’s messages and alerts across groups and Nearby; it does not
+remove membership or rotate group keys. Unblock in Settings. See
+[message actions](message-actions.md).
+
 ### Commands
 
 Buttons provide the same actions without requiring command syntax.
@@ -45,6 +54,9 @@ Buttons provide the same actions without requiring command syntax.
 | `/group invite @Alice` | Creator invites one unambiguously named reachable peer |
 | `/group remove @Alice` | Creator removes a member and rotates the key |
 | `/group leave` | Leave the selected group, with confirmation |
+| `/me text` | Post an encrypted action in the selected group |
+| `/hug Alice` | Post a hug action addressed to the displayed name |
+| `/slap Alice` | Post a playful trout slap addressed to the displayed name |
 
 Create/list also work from the Nearby composer; the other commands require an
 open group conversation. Displayed discriminated nicknames or full fingerprints resolve duplicate base nicknames; invitation

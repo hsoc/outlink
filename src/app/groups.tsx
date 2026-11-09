@@ -1,3 +1,7 @@
+import { MessageActions, type MessageAction } from '@/components/common/MessageActions';
+import { groupMessageAction } from '@/services/bitchat/group-message-actions';
+import { actionDisplay } from '@/lib/message-actions';
+import { sessionIntent } from '@/services/history/lifecycle';
 import { messageTime } from '@/lib/message-time';
 import { conversationActivity, conversationActivityStore } from '@/services/mentions/conversation-activity';
 import { groupConversationScope } from '@/services/mentions/nearby-alerts';
@@ -6,9 +10,9 @@ import { MESSAGE_WINDOW, messageIsFresh } from '@/lib/message-retention';
 import { blockedUsersStore } from '@/services/moderation/blocked-users';
 import { displayNickname, duplicateNicknames, nicknameKey } from '@/lib/nicknames';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, View, type TextInput } from 'react-native';
+import { FlatList, Keyboard, View, type TextInput } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useStore } from 'zustand';
 import { useTranslation } from 'react-i18next';
 import { Users } from 'lucide-react-native';
@@ -34,7 +38,7 @@ export default function Groups() {
   return ready ? <GroupScreen key={self} /> : <AppScreen><AppText>{t('mobile.quick_erasing')}</AppText></AppScreen>;
 }
 function GroupScreen() {
-  const { t } = useTranslation(), c = useThemeColors(), top = useScreenHeaderClearance();
+  const { t } = useTranslation(), c = useThemeColors(), top = useScreenHeaderClearance(), router = useRouter();
   const now = useStore(historyClock, state => state.now);
   const state = useStore(meshGroupsStore), mesh = useStore(bitchatSessionStore), contacts = useStore(contactsStore, s => s.contacts);
   const ownName = useStore(nicknameStore, s => s.name);
@@ -50,7 +54,14 @@ function GroupScreen() {
   const [loadedFor, setLoadedFor] = useState('');
   const [browsingOlder, setBrowsingOlder] = useState(false);
   const historyKey = `${selected}:${state.self}:${state.historyEpoch}`;
+  const menuScope = `${historyKey}:${members}`;
   const composerRef = useRef<TextInput>(null);
+  const [messageMenu, setMessageMenu] = useState<{ message: GroupMessage; name: string; scope: string; epoch: number }>();
+  const longPressed = useRef(false), menuConsumed = useRef(false), focused = useRef(false), actionScope = useRef(menuScope);
+  useFocusEffect(useCallback(() => {
+    focused.current = true; actionScope.current = menuScope; longPressed.current = false;
+    return () => { focused.current = false; setMessageMenu(undefined); longPressed.current = false; };
+  }, [menuScope]));
   const working = useRef(false), revision = useRef(0);
   const group = state.groups.find(g => g.id === selected), creator = group?.creator === state.self;
   useFocusEffect(useCallback(() => selected && group?.status === 'joined' && !members ? conversationActivity.focus(groupConversationScope(selected)) : undefined, [selected, group?.status, members]));
@@ -75,6 +86,19 @@ function GroupScreen() {
     if (working.current) return;
     working.current = true; setBusy(true); setFailed(false);
     try { await task(); } catch { setFailed(true); } finally { working.current = false; setBusy(false); }
+  }
+  async function messageAction(action: MessageAction) {
+    if (menuConsumed.current) return;
+    menuConsumed.current = true;
+    const target = messageMenu; setMessageMenu(undefined);
+    if (!target) return;
+    const current = () => focused.current && target.scope === actionScope.current && target.epoch === sessionIntent();
+    await act(async () => {
+      const peer = await groupMessageAction(action, target.message, target.name, current);
+      if (peer && current()) {
+        workspaceStore.setState({ mode: 'mesh', recipient: peer }); router.dismissTo('/');
+      }
+    });
   }
   function live(fingerprint: string) { return mesh.active && mesh.peers.some(p => p.fingerprint === fingerprint && p.lastSeen > 0); }
   async function invite(groupId: string, peer: { id: string; name: string; fingerprint: string }) {
@@ -120,6 +144,9 @@ ${identity}`, t('mobile.cancel'), t('groups.invite'))) return;
     {failed && <AppText tone="danger" accessibilityLiveRegion="polite">{t('groups.failed')}</AppText>}
   </View>;
   return <AppScreen edges={['bottom']}>
+    {messageMenu && messageMenu.scope === menuScope && !members && <MessageActions name={messageMenu.name} own={messageMenu.message.outgoing}
+      canMessage={!busy} canPost={!busy && mesh.active && group?.status === 'joined'}
+      onAction={action => void messageAction(action)} onClose={() => setMessageMenu(undefined)} />}
     {!group ? <FlatList style={{ flex: 1 }} data={state.groups} keyExtractor={g => g.id} keyboardShouldPersistTaps="handled"
       contentContainerStyle={{ padding: spacing.lg, paddingTop: top, gap: spacing.md }}
       ListHeaderComponent={<View style={{ gap: spacing.sm }}>{controls}
@@ -150,11 +177,29 @@ ${identity}`, t('mobile.cancel'), t('groups.invite'))) return;
           })} />}</View>} /> : <>
         <FlatList style={{ flex: 1, minHeight: 0 }} data={messages} inverted keyExtractor={m => m.sender + ':' + m.id} contentContainerStyle={{ gap: spacing.sm }}
           ListFooterComponent={loadedFor === historyKey && before !== undefined ? <AppButton label={t('groups.older')} variant="text" disabled={busy} onPress={() => void act(async () => { const version = revision.current, page = await bitchatService.groupHistory(group.id, before); if (revision.current === version) { setBrowsingOlder(true); setOlder(old => [...page.messages, ...old].slice(0, MESSAGE_WINDOW)); setBefore(page.before); } })} /> : null}
-          renderItem={({ item }) => <View style={{ alignSelf: item.outgoing ? 'flex-end' : 'flex-start', maxWidth: uiDensity.messageBubbleMaxWidth,
-            paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.xs, borderRadius: radius.xl,
-            borderEndStartRadius: item.outgoing ? radius.xl : radius.xs, borderEndEndRadius: item.outgoing ? radius.xs : radius.xl,
-            backgroundColor: item.outgoing ? c.accentSoft : c.surfaceElevated }}><AppText variant="caption" tone="muted">{displayNickname(item.name, item.sender, duplicates.has(nicknameKey(item.name)))}{' '}{messageTime(item.timestamp)}</AppText><AppText selectable accessibilityHint={!item.outgoing ? t('mobile.mention_name', { name: displayNickname(item.name, item.sender, duplicates.has(nicknameKey(item.name))) }) : undefined}
-              onPress={!item.outgoing ? () => { setDraft(appendMention(workspaceStore.getState().drafts[draftKey] ?? '', displayNickname(item.name, item.sender, duplicates.has(nicknameKey(item.name))))); composerRef.current?.focus(); } : undefined}>{item.content}</AppText></View>} />
+          renderItem={({ item }) => {
+            const displayName = displayNickname(item.name, item.sender, duplicates.has(nicknameKey(item.name)));
+            const openMenu = () => {
+              if (busy) return;
+              menuConsumed.current = false; longPressed.current = true; Keyboard.dismiss();
+              setMessageMenu({ message: item, name: displayName, scope: menuScope, epoch: sessionIntent() });
+            };
+            return <View style={{ alignSelf: item.outgoing ? 'flex-end' : 'flex-start', maxWidth: uiDensity.messageBubbleMaxWidth,
+              paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.xs, borderRadius: radius.xl,
+              borderEndStartRadius: item.outgoing ? radius.xl : radius.xs, borderEndEndRadius: item.outgoing ? radius.xs : radius.xl,
+              backgroundColor: item.outgoing ? c.accentSoft : c.surfaceElevated }}>
+              <AppText variant="caption" tone="muted">{displayName}{' '}{messageTime(item.timestamp)}</AppText>
+              <AppText selectable={false} accessibilityRole="button"
+                accessibilityHint={t(item.outgoing ? 'mobile.own_message_menu_hint' : 'mobile.message_menu_hint')}
+                accessibilityActions={[{ name: 'longpress', label: t('mobile.message_actions') }]}
+                onAccessibilityAction={event => { if (event.nativeEvent.actionName === 'longpress') openMenu(); }}
+                onPressIn={() => { longPressed.current = false; }} onLongPress={openMenu}
+                onPress={!item.outgoing ? () => {
+                  if (longPressed.current) return;
+                  setDraft(appendMention(workspaceStore.getState().drafts[draftKey] ?? '', displayName)); composerRef.current?.focus();
+                } : undefined}>{actionDisplay(item.content, displayName)}</AppText>
+            </View>;
+          }} />
         <AppInput ref={composerRef} label={t('groups.message')} value={draft} multiline compactMultiline maxLength={65000} editable={!busy} onChangeText={setDraft} />
         <AppButton label={t('bitchat.send')} disabled={busy || !mesh.active || !draft.trim() || new TextEncoder().encode(draft).length > 65000} onPress={() => void act(submit)} />
         <AppText variant="caption" tone="muted">{t('groups.commands_hint')}</AppText>

@@ -1,3 +1,4 @@
+import { actionMessage } from '@/lib/message-actions';
 import { ed25519 } from '@noble/curves/ed25519.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex, randomBytes } from '@noble/hashes/utils.js';
@@ -182,6 +183,7 @@ export class GroupRuntime {
   async send(id: string, name: string, content: string) {
     const prepared = await this.serial(async () => {
       const entry = this.get(id); if (entry.status !== 'joined') throw new Error('Not a group member');
+      content = actionMessage(content, name);
       const timestamp = Date.now(), messageId = bytesToHex(randomBytes(16));
       return { data: sealGroupMessage(entry.state, this.identity.signingSeed, name, content, messageId, timestamp),
         message: { id: messageId, group: localGroupId(entry), sender: this.self.fingerprint, name, content, timestamp, outgoing: true } };
