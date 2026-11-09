@@ -154,8 +154,8 @@ It preserves contact identity/trust settings and does not imply remote deletion.
 
 Location conversations use one area button labeled only `#area`. From a private
 conversation it returns to public chat; from public chat it opens the area controls.
-Back in a Location DM closes only that view and preserves the joined public
-channel. Offer Leave only in the public view; omit the separate area label and Change area button. Its
+Back in a Nearby or Location DM closes only that view and preserves the joined
+mesh or public area channel. Offer Leave only in the public view; omit the separate area label and Change area button. Its
 accessibility label retains public-channel context to distinguish broadcasts
 from private threads.
 

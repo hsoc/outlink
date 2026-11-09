@@ -346,7 +346,7 @@ export default function Chats() {
           renderItem={({ item: key }) => <AppButton unread={geoUnread.has(key)} label={geoUnread.has(key) ? t('mobile.unread_private_sender', { name: key.slice(0, 8), count: geoUnread.get(key)!.count }) : key.slice(0, 8)} variant="secondary" fullWidth={false} selected={geoRecipient === key} onPress={() => setPrivateTarget({ hash: geo.hash, pubkey: key })} />} />}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
           <AppText variant="caption" tone="muted">{transportHint}</AppText>
-          {mode === 'geo' && geoRecipient ? <AppButton label={t('common.back')} variant="text" fullWidth={false} size="sm" disabled={busy} onPress={() => setPrivateTarget(undefined)} /> : active ? <AppButton label={t('bitchat.leave')} variant="text" fullWidth={false} size="sm" disabled={busy} onPress={() => void operate(async () => {
+          {(mode === 'mesh' ? !!recipient : !!geoRecipient) ? <AppButton label={t('common.back')} variant="text" fullWidth={false} size="sm" disabled={busy} onPress={() => { if (mode === 'mesh') setRecipient(undefined); else setPrivateTarget(undefined); }} /> : active ? <AppButton label={t('bitchat.leave')} variant="text" fullWidth={false} size="sm" disabled={busy} onPress={() => void operate(async () => {
             if (mode === 'mesh') { await bitchatService.stop(); meshAttachments.clear(); } else geohashService.stop();
             setRecipient(undefined);
           })} /> : <AppButton label={t('mobile.join')} variant="secondary" fullWidth={false} size="sm" loading={busy} disabled={!name.trim() || busy} onPress={() => void operate(join, 'join')} />}

@@ -3,6 +3,7 @@ import React from 'react';
 import renderer, { act } from 'react-test-renderer';
 import Chats from '@/app/index';
 import { geohashService, geohashStore } from '@/services/geohash/geohash.service';
+import { bitchatService, bitchatSessionStore } from '@/services/bitchat/bitchat.service';
 import { workspaceStore } from '@/services/history/workspace';
 const peer = 'b'.repeat(64);
 jest.mock('react-native', () => {
@@ -28,12 +29,12 @@ jest.mock('@/components/MeshAttachments', () => ({ MeshAttachments: 'MeshAttachm
 jest.mock('@/components/ConversationErrorNotice', () => ({ ConversationErrorNotice: 'ConversationErrorNotice' }));
 jest.mock('@/theme', () => ({ spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 }, radius: { xl: 24 }, uiDensity: { messageBubbleMaxWidth: '90%' }, useThemeColors: () => ({}) }));
 jest.mock('@/platform', () => ({ platform: { appState: { currentState: () => 'active', addChangeListener: () => () => {} } } }));
-jest.mock('@/services/bitchat/mesh-attachments', () => ({ meshAttachments: {}, meshAttachmentStore: jest.requireActual('zustand/vanilla').createStore(() => ({ epoch: 0 })) }));
-jest.mock('@/services/bitchat/bitchat.service', () => ({ bitchatService: { restore: jest.fn(async () => {}), showThread: jest.fn(async () => {}) },
+jest.mock('@/services/bitchat/mesh-attachments', () => ({ meshAttachments: { clear: jest.fn() }, meshAttachmentStore: jest.requireActual('zustand/vanilla').createStore(() => ({ epoch: 0 })) }));
+jest.mock('@/services/bitchat/bitchat.service', () => ({ bitchatService: { stop: jest.fn(async () => {}), nicknameIdentities: () => [], restore: jest.fn(async () => {}), showThread: jest.fn(async () => {}) },
   bitchatSessionStore: jest.requireActual('zustand/vanilla').createStore(() => ({ peers: [], messages: [], threadMessages: [], active: false, busy: false, id: 'self' })) }));
 jest.mock('@/services/bitchat/mobile-identity', () => ({ mobileIdentity: jest.fn() }));
 jest.mock('@/services/bitchat/panic', () => ({ panicWipe: jest.fn() }));
-jest.mock('@/services/bitchat/compatibility/contacts', () => ({ contactsStore: jest.requireActual('zustand/vanilla').createStore(() => ({ contacts: [] })), contactsService: { restore: jest.fn(async () => {}) } }));
+jest.mock('@/services/bitchat/compatibility/contacts', () => ({ contactsStore: jest.requireActual('zustand/vanilla').createStore(() => ({ contacts: [] })), contactsService: { get: jest.fn(), restore: jest.fn(async () => {}) } }));
 jest.mock('@/services/moderation/blocked-users', () => ({ blockedUsersStore: jest.requireActual('zustand/vanilla').createStore(() => ({ users: [] })), blockedUsers: { restore: jest.fn(async () => {}) } }));
 jest.mock('@/services/preferences/internet-private', () => ({ configurePrivateInternet: jest.fn() }));
 jest.mock('@/services/preferences/nickname', () => ({ nicknameStore: jest.requireActual('zustand/vanilla').createStore(() => ({ name: 'Alice' })), ensureNickname: jest.fn(async () => 'Alice') }));
@@ -50,6 +51,7 @@ async function openDM() {
 }
 beforeEach(async () => {
   jest.clearAllMocks(); global.requestAnimationFrame = jest.fn(() => 1);
+  bitchatSessionStore.setState({ active: false, peers: [], messages: [], threadMessages: [], threadPeer: undefined });
   workspaceStore.setState({ mode: 'geo', hash: 'u4pruy', drafts: { 'geo:u4pruy': 'public draft' }, ready: true });
   geohashStore.setState({ active: true, hash: 'u4pruy', connected: 1, present: 2, participants: [], busy: false, publicIdentity: 'a'.repeat(64), privateActive: true, privateConnected: 1, privatePeers: [], privateThreads: [], privateMessages: [], messages: [{ id: 'public', pubkey: peer, name: 'Bob', content: 'hello', timestamp: Date.now(), outgoing: false, delivery: 'sent' }] });
   await act(async () => { screen = renderer.create(<Chats />); });
@@ -76,4 +78,24 @@ it('uses the area button to return from a DM, opens editing only from public cha
   await act(async () => { button('common.cancel').props.onPress(); });
   await act(async () => { button('bitchat.leave').props.onPress(); });
   expect(geohashService.stop).toHaveBeenCalledTimes(1);
+});
+
+it('returns from a Nearby DM without stopping Bluetooth, while explicit Public Mesh Leave still disconnects', async () => {
+  const meshPeer = peer.slice(0, 16);
+  await act(async () => {
+    bitchatSessionStore.setState({ active: true, peers: [], messages: [], threadMessages: [] });
+    workspaceStore.setState({ mode: 'mesh', recipient: meshPeer });
+  });
+  expect(button('bitchat.leave')).toBeUndefined();
+  await act(async () => { button('common.back').props.onPress(); });
+  expect(workspaceStore.getState().recipient).toBeUndefined();
+  expect(bitchatSessionStore.getState().active).toBe(true);
+  expect(bitchatService.stop).not.toHaveBeenCalled(); expect(geohashService.stop).not.toHaveBeenCalled();
+  await act(async () => { workspaceStore.setState({ recipient: meshPeer }); });
+  await act(async () => { button('bitchat.public').props.onPress(); });
+  expect(workspaceStore.getState().recipient).toBeUndefined();
+  expect(bitchatService.stop).not.toHaveBeenCalled();
+  await act(async () => { button('bitchat.leave').props.onPress(); });
+  expect(bitchatService.stop).toHaveBeenCalledTimes(1);
+  expect(geohashService.stop).not.toHaveBeenCalled();
 });
