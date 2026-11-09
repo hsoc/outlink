@@ -4,6 +4,8 @@ const { withGradleProperties, withAppBuildGradle } = require('expo/config-plugin
 module.exports = function withAndroidOptimization(config) {
   config = withGradleProperties(config, result => {
     const settings = {
+      // Source-built AGP 9 plugins and R8 exceed the template's 512 MiB metadata cap.
+      'org.gradle.jvmargs': '-Xmx2048m -XX:MaxMetaspaceSize=1024m',
       'android.enableMinifyInReleaseBuilds': 'true',
       'android.enableShrinkResourcesInReleaseBuilds': 'true',
       'android.enableR8.fullMode': 'true',

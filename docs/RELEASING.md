@@ -150,3 +150,8 @@ Review the versioned Gradle-plugin patches as part of dependency upgrades.
 Before publishing a build using this migration, require native compilation, R8
 report/signature validation and the optimized startup smoke check. Bundle export
 and JavaScript tests alone cannot validate the toolchain or runtime performance.
+
+The AGP 9 source-build configuration reserves up to 2 GiB Java heap and 1 GiB
+metaspace for Gradle. `OutOfMemoryError: Metaspace` in R8 is a build-memory failure,
+not an application crash; preserve diagnostics and check generated JVM arguments
+before retrying. The prebuild plugin persists this budget across clean builds.

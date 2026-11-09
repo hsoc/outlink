@@ -201,3 +201,12 @@ The React Native source build declares AndroidX Collection 1.5.0 directly for
 `MutableIntObjectMap`, already used by its mounting manager. The standalone React
 Native composite otherwise resolves only Collection 1.1.0 through AppCompat, even
 though the application resolves 1.5.0. Status-bar SDK guards import `android.os.Build`.
+
+## Build memory
+
+The clean-prebuild plugin keeps Gradle’s Java heap at 2 GiB and raises its class
+metadata (metaspace) ceiling from the Expo template’s 512 MiB to 1 GiB. The first
+full AGP 9 source build passed native/Kotlin compilation but exhausted metaspace
+in `minifyReleaseWithR8`; the 15-minute watchdog then stopped the stalled daemon.
+This is a build-process limit, not an installed-app memory setting. R8 remains
+enabled, and ABI coverage, signing and startup checks are unchanged.

@@ -93,3 +93,18 @@ test('native animation libraries register React before Kotlin script configurati
     assert.ok(!source.includes('apply(plugin = "com.facebook.react")'), packageName);
   }
 });
+
+
+test('clean Android configuration retains the R8 class-metadata budget and optimizer flags', async () => {
+  const { execFileSync } = await import('node:child_process');
+  const output = execFileSync(process.execPath, ['node_modules/expo/bin/cli', 'config', '--type', 'introspect', '--json'], {
+    encoding: 'utf8', timeout: 60000, maxBuffer: 16 * 1024 * 1024, env: { ...process.env, EXPO_OFFLINE: '1' },
+  });
+  const entries = JSON.parse(output)._internal.modResults.android.gradleProperties;
+  const properties = Object.fromEntries(entries.filter(entry => entry.type === 'property').map(entry => [entry.key, entry.value]));
+  assert.equal(entries.filter(entry => entry.type === 'property' && entry.key === 'org.gradle.jvmargs').length, 1);
+  assert.match(properties['org.gradle.jvmargs'], /(?:^|\s)-XX:MaxMetaspaceSize=1024m(?:\s|$)/);
+  assert.match(properties['org.gradle.jvmargs'], /(?:^|\s)-Xmx2048m(?:\s|$)/);
+  for (const key of ['android.enableMinifyInReleaseBuilds', 'android.enableShrinkResourcesInReleaseBuilds', 'android.enableR8.fullMode', 'android.r8.optimizedResourceShrinking'])
+    assert.equal(properties[key], 'true');
+});
