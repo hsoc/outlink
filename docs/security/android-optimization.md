@@ -192,3 +192,7 @@ React Native/Hermes source scripts explicitly suppress legacy Gradle DSL
 deprecations during this transitional opt-out. React Native source exclusions use
 Gradle’s `PatternFilterable` interface, preserving the existing processor filters
 after AGP 9 narrowed the source-directory interface.
+
+Hermes extraction accepts the `meta-hermes-` archive prefix after the upstream
+repository rename, as well as the original `facebook-hermes-` prefix. The pinned
+Hermes version remains unchanged.

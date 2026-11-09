@@ -33,6 +33,18 @@ diff --git a/node_modules/react-native/ReactAndroid/hermes-engine/build.gradle.k
 
  import com.facebook.react.internal.PrivateReactExtension
  import com.facebook.react.tasks.internal.*
+@@ -123,9 +125,8 @@
+       dependsOn(downloadHermes)
+       from(tarTree(downloadHermesDest)) {
+         eachFile {
+-          // We flatten the unzip as the tarball contains a `facebook-hermes-<SHA>`
+-          // folder at the top level.
+-          if (this.path.startsWith("facebook-hermes-")) {
++          // Strip the archive root from both the original and renamed Hermes repository.
++          if (this.path.startsWith("facebook-hermes-") || this.path.startsWith("meta-hermes-")) {
+             this.path = this.path.substringAfter("/")
+           }
+         }
 diff --git a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/statusbar/StatusBarModule.kt b/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/statusbar/StatusBarModule.kt
 --- a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/statusbar/StatusBarModule.kt
 +++ b/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/statusbar/StatusBarModule.kt
