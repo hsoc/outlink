@@ -1,0 +1,1 @@
+Updates Android 15 system-bar handling and native bottom-sheet compatibility. Upgrades Android build tools and retains R8 code optimization, obfuscation and resource shrinking.

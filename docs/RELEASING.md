@@ -3,8 +3,8 @@
 Run the **Build Mobile Apps** workflow from the Actions tab. Android defaults to
 on; iOS is optional. There are no desktop build targets or desktop credentials.
 Both use the existing Outlink production application ID `io.github.hsoc.outlink`.
-Development builds use `.dev`. The public app version is `1.1.12`. Android version code and iOS
-build number are 27; keep increasing these counters even when changing the
+Development builds use `.dev`. The public app version is `1.1.13`. Android version code and iOS
+build number are 28; keep increasing these counters even when changing the
 public version scheme.
 
 ## Android
@@ -144,7 +144,7 @@ claiming complete window/inset compatibility. See
 ## AGP 9 validation
 
 The Android app and React Native source build use AGP 9.0.1 and Kotlin 2.2.10,
-with the existing Gradle 9.3.1 wrapper and CI JDK 21. Expo/native plugins currently
+with the existing Gradle 9.3.1 wrapper and CI JDK 17. Expo/native plugins currently
 require the official AGP 9 legacy-DSL and external-Kotlin compatibility settings.
 Review the versioned Gradle-plugin patches as part of dependency upgrades.
 Before publishing a build using this migration, require native compilation, R8

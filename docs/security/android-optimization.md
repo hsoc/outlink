@@ -149,7 +149,7 @@ Sources: [Material 1.14.0 system-bar compatibility helpers](https://github.com/m
 
 AGP 9.0.1 is pinned in both React Native Gradle version catalogs. The React Native
 Gradle plugin and Expo Gradle-plugin compilers align on Kotlin 2.2.10. The existing
-Gradle 9.3.1 wrapper and CI JDK 21 meet AGP 9 requirements. NDK/ABI settings retain
+Gradle 9.3.1 wrapper and CI JDK 17 meet AGP 9 requirements. NDK/ABI settings retain
 the explicitly selected versions.
 
 Expo and native dependencies still use `BaseExtension`, legacy variant APIs and
