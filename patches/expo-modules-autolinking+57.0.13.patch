@@ -7,3 +7,58 @@ diff --git a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/bu
 +  kotlin("jvm") version "2.2.10" apply false
    id("java-gradle-plugin")
  }
+diff --git a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/build.gradle.kts b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/build.gradle.kts
+--- a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/build.gradle.kts
++++ b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/build.gradle.kts
+@@ -15,7 +15,7 @@
+ dependencies {
+   implementation(project(":expo-autolinking-plugin-shared"))
+   implementation(gradleApi())
+-  compileOnly("com.android.tools.build:gradle:8.5.0")
++  compileOnly("com.android.tools.build:gradle:9.0.1")
+
+   testImplementation("junit:junit:4.13.2")
+   testImplementation("com.google.truth:truth:1.1.2")
+diff --git a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-max-sdk-override-plugin/build.gradle.kts b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-max-sdk-override-plugin/build.gradle.kts
+--- a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-max-sdk-override-plugin/build.gradle.kts
++++ b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-max-sdk-override-plugin/build.gradle.kts
+@@ -14,7 +14,7 @@
+ dependencies {
+   implementation(project(":expo-autolinking-plugin-shared"))
+   implementation(gradleApi())
+-  compileOnly("com.android.tools.build:gradle:8.5.0")
++  compileOnly("com.android.tools.build:gradle:9.0.1")
+
+   testImplementation("junit:junit:4.13.2")
+   testImplementation("com.google.truth:truth:1.1.2")
+diff --git a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/build.gradle.kts b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/build.gradle.kts
+--- a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/build.gradle.kts
++++ b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/build.gradle.kts
+@@ -14,7 +14,7 @@
+ dependencies {
+   implementation(project(":expo-autolinking-plugin-shared"))
+   implementation(gradleApi())
+-  compileOnly("com.android.tools.build:gradle:8.5.0")
++  compileOnly("com.android.tools.build:gradle:9.0.1")
+ }
+
+ java {
+diff --git a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingPlugin.kt b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingPlugin.kt
+--- a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingPlugin.kt
++++ b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingPlugin.kt
+@@ -1,5 +1,6 @@
+ package expo.modules.plugin
+
++import com.android.build.api.dsl.CommonExtension
+ import com.android.build.api.variant.AndroidComponentsExtension
+ import com.android.build.gradle.BaseExtension
+ import com.android.build.gradle.internal.tasks.factory.dependsOn
+@@ -88,7 +89,7 @@
+
+     // Adds the generated file to the source set.
+     project.extensions.getByType(AndroidComponentsExtension::class.java).finalizeDsl { ext ->
+-      ext
++      (ext as CommonExtension)
+         .sourceSets
+         .getByName("main")
+         .java

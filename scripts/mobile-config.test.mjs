@@ -71,6 +71,14 @@ test('Android composite builds align AGP 9 and Kotlin versions', async () => {
   ]) {
     assert.ok((await readFile(path, 'utf8')).includes(`kotlin("jvm") version "${kotlin}"`));
   }
+  for (const path of [
+    'node_modules/expo-modules-core/expo-module-gradle-plugin/build.gradle.kts',
+    'node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/build.gradle.kts',
+    'node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-max-sdk-override-plugin/build.gradle.kts',
+    'node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/build.gradle.kts',
+  ]) {
+    assert.ok((await readFile(path, 'utf8')).includes(`compileOnly("com.android.tools.build:gradle:${agp}")`));
+  }
   const sourceProperties = await readFile('node_modules/react-native/gradle.properties', 'utf8');
   assert.match(sourceProperties, /^android.newDsl=false$/m);
   assert.match(sourceProperties, /^android.builtInKotlin=false$/m);
