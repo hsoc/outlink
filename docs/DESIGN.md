@@ -10,7 +10,10 @@ is physically nearby or that public messages are encrypted.
 
 Use the shared AppScreen, ScreenHeader, AppText, AppInput, and AppButton primitives.
 Respect safe areas, keyboard controls, accessibility labels, and logical start/end
-layout. Reuse the original light/dark palettes, system appearance, accent choices,
+layout. Android system bars use the Expo edge-to-edge window and safe-area
+insets. Screen-level StatusBar controls set icon style without deprecated
+background-color or translucency props. Reuse the original light/dark palettes,
+system appearance, accent choices,
 frosted iOS chrome, opaque Android chrome, typography, spacing, and radii.
 
 ## Hard rules

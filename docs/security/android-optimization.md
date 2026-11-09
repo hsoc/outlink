@@ -84,3 +84,36 @@ contains the startup screenshot, UI dump and logs. The previously published
 v1.1.7 downloads were not replaced, and no new version/tag was published by this
 optimization change. Physical Bluetooth/background/private-message validation
 on the optimized APK remains outstanding.
+
+
+## Android 15 system-bar warnings
+
+The v1.1.12 mapping from build 42403841893 resolves the reported shortened names:
+
+| Reported location | Mapped origin |
+| --- | --- |
+| `Tb.k.j` | React Native Screens `FormSheetDialog`, with Material `BottomSheetDialog.onCreate` inlined |
+| `d8.b.runGuarded` | React Native `StatusBarModule.setColor` runnable |
+| `H5.a.B` / `H5.a.s` | R8-generated API outline methods taking `WindowManager.LayoutParams`. The synthetic holder's Glide-derived name does not identify the original caller |
+
+The unshortened entries belong to React Native status-bar/window utilities and
+Expo Image Picker. The checked-in React Native 0.86.3 implementation still contains
+legacy system-bar color APIs and older cutout modes for compatibility. The image
+picker already uses `WindowCompat.enableEdgeToEdge` with system-bar/display-cutout
+insets; compatibility code in its native dependency chain can remain visible to
+Play's analysis even when Outlink does not request cropping.
+
+Outlink's `AppScreen` sets only status-bar icon style. Its deprecated
+`backgroundColor` and `translucent` props were removed. The Expo 57 edge-to-edge
+window and existing safe-area views own the background and content insets.
+This application-level cleanup does not remove dependency bytecode references.
+The remaining Play entries require dependency-level migration and a newly built
+APK/AAB scan before they can be considered cleared. Obfuscated names are specific
+to each build, so always use the matching mapping artifact.
+
+Validate status/navigation icons, portrait and landscape cutouts, keyboard
+opening, modal sheets and the image picker on Android 15/16 and an older supported
+Android version. Static checks and bundle export do not establish this visual QA.
+
+Sources: [React Native 0.86 StatusBar deprecations](https://reactnative.dev/docs/0.86/statusbar),
+[Android 15 edge-to-edge changes](https://developer.android.com/about/versions/15/behavior-changes-15#edge-to-edge).

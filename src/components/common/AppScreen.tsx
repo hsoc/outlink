@@ -43,8 +43,6 @@ export function AppScreen({ children, edges = ['top', 'bottom'] }: Props) {
     <View style={{ flex: 1, backgroundColor: c.background }}>
       <StatusBar
         barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'}
-        translucent
-        backgroundColor="transparent"
       />
       <SafeAreaView style={{ flex: 1 }} edges={[...horizontalEdges, ...edges]}>
         {children}
