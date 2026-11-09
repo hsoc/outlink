@@ -47,6 +47,9 @@ on navigation/erasure, and stale actions cannot execute in a different thread.
 ## Identity and persistence
 
 Blocks are keyed by mesh peer ID or full Nostr public key, never by nickname.
+Location private-message records use the Nostr namespace despite sharing the
+mesh message structure. Preserve the proven thread root and current head when
+blocking known aliases, including after older mailbox aliases are pruned.
 Nostr keys are shared across the location and bridge display paths. Already
 proven Location private-thread aliases are blocked together; further known aliases
 are checked against that thread. Bluetooth group display also filters a blocked

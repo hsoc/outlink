@@ -4,6 +4,7 @@ import renderer, { act } from 'react-test-renderer';
 import Chats from '@/app/index';
 import { geohashService, geohashStore } from '@/services/geohash/geohash.service';
 import { bitchatService, bitchatSessionStore } from '@/services/bitchat/bitchat.service';
+import { blockedUsers, blockedUsersStore } from '@/services/moderation/blocked-users';
 import { workspaceStore } from '@/services/history/workspace';
 const peer = 'b'.repeat(64);
 jest.mock('react-native', () => {
@@ -14,7 +15,7 @@ jest.mock('react-native', () => {
   }));
 });
 jest.mock('react-native-keyboard-controller', () => ({ KeyboardAvoidingView: 'KeyboardAvoidingView' }));
-jest.mock('react-i18next', () => { const t = (key: string) => key; return { useTranslation: () => ({ t }) }; });
+jest.mock('react-i18next', () => { const t = (key: string, values?: { name?: string; count?: number }) => key === 'mobile.dm_shortcut' ? `DM · ${values?.name}` : key === 'mobile.unread_private_sender' ? `${values?.name} · ${values?.count} unread` : key; return { useTranslation: () => ({ t }) }; });
 jest.mock('expo-router', () => ({ router: { push: jest.fn() }, useFocusEffect: (callback: any) => jest.requireActual('react').useEffect(callback, [callback]) }));
 jest.mock('@solar-icons/react-native/category/map/Linear/Radar', () => ({ Radar: 'Radar' }), { virtual: true });
 jest.mock('@/components/common/AppScreen', () => ({ AppScreen: 'AppScreen' }));
@@ -35,12 +36,18 @@ jest.mock('@/services/bitchat/bitchat.service', () => ({ bitchatService: { stop:
 jest.mock('@/services/bitchat/mobile-identity', () => ({ mobileIdentity: jest.fn() }));
 jest.mock('@/services/bitchat/panic', () => ({ panicWipe: jest.fn() }));
 jest.mock('@/services/bitchat/compatibility/contacts', () => ({ contactsStore: jest.requireActual('zustand/vanilla').createStore(() => ({ contacts: [] })), contactsService: { get: jest.fn(), restore: jest.fn(async () => {}) } }));
-jest.mock('@/services/moderation/blocked-users', () => ({ blockedUsersStore: jest.requireActual('zustand/vanilla').createStore(() => ({ users: [] })), blockedUsers: { restore: jest.fn(async () => {}) } }));
+jest.mock('@/services/moderation/blocked-users', () => ({ blockedUsersStore: jest.requireActual('zustand/vanilla').createStore(() => ({ users: [] })), blockedUsers: { restore: jest.fn(async () => {}), set: jest.fn(async () => {}) } }));
 jest.mock('@/services/preferences/internet-private', () => ({ configurePrivateInternet: jest.fn() }));
 jest.mock('@/services/preferences/nickname', () => ({ nicknameStore: jest.requireActual('zustand/vanilla').createStore(() => ({ name: 'Alice' })), ensureNickname: jest.fn(async () => 'Alice') }));
 jest.mock('@/services/history/workspace', () => ({ workspaceStore: jest.requireActual('zustand/vanilla').createStore(() => ({ mode: 'geo', hash: 'u4pruy', precision: 6, relays: '', drafts: {}, ready: true })), restoreWorkspace: jest.fn(async () => {}) }));
 jest.mock('@/services/mentions/conversation-activity', () => ({ conversationActivityStore: jest.requireActual('zustand/vanilla').createStore(() => ({ unread: {} })), conversationActivity: { focus: jest.fn() }, conversationScope: (...args: unknown[]) => JSON.stringify(args) }));
-jest.mock('@/services/geohash/geohash.service', () => ({ geohashStore: jest.requireActual('zustand/vanilla').createStore(() => ({})), geohashService: { restore: jest.fn(async () => {}), stop: jest.fn(), join: jest.fn(), privatePeer: (key: string) => key, sendPrivate: jest.fn(async () => {}) } }));
+jest.mock('@/services/geohash/geohash.service', () => {
+  const store = jest.requireActual('zustand/vanilla').createStore(() => ({}));
+  return { geohashStore: store, geohashService: { restore: jest.fn(async () => {}), stop: jest.fn(), join: jest.fn(),
+    privatePeer: (key: string) => (store.getState().privateThreads ?? []).find((thread: any) => thread.peer === key || thread.head === key || thread.keys.includes(key))?.peer ?? key,
+    sendPrivate: jest.fn(async () => {}), readPrivate: jest.fn(async () => {}),
+  } };
+});
 let screen: renderer.ReactTestRenderer;
 const buttons = () => screen.root.findAllByType('AppButton' as never);
 const button = (label: string) => buttons().find(item => item.props.label === label)!;
@@ -51,6 +58,7 @@ async function openDM() {
 }
 beforeEach(async () => {
   jest.clearAllMocks(); global.requestAnimationFrame = jest.fn(() => 1);
+  blockedUsersStore.setState({ users: [] });
   bitchatSessionStore.setState({ active: false, peers: [], messages: [], threadMessages: [], threadPeer: undefined });
   workspaceStore.setState({ mode: 'geo', hash: 'u4pruy', drafts: { 'geo:u4pruy': 'public draft' }, ready: true });
   geohashStore.setState({ active: true, hash: 'u4pruy', connected: 1, present: 2, participants: [], busy: false, publicIdentity: 'a'.repeat(64), privateActive: true, privateConnected: 1, privatePeers: [], privateThreads: [], privateMessages: [], messages: [{ id: 'public', pubkey: peer, name: 'Bob', content: 'hello', timestamp: Date.now(), outgoing: false, delivery: 'sent' }] });
@@ -98,4 +106,54 @@ it('returns from a Nearby DM without stopping Bluetooth, while explicit Public M
   await act(async () => { button('bitchat.leave').props.onPress(); });
   expect(bitchatService.stop).toHaveBeenCalledTimes(1);
   expect(geohashService.stop).not.toHaveBeenCalled();
+});
+
+it.each(['mesh', 'geo'] as const)('places new %s DM alerts beside the public button, keeps the selected thread after read, and preserves the other transport dot', async mode => {
+  const id = mode === 'mesh' ? peer.slice(0, 16) : peer;
+  await act(async () => {
+    workspaceStore.setState({ mode, recipient: undefined });
+    bitchatSessionStore.setState({ active: true, unread: new Map([[peer.slice(0, 16), { name: 'Bob', count: 2 }]]) });
+    geohashStore.setState({ privatePeers: [peer], privateMessages: [{ id: 'dm', peer, recipient: 'a'.repeat(64), name: 'bbbbbbbb', content: 'private', timestamp: Date.now(), outgoing: false, delivery: 'delivered' }] });
+  });
+  expect(button('mobile.mesh').props.unread).toBe(true); expect(button('mobile.geo').props.unread).toBe(true);
+  const tab = buttons().find(item => item.props.label.startsWith('DM · Bob') && item.props.unread)!;
+  expect(tab).toBeDefined();
+  expect(tab.props.label).toBe('DM · Bob');
+  expect(tab.props.iconRight.props.children).toBe(mode === 'mesh' ? 2 : 1);
+  expect(tab.props.accessibilityLabel).toBe(mode === 'mesh' ? 'DM · Bob · 2 unread' : 'DM · Bob · 1 unread');
+  if (mode === 'mesh') expect(button('mobile.contacts').props.unread).toBe(true);
+  await act(async () => { tab.props.onPress(); });
+  if (mode === 'mesh') expect(workspaceStore.getState().recipient).toBe(id);
+  expect(geohashService.stop).not.toHaveBeenCalled(); expect(bitchatService.stop).not.toHaveBeenCalled();
+  await act(async () => {
+    if (mode === 'mesh') bitchatSessionStore.setState({ unread: new Map(), threadPeer: id, threadMessages: [{ id: 'read-dm', peer: id, recipient: 'self', name: 'Bob', content: 'private', timestamp: Date.now(), outgoing: false, delivery: 'read' }] });
+    else geohashStore.setState({ privateMessages: geohashStore.getState().privateMessages.map(message => ({ ...message, delivery: 'read' as const })) });
+  });
+  const selected = buttons().find(item => item.props.label === 'DM · Bob' && item.props.selected)!;
+  expect(selected).toBeDefined(); expect(selected.props.unread).toBe(false);
+  expect(button(mode === 'mesh' ? 'mobile.geo' : 'mobile.mesh').props.unread).toBe(true);
+});
+
+it('does not show a Location DM badge for a blocked proven root after old aliases are pruned', async () => {
+  const root = 'c'.repeat(64);
+  await act(async () => {
+    blockedUsersStore.setState({ users: [{ key: 'nostr:' + root, name: 'Bob' }] });
+    geohashStore.setState({ privatePeers: [root], privateThreads: [{ peer: root, head: peer, keys: [peer], local: '', blocked: false, migrating: false }],
+      privateMessages: [{ id: 'dm', peer, channelThread: root, recipient: 'a'.repeat(64), name: 'Bob', content: 'blocked', timestamp: Date.now(), outgoing: false, delivery: 'delivered' }] });
+  });
+  expect(button('mobile.geo').props.unread).toBe(false);
+  expect(buttons().some(item => item.props.label.startsWith('DM ·'))).toBe(false);
+});
+
+it('blocks a Location DM author in the Nostr namespace together with its proven root', async () => {
+  const root = 'c'.repeat(64);
+  await act(async () => { geohashStore.setState({ privatePeers: [root], privateThreads: [{ peer: root, head: peer, keys: [peer], local: '', blocked: false, migrating: false }],
+    privateMessages: [{ id: 'dm', peer, channelThread: root, recipient: 'a'.repeat(64), name: 'Bob', content: 'private', timestamp: Date.now(), outgoing: false, delivery: 'delivered' }] }); });
+  await openDM();
+  expect(buttons().filter(item => item.props.label.startsWith('DM ·')).length).toBe(1);
+  await act(async () => { screen.root.findAllByType('AppText' as never).find(item => item.props.children === 'private')!.props.onLongPress(); });
+  await act(async () => { screen.root.findByType('MessageActions' as never).props.onAction('block'); });
+  const keys = jest.mocked(blockedUsers.set).mock.calls[0][0];
+  expect(new Set(keys)).toEqual(new Set(['nostr:' + peer, 'nostr:' + root]));
+  expect(keys.every(key => key.startsWith('nostr:'))).toBe(true);
 });

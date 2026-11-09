@@ -43,6 +43,7 @@ export const density = {
     shareRecipientSummaryAvatarSize: 32,
     messageDeliveryStatusInset: 6,
     messageBubbleMaxWidth: '88%',
+    conversationTabMaxWidth: 180,
     selectedControlRingWidth: 1,
     countBadge: {
       sm: { size: 18, horizontalPadding: 4 },

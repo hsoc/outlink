@@ -29,8 +29,7 @@ A notification opens the application; it does not automatically reconnect or
 join another channel.
 
 Android can receive while backgrounded only when the existing background
-connectivity mode retains a joined mesh and its connections. Location-only
-sessions still pause. iOS currently pauses its JavaScript messaging engine in the
+connectivity mode retains joined Nearby or Location messaging and its connections. iOS currently pauses its JavaScript messaging engine in the
 background. Neither platform gains delivery after force-stop/process death or
 remote wake-up through this feature. A fresh native APK/IPA build is required.
 
@@ -67,19 +66,27 @@ Tap received message text in Public Mesh, location channels, private conversatio
 or private Bluetooth groups to append the sender mention to the current draft and
 focus the message box. Existing draft text is preserved; tapping does not send.
 The mention uses the visible nickname, including its four-character discriminator
-only for active duplicates. In Nearby and Location conversations, long-press opens the [message actions](message-actions.md) menu, including Copy message. Group text retains native selection.
+only for active duplicates. In Nearby, Location and private Bluetooth group conversations, long-press opens the [message actions](message-actions.md) menu, including Copy message.
 Tapping your own messages does not insert a mention. Public sender labels retain
 their existing shortcut. This does not enable private/group mention notifications.
 
 ## Nearby and Location-channel private messages
 
-Incoming Nearby DMs now surface in an **Unread Nearby messages** strip on the
-main screen, including while Location channels is selected. Tap a sender button
-to open that private conversation directly. Contacts also shows per-sender unread
-counts. Nearby counts use unexpired unread messages in encrypted local history,
-not a full archive-wide count. Blocked contacts do not appear. Opening a private
-thread marks its loaded messages read only while the screen is focused and the
-app is in the foreground; background receipt and Settings do not mark them read.
+Nearby and Location use the same horizontal conversation selector beneath their
+mode buttons. A new incoming DM adds a **DM · sender** button beside **Public Mesh**
+or **#area**, with a red dot and unread count. The selected private conversation
+stays visible after its unread count clears. Other unread senders stay marked.
+When another mode is selected, the Nearby/Location tab dot points to its waiting
+DMs; switching modes reveals their sender buttons. These indicators work without
+notification permission. Opening a sender button never leaves the public session.
+Nearby’s Contacts button and per-contact cards/Message user buttons also show
+unread dots and counts. Saved contacts are not all added to the chat selector.
+Location retains its bounded recent private threads in the area selector.
+
+Nearby counts use unexpired unread messages in encrypted local history, not a
+full archive scan. Blocked senders do not contribute indicators. Opening a
+private thread marks its loaded messages read only while focused in the
+foreground; background receipt and Settings do not mark them read.
 
 Enable **Settings → Notify for private messages** for optional local OS
 alerts. This is independent of the public mention setting and defaults off.
@@ -99,16 +106,15 @@ message storage. Disabling DM alerts clears only that category; full identity
 erasure invalidates and drains all categories before clearing local data.
 The separate background Nearby option below also covers joined private groups.
 
-Location DMs have an **Unread Location messages** sender strip visible from either
-main tab, plus unread counts on Location private-conversation buttons. A shortcut
-opens the matching private thread in the currently loaded area, leaving any area
-edit form. The proven conversation root groups rotated sender keys together;
-expired/blocked private threads do not contribute unread indicators. Names use the
-existing private-message identity label, without assuming a public nickname is an
-authenticated private identity. Location counts cover the bounded loaded
-history window; other areas are not aggregated into a global inbox. With private
-messaging active, only a focused foreground private thread sends read receipts;
-Settings and background receipt leave messages unread. Offline history retains
+Location shortcuts use a public nickname only when its signed public key matches
+that private sender or a proven rotation alias in the currently loaded area.
+Otherwise they retain the private identity label/short key. A display nickname is
+not proof of a person’s identity and never creates a mesh contact. Proven rotation
+aliases share one thread/button. Expired or blocked threads do not contribute
+unread counts. Blocks cover the proven root and current head even after old
+mailbox aliases are pruned. Location counts cover the bounded loaded history window; other
+areas are not combined into a global inbox. With private messaging active, only a
+focused foreground private thread sends read receipts. Offline history retains
 its unread state until private messaging is active again.
 
 One private-message notification preference covers both transports. Existing

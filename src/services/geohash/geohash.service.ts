@@ -36,7 +36,7 @@ geohashStore.subscribe((state, previous) => {
 class GeohashService {
   isBlocked(key: string) {
     const thread = geohashStore.getState().privateThreads.find(t => t.peer === key || t.head === key || t.keys.includes(key));
-    return [key, ...(thread?.keys ?? [])].some(id => blockedUsers.has('nostr:' + id));
+    return [key, ...(thread ? [thread.peer, thread.head, ...thread.keys] : [])].some(id => blockedUsers.has('nostr:' + id));
   }
   meshFallback?: (event: Event, hash: string) => Promise<boolean>;
   acceptCarrier(event: Event, hash: string) { if (this.connection?.hash === hash) this.session?.acceptEvent(event); }

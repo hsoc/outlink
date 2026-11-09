@@ -1,3 +1,5 @@
+import { ConversationTabs } from '@/components/common/ConversationTabs';
+import { dmShortcuts, locationDmNames } from '@/lib/dm-shortcuts';
 import { meshAttachments, meshAttachmentStore } from '@/services/bitchat/mesh-attachments';
 import { MeshAttachments } from '@/components/MeshAttachments';
 import { ConversationErrorNotice } from '@/components/ConversationErrorNotice';
@@ -52,14 +54,17 @@ export default function Chats() {
   const blockedKeys = useMemo(() => {
     const keys = new Set(blocked.map(user => user.key));
     for (const contact of savedContacts) if (contact.blocked) keys.add('mesh:' + contact.id);
-    for (const thread of geo.privateThreads) if (thread.keys.some(key => keys.has('nostr:' + key))) for (const key of thread.keys) keys.add('nostr:' + key);
+    for (const thread of geo.privateThreads) {
+      const aliases = [thread.peer, thread.head, ...thread.keys];
+      if (aliases.some(key => keys.has('nostr:' + key))) for (const key of aliases) keys.add('nostr:' + key);
+    }
     return keys;
   }, [blocked, savedContacts, geo.privateThreads]);
   const unread = useMemo(() => {
     const blocked = new Set([...blockedKeys].filter(key => key.startsWith('mesh:')).map(key => key.slice(5)));
     return mesh.unread ? new Map([...mesh.unread].filter(([peer]) => !blocked.has(peer))) : unreadPrivateMessages(mesh.messages, blocked);
   }, [mesh.messages, mesh.unread, blockedKeys]);
-  const geoUnread = useMemo(() => unreadLocationMessages(geo.privateMessages.filter(message => !blockedKeys.has(messageUserKey(message))), geo.privateThreads), [geo.privateMessages, geo.privateThreads, blockedKeys]);
+  const geoUnread = useMemo(() => unreadLocationMessages(geo.privateMessages.filter(message => !blockedKeys.has(messageUserKey(message, 'geo'))), geo.privateThreads), [geo.privateMessages, geo.privateThreads, blockedKeys]);
   const activity = useStore(conversationActivityStore, s => s.unread);
   const workspace = useStore(workspaceStore);
   const { mode, hash, precision, relays, recipient } = workspace;
@@ -78,7 +83,32 @@ export default function Chats() {
   const setDraft = (value: string) => workspaceStore.setState(state => ({ drafts: { ...state.drafts, [draftKey]: value } }));
   const name = useStore(nicknameStore, state => state.name);
   const nearbyDuplicates = useMemo(() => duplicateNicknames(mesh.active ? [{ name, identity: mesh.id }, ...mesh.peers.filter(p => p.lastSeen > 0).map(p => ({ name: p.name, identity: p.id }))] : []), [mesh.active, mesh.id, mesh.peers, name]);
-  const duplicates = useMemo(() => mode === 'mesh' ? nearbyDuplicates : duplicateNicknames(geo.connected ? [{ name, identity: geo.publicIdentity }, ...geo.participants] : []), [mode, nearbyDuplicates, name, geo.connected, geo.publicIdentity, geo.participants]);
+  const geoDuplicates = useMemo(() => duplicateNicknames(geo.connected ? [{ name, identity: geo.publicIdentity }, ...geo.participants] : []), [name, geo.connected, geo.publicIdentity, geo.participants]);
+  const duplicates = mode === 'mesh' ? nearbyDuplicates : geoDuplicates;
+  const meshPeers = mesh.peers, meshMessages = mesh.messages, meshThreadMessages = mesh.threadMessages;
+  const meshDmNames = useMemo(() => {
+    const names = new Map(meshMessages.filter(message => !message.outgoing).map(message => [message.peer, message.name]));
+    for (const message of meshThreadMessages) if (!message.outgoing) names.set(message.peer, message.name);
+    for (const contact of savedContacts) names.set(contact.id, contact.name);
+    for (const entry of meshPeers) names.set(entry.id, entry.name);
+    for (const [id, value] of names) names.set(id, displayNickname(value, id, nearbyDuplicates.has(nicknameKey(value))));
+    return names;
+  }, [savedContacts, meshPeers, meshMessages, meshThreadMessages, nearbyDuplicates]);
+  const geoDmNames = useMemo(() => {
+    const names = locationDmNames([
+      ...geo.messages.map(message => ({ identity: message.pubkey, name: message.name })), ...geo.participants,
+    ], geo.privateMessages, geo.privateThreads);
+    const heads = new Map(geo.privateThreads.map(thread => [thread.peer, thread.head]));
+    for (const [id, value] of names) names.set(id, displayNickname(value, heads.get(id) ?? id, geoDuplicates.has(nicknameKey(value))));
+    return names;
+  }, [geo.messages, geo.participants, geo.privateMessages, geo.privateThreads, geoDuplicates]);
+  const geoBlockedPeers = useMemo(() => {
+    const peers = new Set([...blockedKeys].filter(key => key.startsWith('nostr:')).map(key => key.slice(6)));
+    for (const thread of geo.privateThreads) if ([thread.peer, thread.head, ...thread.keys].some(key => peers.has(key))) peers.add(thread.peer);
+    return peers;
+  }, [blockedKeys, geo.privateThreads]);
+  const meshTabs = useMemo(() => dmShortcuts(unread, recipient, meshDmNames), [unread, recipient, meshDmNames]);
+  const geoTabs = useMemo(() => dmShortcuts(geoUnread, geoRecipient, geoDmNames, geo.privatePeers, geoBlockedPeers), [geoUnread, geoRecipient, geoDmNames, geo.privatePeers, geoBlockedPeers]);
   const [messageMenu, setMessageMenu] = useState<{ message: BitchatMessage | GeoMessage; name: string; scope: string; epoch: number }>();
   const [locationInfo, setLocationInfo] = useState(false);
   const longPressed = useRef(false), menuConsumed = useRef(false);
@@ -103,7 +133,6 @@ export default function Chats() {
   const peer = mesh.peers.find(p => p.id === recipient);
   const savedContact = savedContacts.find(contact => contact.id === recipient && contactAvailable(contact));
   const selectedOnline = mesh.active && !!peer?.lastSeen && !savedContact?.blocked;
-  const selectedName = peer?.name ?? savedContact?.name ?? mesh.messages.find(message => !message.outgoing && message.peer === recipient)?.name ?? recipient;
   const fingerprint = peer?.fingerprint || savedContact?.fingerprint;
   const listRef = useRef<FlatList<BitchatMessage | GeoMessage>>(null);
   const atLatest = useRef(true);
@@ -147,7 +176,7 @@ export default function Chats() {
     void bitchatService.showThread(mode === 'mesh' ? recipient : undefined).catch(() => { if (current) setActionError('other'); });
     return () => { current = false; };
   }, [mode, recipient]);
-  const messages = useMemo(() => (mode === 'geo' ? geoRecipient ? geo.privateMessages.filter(m => m.channelThread === geoRecipient || m.peer === geoRecipient || m.recipient === geoRecipient) : geo.messages : recipient ? privateMeshMessages : mesh.messages.filter(m => !m.recipient)).filter(m => !blockedKeys.has(messageUserKey(m))), [blockedKeys, mode, recipient, mesh.messages, privateMeshMessages, geo.messages, geo.privateMessages, geoRecipient]);
+  const messages = useMemo(() => (mode === 'geo' ? geoRecipient ? geo.privateMessages.filter(m => m.channelThread === geoRecipient || m.peer === geoRecipient || m.recipient === geoRecipient) : geo.messages : recipient ? privateMeshMessages : mesh.messages.filter(m => !m.recipient)).filter(m => !blockedKeys.has(messageUserKey(m, mode))), [blockedKeys, mode, recipient, mesh.messages, privateMeshMessages, geo.messages, geo.privateMessages, geoRecipient]);
   useEffect(() => {
     let alive = true;
     void Promise.all([blockedUsers.restore(), ensureNickname(), restoreWorkspace(), bitchatService.restore(), contactsService.restore()]).then(async () => {
@@ -222,14 +251,14 @@ export default function Chats() {
     menuConsumed.current = true;
     const target = messageMenu; setMessageMenu(undefined);
     if (!target || target.epoch !== sessionIntent() || target.scope !== draftKey) return;
-    const item = target.message, key = messageUserKey(item);
+    const item = target.message, key = messageUserKey(item, mode);
     await operate(async () => {
       if (action === 'copy') { await platform.clipboard.writeText(item.content); return; }
       if (item.outgoing) return;
       if (action === 'block') {
         const identity = key.slice(key.indexOf(':') + 1);
-        const thread = key.startsWith('nostr:') ? geo.privateThreads.find(t => t.peer === identity || t.keys.includes(identity)) : undefined;
-        await blockedUsers.set([key, ...(thread?.keys ?? []).map(id => 'nostr:' + id)], nicknameBase(target.name), true); return;
+        const thread = key.startsWith('nostr:') ? geo.privateThreads.find(t => t.peer === identity || t.head === identity || t.keys.includes(identity) || 'channelThread' in item && t.peer === item.channelThread) : undefined;
+        await blockedUsers.set([key, ...(thread ? [thread.peer, thread.head, ...thread.keys] : []).map(id => 'nostr:' + id)], nicknameBase(target.name), true); return;
       }
       if (action === 'message') {
         const destination = privateMessageTarget(item, mode);
@@ -270,7 +299,7 @@ export default function Chats() {
   const showingConversation = ready && isComposing && !wiping && !(mode === 'geo' && editingArea);
   useFocusEffect(useCallback(() => showingConversation ? conversationActivity.focus(visibleConversation) : undefined, [showingConversation, visibleConversation]));
   const transportHint = mode === 'mesh'
-    ? `Bluetooth · ${mesh.active ? (hasMeshPeers ? t('mobile.mesh_connected', { count: onlinePeerCount }) : t('mobile.mesh_searching')) : t('mobile.disconnected')}`
+    ? `Bluetooth · ${recipient ? t(selectedOnline ? 'mobile.mesh_online' : 'mobile.mesh_offline') : mesh.active ? (hasMeshPeers ? t('mobile.mesh_connected', { count: onlinePeerCount }) : t('mobile.mesh_searching')) : t('mobile.disconnected')}`
     : `Internet · ${geo.connected > 0 ? t('mobile.relays_connected', { count: geo.connected }) : t('mobile.relays_disconnected')}`;
   if (!ready) return <AppScreen><AppText>Outlink</AppText></AppScreen>;
   const composerInput = <AppInput ref={composerRef} label={t('bitchat.message')} value={draft} onChangeText={setDraft} multiline compactMultiline scrollEnabled maxLength={mode === 'mesh' ? 255 : geoRecipient ? 4096 : MAX_GEO_CONTENT_BYTES} />;
@@ -292,22 +321,15 @@ export default function Chats() {
           {value === 'geo' && mode === 'geo' && <AppButton label={t('mobile.info')} accessibilityLabel={t('mobile.location_info')} variant="text" fullWidth={false} size="sm" onPress={() => { Keyboard.dismiss(); setLocationInfo(true); }} />}
         </View>)}
       </View>
-      {unread.size > 0 && <View style={{ gap: spacing.xs }}>
-        <AppText variant="caption" tone="accent" accessibilityLiveRegion="polite">{t('mobile.unread_private_messages')}</AppText>
-        <ScrollView horizontal keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: spacing.sm }}>
-          {[...unread].map(([id, entry]) => <AppButton key={id} unread accessibilityHint={t('mobile.unread_activity')} variant="secondary" fullWidth={false}
-            label={t('mobile.unread_private_sender', { name: displayNickname(entry.name, id, nearbyDuplicates.has(nicknameKey(entry.name))), count: entry.count })}
-            onPress={() => { setMode('mesh'); setRecipient(id); }} />)}
-        </ScrollView>
-      </View>}
-      {geoUnread.size > 0 && <View style={{ gap: spacing.xs }}>
-        <AppText variant="caption" tone="accent" accessibilityLiveRegion="polite">{t('mobile.unread_location_messages')}</AppText>
-        <ScrollView horizontal keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: spacing.sm }}>
-          {[...geoUnread].map(([id, entry]) => <AppButton key={id} unread accessibilityHint={t('mobile.unread_activity')} variant="secondary" fullWidth={false}
-            label={t('mobile.unread_private_sender', { name: entry.name, count: entry.count })}
-            onPress={() => { workspaceStore.setState(state => ({ mode: 'geo', hash: geo.hash, precision: state.hash === geo.hash ? state.precision : 0 })); setPrivateTarget({ hash: geo.hash, pubkey: id }); setEditingArea(false); }} />)}
-        </ScrollView>
-      </View>}
+      {!(mode === 'geo' && editingArea) && (isComposing || (mode === 'mesh' ? unread.size : geoUnread.size) > 0) && <ConversationTabs
+        threads={mode === 'mesh' ? meshTabs : geoTabs} selected={mode === 'mesh' ? recipient : geoRecipient}
+        publicButton={mode === 'mesh'
+          ? <AppButton unread={!!activity[conversationScope('mesh')]} label={t('bitchat.public')} variant="secondary" fullWidth={false} selected={!recipient} onPress={() => setRecipient(undefined)} />
+          : <AppButton unread={!!activity[conversationScope('geo', geo.hash)]} label={`#${geo.hash}`} accessibilityLabel={`${t('mobile.public_channel')} · #${geo.hash}`} labelNumberOfLines={1} accessibilityHint={t(geoRecipient ? 'common.back' : 'mobile.change_area')} variant="secondary" fullWidth={false} selected={!geoRecipient} disabled={busy} onPress={() => { setPrivateTarget(undefined); setEditingArea(!geoRecipient); }} />}
+        onSelect={id => {
+          if (mode === 'mesh') setRecipient(id);
+          else { workspaceStore.setState(state => ({ hash: geo.hash, precision: state.hash === geo.hash ? state.precision : 0 })); setPrivateTarget({ hash: geo.hash, pubkey: id }); }
+        }} />}
       {(mode === 'geo' && editingArea) || (!active && !isComposing) ? <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: spacing.lg, paddingBottom: spacing.lg }}>
         <Radar size={uiDensity.iconButtonSize} color={c.textMuted} />
         <AppText variant="title">{t(mode === 'mesh' ? 'bitchat.title' : 'mobile.geo')}</AppText>
@@ -330,10 +352,8 @@ export default function Chats() {
       </ScrollView> : null}
       {isComposing && !(mode === 'geo' && editingArea) && <>
         {mode === 'mesh' && <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-          <AppButton unread={!!activity[conversationScope('mesh')]} label={t('bitchat.public')} variant="secondary" fullWidth={false} selected={!recipient} onPress={() => setRecipient(undefined)} />
-          {recipient && <AppButton unread={unread.has(recipient)} label={`${displayNickname(selectedName ?? t('mobile.unknown_nickname'), recipient ?? '', duplicates.has(nicknameKey(selectedName ?? '')))} · ${t(selectedOnline ? 'mobile.mesh_online' : 'mobile.mesh_offline')}`} labelNumberOfLines={1} variant="secondary" fullWidth={false} selected onPress={() => router.push('/contacts')} />}
           <AppButton unread={Object.keys(activity).some(key => JSON.parse(key)[1] === 'group')} label={t('groups.title')} variant="text" fullWidth={false} onPress={() => router.push('/groups')} />
-          <AppButton label={t('mobile.contacts')} variant="text" fullWidth={false} onPress={() => router.push('/contacts')} />
+          <AppButton unread={unread.size > 0} accessibilityHint={unread.size ? t('mobile.unread_activity') : undefined} label={t('mobile.contacts')} variant="text" fullWidth={false} onPress={() => router.push('/contacts')} />
         </View>}
         {mode === 'geo' && <View style={{ gap: spacing.xs }}>
           <AppText variant="caption" weight="semibold" tone={geo.connected > 0 ? 'accent' : 'muted'}>
@@ -341,9 +361,6 @@ export default function Chats() {
           </AppText>
         </View>}
         {mode === 'mesh' && recipient && (!selectedOnline || !savedContact) && <AppText variant="caption" tone="muted">{t(savedContact?.blocked ? 'mobile.contact_blocked' : savedContact ? 'mobile.mesh_offline_hint' : 'mobile.contact_reconnect_hint')}</AppText>}
-        {mode === 'geo' && <FlatList horizontal data={geo.privatePeers} keyExtractor={key => key} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm }}
-          ListHeaderComponent={<AppButton unread={!!activity[conversationScope('geo', geo.hash)]} label={`#${geo.hash}`} accessibilityLabel={`${t('mobile.public_channel')} · #${geo.hash}`} labelNumberOfLines={1} accessibilityHint={t(geoRecipient ? 'common.back' : 'mobile.change_area')} variant="secondary" fullWidth={false} selected={!geoRecipient} disabled={busy} onPress={() => { setPrivateTarget(undefined); setEditingArea(!geoRecipient); }} />}
-          renderItem={({ item: key }) => <AppButton unread={geoUnread.has(key)} label={geoUnread.has(key) ? t('mobile.unread_private_sender', { name: key.slice(0, 8), count: geoUnread.get(key)!.count }) : key.slice(0, 8)} variant="secondary" fullWidth={false} selected={geoRecipient === key} onPress={() => setPrivateTarget({ hash: geo.hash, pubkey: key })} />} />}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
           <AppText variant="caption" tone="muted">{transportHint}</AppText>
           {(mode === 'mesh' ? !!recipient : !!geoRecipient) ? <AppButton label={t('common.back')} variant="text" fullWidth={false} size="sm" disabled={busy} onPress={() => { if (mode === 'mesh') setRecipient(undefined); else setPrivateTarget(undefined); }} /> : active ? <AppButton label={t('bitchat.leave')} variant="text" fullWidth={false} size="sm" disabled={busy} onPress={() => void operate(async () => {

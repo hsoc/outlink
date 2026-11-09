@@ -124,9 +124,13 @@ acceptance, creator management, and full member fingerprints. Keep roster member
 separate from live reachability. Distinguish encrypted group broadcasts from public
 mesh and 1:1 receipt semantics; explain local leave and creator departure.
 
-Received Nearby and Location-channel DMs surface through a compact unread sender strip and per-contact
-counts, independent of OS permission. Sender shortcuts open the private thread
-directly. Only the visible foreground conversation marks messages read. Optional
+Received Nearby and Location-channel DMs use the same horizontal public/DM selector.
+Show the selected DM and unread sender buttons beside Public Mesh or `#area`, with
+red dots and unread counts, independent of OS permission. Bound and truncate long
+selector labels so one nickname cannot dominate the horizontal row. Keep the selected button
+after reading. Other-mode unread DMs light that mode’s tab. Nearby Contacts and
+its contact rows also show unread dots; Location recent threads remain area-scoped.
+Sender shortcuts open the private thread directly. Only the visible foreground conversation marks messages read. Optional
 Private-message notifications are separate from public mention alerts and
 use generic previews without names or content.
 

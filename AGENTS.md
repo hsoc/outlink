@@ -79,7 +79,12 @@ late focus loads, publish after persistence, and invalidate work on full wipe.
 
 # Private DM visibility
 
-Keep unread Nearby and Location sender shortcuts independent of OS permission. Derive Nearby counts from the keyed history index and Location counts from the
+Keep unread Nearby and Location sender shortcuts independent of OS permission.
+Use the shared public/DM selector with sender dots/counts; retain selected threads
+after read and aggregate other-mode activity on its tab. Location display names
+may follow only exact current-area keys or proven aliases, never nickname matches
+or a cross-area contact mapping. Pass the transport when assigning private-message
+author block keys; retain proven root/head block coverage after alias pruning. Derive Nearby counts from the keyed history index and Location counts from the
 bounded loaded window. Mark read only in a focused foreground
 private thread. Feed optional DM alerts only from newly accepted arrival callbacks,
 never history hydration. Preserve separate mention/DM preferences and native

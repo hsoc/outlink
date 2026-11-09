@@ -28,14 +28,17 @@ type RowProps = { entry: ContactDirectoryEntry; busy: boolean; duplicate: boolea
 const ContactRow = memo(function ContactRow({ entry, busy, duplicate, unread, onAction }: RowProps) {
   const { t } = useTranslation(), c = useThemeColors(), contact = entry.contact;
   return <View style={{ padding: spacing.md, gap: spacing.sm, backgroundColor: c.surface, borderRadius: radius.lg }}>
-    <AppText variant="subtitle" numberOfLines={1}>{displayNickname(entry.name, entry.id, duplicate)}</AppText>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+      <AppText variant="subtitle" numberOfLines={1} style={{ flex: 1 }}>{displayNickname(entry.name, entry.id, duplicate)}</AppText>
+      {unread > 0 && <View style={{ width: spacing.sm, height: spacing.sm, borderRadius: radius.full, backgroundColor: c.notification }} />}
+    </View>
     {unread > 0 && <AppText tone="accent">{t('mobile.unread_private_count', { count: unread })}</AppText>}
     <AppText variant="caption" tone="muted">{t(entry.online ? 'mobile.mesh_online' : 'mobile.mesh_offline')}
       {contact?.blocked ? ` · ${t('mobile.contact_blocked')}` : contact && isSavedContact(contact) ? ` · ${t('mobile.saved_contact_status')}` : ''}</AppText>
     {contact && <AppText variant="caption" tone="muted">{t(contact.verified ? 'mobile.verified' : 'mobile.unverified')}</AppText>}
     {contact && <AppText variant="caption" tone="muted" selectable>{contact.fingerprint}</AppText>}
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-      <AppButton label={t('mobile.message_action_message')} variant="secondary" fullWidth={false} disabled={busy || contact?.blocked} onPress={() => onAction(entry.id, 'open')} />
+      <AppButton unread={unread > 0} accessibilityHint={unread ? t('mobile.unread_activity') : undefined} label={t('mobile.message_action_message')} variant="secondary" fullWidth={false} disabled={busy || contact?.blocked} onPress={() => onAction(entry.id, 'open')} />
       {contact && <>
         {!isSavedContact(contact) && <AppButton label={t('mobile.save_contact')} variant="text" fullWidth={false} disabled={busy} onPress={() => onAction(entry.id, 'save')} />}
         {contact.saved && !contact.favorite && !contact.verified && !contact.blocked && <AppButton label={t('mobile.unsave_contact')} variant="text" fullWidth={false} disabled={busy} onPress={() => onAction(entry.id, 'unsave')} />}

@@ -10,6 +10,8 @@ it('binds the same Nostr identity in location and bridged messages without using
   expect(messageUserKey({ pubkey: key } as never)).toBe('nostr:' + key);
   expect(messageUserKey({ peer: 'bridge:' + key, bridge: { pubkey: key } } as never)).toBe('nostr:' + key);
   expect(messageUserKey({ peer: '1234567890abcdef' } as never)).toBe('mesh:1234567890abcdef');
+  expect(messageUserKey({ peer: key, channelThread: 'root' } as never, 'geo')).toBe('nostr:' + key);
+  expect(messageUserKey({ peer: key } as never, 'geo')).toBe('nostr:' + key);
 });
 
 it('opens location and Nearby targets without requiring transport/contact readiness and keeps bridge identities distinct', () => {

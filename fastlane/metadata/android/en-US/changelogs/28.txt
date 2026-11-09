@@ -1,1 +1,1 @@
-Updates Android 15 system-bar handling and native bottom-sheet compatibility. Upgrades Android build tools and retains R8 code optimization, obfuscation and resource shrinking.
+Adds message actions in private Bluetooth groups. Shows consistent unread DM buttons and contact badges. Returning from a DM keeps Nearby/Location connected. Fixes Location DM blocking across rotated identities. Updates Android 15 display handling and build tools; retains R8 optimization and resource shrinking.

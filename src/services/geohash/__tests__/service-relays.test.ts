@@ -172,7 +172,7 @@ it('suppresses public messages and mentions from blocked known location aliases'
   await geohashService.join('u4pruy', 'Alice', ['wss://one.example']); sockets.forEach(socket => socket.onopen?.());
   const event = createGeohashEvent(new Uint8Array(32).fill(7), 'u4pruy', 'Bob', '@Alice blocked');
   const old = 'c'.repeat(64);
-  geohashStore.setState({ privateThreads: [{ peer: old, head: event.pubkey, keys: [old, event.pubkey], local: '', blocked: false, migrating: false }] });
+  geohashStore.setState({ privateThreads: [{ peer: old, head: event.pubkey, keys: [event.pubkey], local: '', blocked: false, migrating: false }] });
   const check = jest.spyOn(blockedUsers, 'has').mockImplementation(key => key === 'nostr:' + old);
   try {
     for (const socket of sockets) socket.onmessage?.({ data: JSON.stringify(['EVENT', 'geohash', event]) });

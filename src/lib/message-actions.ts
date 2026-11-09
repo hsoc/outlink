@@ -1,7 +1,8 @@
 import type { BitchatMessage } from '@/services/bitchat/bitchat-session';
 import type { GeoMessage } from '@/services/geohash/geohash-session';
-export function messageUserKey(message: BitchatMessage | GeoMessage): string {
-  return 'pubkey' in message ? 'nostr:' + message.pubkey : message.bridge ? 'nostr:' + message.bridge.pubkey : 'mesh:' + message.peer;
+/** Private records share a message type, so their author namespace needs the transport. */
+export function messageUserKey(message: BitchatMessage | GeoMessage, mode: 'mesh' | 'geo' = 'mesh'): string {
+  return 'pubkey' in message ? 'nostr:' + message.pubkey : message.bridge ? 'nostr:' + message.bridge.pubkey : (mode === 'geo' ? 'nostr:' : 'mesh:') + message.peer;
 }
 export function socialMessage(action: 'hug' | 'slap', name: string): string {
   const label = name.replace(/\s+/gu, ' ').trim();
