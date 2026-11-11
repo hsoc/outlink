@@ -1,3 +1,4 @@
+import { recordRename } from '@/services/history/rename-notices';
 import { actionMessage } from '@/lib/message-actions';
 import { conversationActivity, conversationScope } from '@/services/mentions/conversation-activity';
 import { MESSAGE_WINDOW, messageIsFresh } from '@/lib/message-retention';
@@ -130,6 +131,12 @@ class GeohashService {
         },
         delivery: (id, delivery) => { if (current()) geohashStore.setState(state => ({ messages: state.messages.map(m => m.id === id ? { ...m, delivery } : m) })); },
         connection: connected => { if (current()) geohashStore.setState({ connected }); },
+        rename: (pubkey, before, after) => {
+          if (!current() || this.isBlocked(pubkey)) return;
+          const { participants, publicIdentity } = geohashStore.getState();
+          recordRename(conversationScope('geo', hash), { name: before, identity: pubkey }, after,
+            [{ name: nicknameStore.getState().name, identity: publicIdentity }, ...participants]);
+        },
         participants: participants => { if (current()) geohashStore.setState({ participants }); },
         presence: present => { if (current()) geohashStore.setState({ present }); },
         error: () => { if (current()) geohashStore.setState({ error: true }); },

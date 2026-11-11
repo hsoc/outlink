@@ -55,16 +55,17 @@ const sessions: BitchatSession[] = [];
 function node(id: string, n: number, frameSize = 185, extension?: (packet: BitchatPacket, context: ExtensionContext) => Promise<boolean>, groupState?: (peer: BitchatPeer, payload: Uint8Array, invite: boolean) => Promise<void>) {
   const r = radio(id, frameSize), peers = new Map<string, BitchatPeer>(), messages: BitchatMessage[] = [];
   const receipts: [string, string, string][] = [];
+  const rename = jest.fn();
   const voices: { packet: VoiceBurst; privateMessage: boolean }[] = [];
   const media: { peer: string; attachment: MeshMedia; privateMessage: boolean }[] = [];
   const noiseSeed = new Uint8Array(32).fill(n);
   let counter = 1;
   const identity = { noiseSeed, noisePublicKey: x25519.getPublicKey(noiseSeed), signingSeed: new Uint8Array(32).fill(n + 10) };
   const session = new BitchatSession(r.port, identity, id,
-    { extension, groupState, voice: (_peer, packet, privateMessage) => { voices.push({ packet, privateMessage }); }, media: (peer, attachment, privateMessage) => { media.push({ peer: peer.id, attachment, privateMessage }); }, peer: (p) => peers.set(p.id, { ...p }), message: (m) => { messages.push(m); },
+    { extension, groupState, rename, voice: (_peer, packet, privateMessage) => { voices.push({ packet, privateMessage }); }, media: (peer, attachment, privateMessage) => { media.push({ peer: peer.id, attachment, privateMessage }); }, peer: (p) => peers.set(p.id, { ...p }), message: (m) => { messages.push(m); },
       receipt: (message, sender, status) => receipts.push([message, sender, status]), error: jest.fn() },
     (length) => new Uint8Array(length).fill(counter++));
-  sessions.push(session); return { r, session, peers, messages, receipts, identity, media, voices };
+  sessions.push(session); return { r, session, peers, messages, receipts, identity, media, voices, rename };
 }
 afterEach(async () => { await Promise.all(sessions.splice(0).map((s) => s.stop())); });
 it('discovers signed identities through a relay and delivers a public message once across a cycle', async () => {
@@ -406,8 +407,12 @@ it('announces renames while preserving identity and an established encrypted ses
   const id = a.session.id, fingerprint = b.peers.get(id)?.fingerprint;
   const handshakes = () => [...a.r.wire, ...b.r.wire].filter(w => w[1] === BitchatType.handshake).length;
   const count = handshakes();
+  const oldAnnouncement = [...a.r.wire].reverse().find(wire => wire[1] === BitchatType.announce)!;
+  expect(b.rename).not.toHaveBeenCalled();
   a.session.rename('Alice Updated'); await until(() => b.peers.get(id)?.name === 'Alice Updated');
   expect(a.session.id).toBe(id); expect(b.peers.get(id)?.fingerprint).toBe(fingerprint);
+  expect(b.rename).toHaveBeenCalledWith(expect.objectContaining({ id, name: 'Alice' }), 'Alice Updated');
+  b.r.listeners.get('onMessage')?.forEach(fn => fn({ endpointId: a.r.id, payload: oldAnnouncement.slice() }));
   await a.session.sendPrivate(b.session.id, 'after rename', 'rename-after');
   await until(() => b.messages.length === 2); expect(handshakes()).toBe(count);
   expect(a.peers.get(b.session.id)?.secure).toBe(true);
@@ -415,6 +420,7 @@ it('announces renames while preserving identity and an established encrypted ses
   await until(() => b.messages.some(m => m.content === 'public after rename'));
   expect(publicMessage.name).toBe('Alice Updated');
   expect(b.messages.find(m => m.content === 'public after rename')?.name).toBe('Alice Updated');
+  expect(b.rename).toHaveBeenCalledTimes(1);
   expect(() => a.session.rename(' ')).toThrow(); expect(a.session.nickname).toBe('Alice Updated');
 });
 

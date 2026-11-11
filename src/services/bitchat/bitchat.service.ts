@@ -1,8 +1,9 @@
+import { recordRename, clearRenameNotices } from '@/services/history/rename-notices';
 import { liveVoice } from './live-voice';
 import { PRIVATE_MEDIA_CAPABILITY } from './compatibility/media';
 import { meshAttachments } from './mesh-attachments';
 import { actionMessage } from '@/lib/message-actions';
-import { nearbyAlerts } from '@/services/mentions/nearby-alerts';
+import { groupConversationScope, nearbyAlerts } from '@/services/mentions/nearby-alerts';
 import { conversationActivity, conversationScope } from '@/services/mentions/conversation-activity';
 import { MESSAGE_WINDOW, messageIsFresh } from '@/lib/message-retention';
 import { cashuTransfers } from '@/services/cashu/transfers';
@@ -30,7 +31,7 @@ import { MessageOutbox, type PendingMessage, type CourierDispatch, type Delivery
 import { PrivateMailbox, privateNostrKey, type InternetPayload } from './compatibility/private-mailbox';
 import { verificationLink, verifyLink } from './compatibility/verification';
 import { mobileIdentity } from './mobile-identity';
-import { historyOperation, loadMessages, saveMessage } from '@/services/history/history';
+import { forgetSenderLabels, historyOperation, loadMessages, saveMessage } from '@/services/history/history';
 import { bytes, peerId, join, encodeTlv, decodeTlv, text, BitchatType, verifyPacket, isBroadcast, type BitchatPacket } from './bitchat-wire';
 import { gossipArchive } from './compatibility/gossip-storage';
 import { ed25519, x25519 } from '@noble/curves/ed25519.js';
@@ -428,6 +429,7 @@ class BitchatService {
   private hydrated = false;
   private historyVersion = 0;
   clearMessages(): void {
+    clearRenameNotices();
     meshGroupsStore.setState(s => ({ messages: [], historyEpoch: s.historyEpoch + 1 }));
     ++this.historyVersion; ++this.threadLoad; this.before = undefined; this.threadBefore = undefined;
     bitchatSessionStore.setState({ messages: [], threadMessages: [], unread: undefined });
@@ -443,6 +445,7 @@ class BitchatService {
       await historyOperation(async () => {
         if (epoch !== sessionIntent()) throw new Error('Conversation deletion canceled by identity erasure');
         await platform.history.deleteConversation('mesh', peer, pending.map(message => message.id + message.peer));
+        forgetSenderLabels('mesh', peer);
         if (epoch !== sessionIntent()) return;
         bitchatSessionStore.setState(state => ({ messages: state.messages.filter(message => !message.recipient || (message.outgoing ? message.recipient : message.peer) !== peer), threadMessages: state.threadPeer === peer ? [] : state.threadMessages }));
         if (bitchatSessionStore.getState().threadPeer === peer) ++this.threadLoad;
@@ -507,6 +510,14 @@ class BitchatService {
         const groups = new GroupRuntime(this.identity, protocolStorage, {
           state: async (peer, data, invite) => { if (this.groups !== groups || !this.session || contactsService.get(peer)?.blocked) throw new Error('Group session unavailable'); await this.session.sendGroupState(peer, data, invite); },
           broadcast: async data => { if (this.groups !== groups || !this.session) throw new Error('Group session unavailable'); await this.session.sendGroup(data); },
+          rename: (group, before, after, members) => {
+            if (this.groups !== groups || blockedUsers.has('mesh:' + before.fingerprint.slice(0, 16))) return;
+            const mesh = bitchatSessionStore.getState();
+            const active = new Set(mesh.peers.filter(peer => peer.lastSeen > 0).map(peer => peer.fingerprint));
+            active.add(groups.self.fingerprint);
+            recordRename(groupConversationScope(group), { name: before.nickname, identity: before.fingerprint }, after.nickname,
+              members.filter(member => active.has(member.fingerprint)).map(member => ({ name: member.nickname, identity: member.fingerprint })));
+          },
           changed: list => meshGroupsStore.setState({ groups: list, self: groups.self.fingerprint }),
           message: message => this.storeGroupMessage(message),
         });
@@ -522,6 +533,12 @@ class BitchatService {
           },
           groupState: async (peer, payload, invite) => { if (!blockedUsers.has('mesh:' + peer.id) && !contactsService.get(peer.id)?.blocked) { const changed = await this.groups?.receiveState(peer, payload, invite); if (changed) await this.replayGroups(); } },
           extension: (packet, context) => this.extension(packet, context),
+          rename: (peer, nextName) => {
+            if (blockedUsers.has('mesh:' + peer.id) || contactsService.get(peer.id)?.blocked) return;
+            const mesh = bitchatSessionStore.getState();
+            recordRename(conversationScope('mesh'), { name: peer.name, identity: peer.id }, nextName,
+              [{ name: nicknameStore.getState().name, identity: mesh.id }, ...mesh.peers.filter(entry => entry.lastSeen > 0).map(entry => ({ name: entry.name, identity: entry.id }))]);
+          },
           peer: peer => {
             const pin = contactsService.get(peer.id);
             if (pin?.blocked || pin && pin.noiseKey !== peer.noisePublicKey) return;

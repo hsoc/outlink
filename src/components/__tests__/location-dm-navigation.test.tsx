@@ -2,6 +2,8 @@
 import React from 'react';
 import renderer, { act } from 'react-test-renderer';
 import Chats from '@/app/index';
+import { platform } from '@/platform';
+import { clearRenameNotices, recordRename } from '@/services/history/rename-notices';
 import { geohashService, geohashStore } from '@/services/geohash/geohash.service';
 import { bitchatService, bitchatSessionStore } from '@/services/bitchat/bitchat.service';
 import { blockedUsers, blockedUsersStore } from '@/services/moderation/blocked-users';
@@ -10,12 +12,12 @@ const peer = 'b'.repeat(64);
 jest.mock('react-native', () => {
   const React = jest.requireActual('react');
   return Object.create(jest.requireActual('react-native'), Object.getOwnPropertyDescriptors({ View: 'View', ScrollView: 'ScrollView', Keyboard: { dismiss: jest.fn() },
-    FlatList: React.forwardRef(function MockFlatList(props: any, _ref: unknown) { return React.createElement('FlatList', null, props.ListHeaderComponent,
+    FlatList: React.forwardRef(function MockFlatList(props: any, _ref: unknown) { return React.createElement('FlatList', { onViewableItemsChanged: props.onViewableItemsChanged, keyExtractor: props.keyExtractor }, props.ListHeaderComponent,
       props.data.map((item: any, index: number) => React.createElement(React.Fragment, { key: index }, props.renderItem({ item, index }))), props.ListFooterComponent); }),
   }));
 });
 jest.mock('react-native-keyboard-controller', () => ({ KeyboardAvoidingView: 'KeyboardAvoidingView' }));
-jest.mock('react-i18next', () => { const t = (key: string, values?: { name?: string; count?: number }) => key === 'mobile.dm_shortcut' ? `DM · ${values?.name}` : key === 'mobile.unread_private_sender' ? `${values?.name} · ${values?.count} unread` : key; return { useTranslation: () => ({ t }) }; });
+jest.mock('react-i18next', () => { const t = (key: string, values?: { name?: string; count?: number; before?: string; after?: string }) => key === 'mobile.nickname_changed' ? `${values?.before} is now ${values?.after}` : key === 'mobile.dm_shortcut' ? `DM · ${values?.name}` : key === 'mobile.unread_private_sender' ? `${values?.name} · ${values?.count} unread` : key; return { useTranslation: () => ({ t }) }; });
 jest.mock('expo-router', () => ({ router: { push: jest.fn() }, useFocusEffect: (callback: any) => jest.requireActual('react').useEffect(callback, [callback]) }));
 jest.mock('@solar-icons/react-native/category/map/Linear/Radar', () => ({ Radar: 'Radar' }), { virtual: true });
 jest.mock('@/components/common/AppScreen', () => ({ AppScreen: 'AppScreen' }));
@@ -29,7 +31,7 @@ jest.mock('@/components/bitchat/QuickEraseButton', () => ({ QuickEraseButton: 'Q
 jest.mock('@/components/MeshAttachments', () => ({ MeshAttachments: 'MeshAttachments' }));
 jest.mock('@/components/ConversationErrorNotice', () => ({ ConversationErrorNotice: 'ConversationErrorNotice' }));
 jest.mock('@/theme', () => ({ spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 }, radius: { xl: 24 }, uiDensity: { messageBubbleMaxWidth: '90%' }, useThemeColors: () => ({}) }));
-jest.mock('@/platform', () => ({ platform: { appState: { currentState: () => 'active', addChangeListener: () => () => {} } } }));
+jest.mock('@/platform', () => ({ platform: { history: { retainSenderLabel: jest.fn(async () => {}) }, appState: { currentState: () => 'active', addChangeListener: () => () => {} } } }));
 jest.mock('@/services/bitchat/mesh-attachments', () => ({ meshAttachments: { clear: jest.fn() }, meshAttachmentStore: jest.requireActual('zustand/vanilla').createStore(() => ({ epoch: 0 })) }));
 jest.mock('@/services/bitchat/bitchat.service', () => ({ bitchatService: { stop: jest.fn(async () => {}), nicknameIdentities: () => [], restore: jest.fn(async () => {}), showThread: jest.fn(async () => {}) },
   bitchatSessionStore: jest.requireActual('zustand/vanilla').createStore(() => ({ peers: [], messages: [], threadMessages: [], active: false, busy: false, id: 'self' })) }));
@@ -57,7 +59,7 @@ async function openDM() {
   await act(async () => { screen.root.findByType('MessageActions' as never).props.onAction('message'); });
 }
 beforeEach(async () => {
-  jest.clearAllMocks(); global.requestAnimationFrame = jest.fn(() => 1);
+  jest.clearAllMocks(); clearRenameNotices(); global.requestAnimationFrame = jest.fn(() => 1);
   blockedUsersStore.setState({ users: [] });
   bitchatSessionStore.setState({ active: false, peers: [], messages: [], threadMessages: [], threadPeer: undefined });
   workspaceStore.setState({ mode: 'geo', hash: 'u4pruy', drafts: { 'geo:u4pruy': 'public draft' }, ready: true });
@@ -156,4 +158,44 @@ it('blocks a Location DM author in the Nostr namespace together with its proven 
   const keys = jest.mocked(blockedUsers.set).mock.calls[0][0];
   expect(new Set(keys)).toEqual(new Set(['nostr:' + peer, 'nostr:' + root]));
   expect(keys.every(key => key.startsWith('nostr:'))).toBe(true);
+});
+
+it('keeps discriminators on both older Location bubbles after a rename and gives later unambiguous messages bare labels', async () => {
+  const self = 'a'.repeat(64);
+  const message = geohashStore.getState().messages[0];
+  const ownMessage = { ...message, id: 'own', pubkey: self, name: 'Alice', outgoing: true };
+  const remoteMessage = { ...message, name: 'Alice' };
+  const offscreen = { ...remoteMessage, id: 'offscreen' };
+  const labels = () => screen.root.findAllByType('AppText' as never)
+    .map(item => item.props.children).filter(value => Array.isArray(value) && /^\[\d\d:\d\d:\d\d\]$/.test(value[2]))
+    .map(value => value[0]);
+  await act(async () => { geohashStore.setState({ messages: [ownMessage, remoteMessage, offscreen] }); });
+  expect(labels()).toEqual(['Alice', 'Alice', 'Alice']);
+  await act(async () => {
+    const list = screen.root.findAllByType('FlatList' as never).find(node => node.props.onViewableItemsChanged)!.props;
+    list.onViewableItemsChanged({ viewableItems: [ownMessage, remoteMessage].map(item => ({ key: list.keyExtractor(item) })) });
+    geohashStore.setState({ participants: [{ name: 'Alice', identity: peer }] });
+  });
+  expect(labels().slice(0, 2)).toEqual(['Alice#aaaa', 'Alice#bbbb']);
+  expect(platform.history.retainSenderLabel).toHaveBeenCalledTimes(2);
+  expect(platform.history.retainSenderLabel).toHaveBeenCalledWith('geo:u4pruy', remoteMessage.id, 'Alice#bbbb');
+  await act(async () => {
+    geohashStore.setState({ participants: [{ name: 'Bob', identity: peer }],
+      messages: [ownMessage, remoteMessage, offscreen, { ...remoteMessage, id: 'renamed', name: 'Bob' }, { ...ownMessage, id: 'later' }] });
+  });
+  expect(labels()).toEqual(['Alice#aaaa', 'Alice#bbbb', 'Alice', 'Bob', 'Alice']);
+});
+
+it('shows a dismissible rename in its public area only', async () => {
+  const alex = { identity: peer, name: 'Alex' };
+  const scope = (area: string) => JSON.stringify(['geo', area, undefined]);
+  const notice = (label: string) => screen.root.findAllByType('AppText' as never).some(item => item.props.children === label);
+  await act(async () => {
+    recordRename(scope('elsewhere'), alex, 'Other', []);
+    recordRename(scope('u4pruy'), alex, 'Sam', [alex, { name: 'Alex', identity: 'a'.repeat(64) }]);
+  });
+  expect(notice('Alex#bbbb is now Sam')).toBe(true);
+  expect(notice('Alex is now Other')).toBe(false);
+  await act(async () => { button('common.dismiss').props.onPress(); });
+  expect(notice('Alex#bbbb is now Sam')).toBe(false);
 });

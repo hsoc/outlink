@@ -3,7 +3,7 @@ import { GeohashSession, type GeoSocket } from '../geohash-session';
 import { createGeohashEvent } from '../geohash-protocol';
 function setup() {
   const sockets: (GeoSocket & { sent: unknown[][] })[] = [];
-  const callbacks = { message: jest.fn(), delivery: jest.fn(), connection: jest.fn(), presence: jest.fn(), participants: jest.fn(), error: jest.fn() };
+  const callbacks = { rename: jest.fn(), message: jest.fn(), delivery: jest.fn(), connection: jest.fn(), presence: jest.fn(), participants: jest.fn(), error: jest.fn() };
   const session = new GeohashSession('ezs42', new Uint8Array(32).fill(1), 'Alice', ['wss://one.example','wss://two.example'], callbacks, () => {
     const socket = { readyState: 1, onopen: null, onclose: null, onerror: null, onmessage: null,
       sent: [] as unknown[][], send(data: string) { this.sent.push(JSON.parse(data)); }, close: jest.fn() };
@@ -132,4 +132,22 @@ it('exposes only recent named participants and expires them independently of his
   expect(callbacks.participants).toHaveBeenLastCalledWith([]);
   expect(callbacks.message).toHaveBeenCalledTimes(1);
   session.stop(); expect(callbacks.participants).toHaveBeenLastCalledWith([]);
+});
+
+it('reports strictly newer signed live renames within an area and keeps history, replays and different keys silent', () => {
+  const { session, sockets, callbacks } = setup(); session.start(); sockets.forEach(socket => socket.onopen!());
+  const key = new Uint8Array(32).fill(2), other = new Uint8Array(32).fill(3);
+  const now = Math.floor(Date.now() / 1000);
+  const receive = (event: ReturnType<typeof createGeohashEvent>) => sockets[0].onmessage!({ data: JSON.stringify(['EVENT', 'geohash', event]) });
+  receive(createGeohashEvent(key, 'ezs42', 'Alex', 'older', false, now - 3));
+  receive(createGeohashEvent(key, 'ezs42', 'Sam', 'history', false, now - 2));
+  expect(callbacks.rename).not.toHaveBeenCalled();
+  sockets[0].onmessage!({ data: JSON.stringify(['EOSE', 'geohash']) });
+  const rename = createGeohashEvent(key, 'ezs42', 'Casey', 'live', false, now);
+  receive(rename); receive(rename);
+  receive(createGeohashEvent(key, 'ezs42', 'Alex', 'delayed', false, now - 1));
+  receive(createGeohashEvent(other, 'ezs42', 'Alex', 'different key', false, now));
+  receive(createGeohashEvent(key, 'ezs43', 'Alex', 'different area', false, now + 1));
+  expect(callbacks.rename.mock.calls).toEqual([[rename.pubkey, 'Sam', 'Casey']]);
+  session.stop();
 });

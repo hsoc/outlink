@@ -1,3 +1,5 @@
+import { RenameNotices } from '@/components/RenameNotices';
+import { useMessageSenderLabel } from '@/hooks/use-message-sender-label';
 import { MessageActions, type MessageAction } from '@/components/common/MessageActions';
 import { groupMessageAction } from '@/services/bitchat/group-message-actions';
 import { actionDisplay } from '@/lib/message-actions';
@@ -8,7 +10,7 @@ import { groupConversationScope } from '@/services/mentions/nearby-alerts';
 import { historyClock } from '@/services/history/maintenance';
 import { MESSAGE_WINDOW, messageIsFresh } from '@/lib/message-retention';
 import { blockedUsersStore } from '@/services/moderation/blocked-users';
-import { displayNickname, duplicateNicknames, nicknameKey } from '@/lib/nicknames';
+import { displayNickname, duplicateNicknames, nicknameCollisions, nicknameKey } from '@/lib/nicknames';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Keyboard, View, type TextInput } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
@@ -31,6 +33,10 @@ import { appendMention } from '@/lib/mentions';
 import { platform } from '@/platform';
 import { radius, spacing, uiDensity, useThemeColors } from '@/theme';
 
+function groupSender(message: GroupMessage) {
+  return { id: `${message.sender}:${message.id}`, identity: message.sender };
+}
+
 export default function Groups() {
   const self = useStore(meshGroupsStore, s => s.self), ready = useStore(workspaceStore, s => s.ready);
   const { t } = useTranslation();
@@ -43,6 +49,7 @@ function GroupScreen() {
   const state = useStore(meshGroupsStore), mesh = useStore(bitchatSessionStore), contacts = useStore(contactsStore, s => s.contacts);
   const ownName = useStore(nicknameStore, s => s.name);
   const blocked = useStore(blockedUsersStore, s => s.users);
+  const blockedKeys = useMemo(() => new Set(blocked.map(user => user.key)), [blocked]);
   const params = useLocalSearchParams<{ id?: string }>();
   const [selected, setSelected] = useState<string | undefined>(params.id), [name, setName] = useState('');
   const activity = useStore(conversationActivityStore, s => s.unread);
@@ -65,7 +72,7 @@ function GroupScreen() {
   const working = useRef(false), revision = useRef(0);
   const group = state.groups.find(g => g.id === selected), creator = group?.creator === state.self;
   useFocusEffect(useCallback(() => selected && group?.status === 'joined' && !members ? conversationActivity.focus(groupConversationScope(selected)) : undefined, [selected, group?.status, members]));
-  const duplicates = useMemo(() => duplicateNicknames(mesh.active ? (group?.members ?? []).filter(m => m.fingerprint === state.self || mesh.peers.some(p => p.fingerprint === m.fingerprint && p.lastSeen > 0)).map(m => ({ name: m.nickname, identity: m.fingerprint })) : []), [mesh.active, mesh.peers, group, state.self]);
+  const duplicates = useMemo(() => nicknameCollisions(mesh.active ? (group?.members ?? []).filter(m => m.fingerprint === state.self || mesh.peers.some(p => p.fingerprint === m.fingerprint && p.lastSeen > 0)).map(m => ({ name: m.nickname, identity: m.fingerprint })) : []), [mesh.active, mesh.peers, group, state.self]);
   const nearbyDuplicates = useMemo(() => duplicateNicknames(mesh.active ? [...mesh.peers.filter(p => p.lastSeen > 0).map(p => ({ name: p.name, identity: p.id })), { name: ownName, identity: mesh.id }] : []), [mesh.active, mesh.peers, ownName, mesh.id]);
   useEffect(() => {
     let alive = true; ++revision.current;
@@ -78,10 +85,10 @@ function GroupScreen() {
   const messages = useMemo(() => {
     const map = new Map((loadedFor === historyKey ? older : []).map(m => [m.sender + ':' + m.id, m]));
     for (const m of state.messages) if (m.group === selected) map.set(m.sender + ':' + m.id, m);
-    const hidden = new Set(blocked.map(user => user.key));
-    const visible = [...map.values()].filter(message => messageIsFresh(message, now) && !hidden.has('mesh:' + message.sender.slice(0, 16))).sort((a, b) => a.timestamp - b.timestamp);
+    const visible = [...map.values()].filter(message => messageIsFresh(message, now) && !blockedKeys.has('mesh:' + message.sender.slice(0, 16))).sort((a, b) => a.timestamp - b.timestamp);
     return (browsingOlder ? visible.slice(0, MESSAGE_WINDOW) : visible.slice(-MESSAGE_WINDOW)).reverse();
-  }, [older, state.messages, selected, loadedFor, historyKey, blocked, now, browsingOlder]);
+  }, [older, state.messages, selected, loadedFor, historyKey, blockedKeys, now, browsingOlder]);
+  const { labelFor, onViewableItemsChanged, viewabilityConfig, keyExtractor } = useMessageSenderLabel(draftKey, messages, groupSender, duplicates, group?.status === 'joined' && !members);
   async function act(task: () => Promise<unknown>) {
     if (working.current) return;
     working.current = true; setBusy(true); setFailed(false);
@@ -175,10 +182,11 @@ ${identity}`, t('mobile.cancel'), t('groups.invite'))) return;
           {creator && item.fingerprint !== group.creator && <AppButton label={t('groups.remove')} variant="text" disabled={busy || !mesh.active} onPress={() => void act(async () => {
             if (await platform.confirmationDialog.confirm(t('groups.remove'), t('groups.remove_hint'), t('mobile.cancel'), t('groups.remove'))) await bitchatService.removeGroupMember(group.id, item.fingerprint);
           })} />}</View>} /> : <>
-        <FlatList style={{ flex: 1, minHeight: 0 }} data={messages} inverted keyExtractor={m => m.sender + ':' + m.id} contentContainerStyle={{ gap: spacing.sm }}
+        <RenameNotices scope={groupConversationScope(group.id)} blocked={blockedKeys} prefix="mesh:" />
+        <FlatList style={{ flex: 1, minHeight: 0 }} data={messages} onViewableItemsChanged={onViewableItemsChanged} viewabilityConfig={viewabilityConfig} inverted keyExtractor={keyExtractor} contentContainerStyle={{ gap: spacing.sm }}
           ListFooterComponent={loadedFor === historyKey && before !== undefined ? <AppButton label={t('groups.older')} variant="text" disabled={busy} onPress={() => void act(async () => { const version = revision.current, page = await bitchatService.groupHistory(group.id, before); if (revision.current === version) { setBrowsingOlder(true); setOlder(old => [...page.messages, ...old].slice(0, MESSAGE_WINDOW)); setBefore(page.before); } })} /> : null}
           renderItem={({ item }) => {
-            const displayName = displayNickname(item.name, item.sender, duplicates.has(nicknameKey(item.name)));
+            const displayName = labelFor(item);
             const openMenu = () => {
               if (busy) return;
               menuConsumed.current = false; longPressed.current = true; Keyboard.dismiss();

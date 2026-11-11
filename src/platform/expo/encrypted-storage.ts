@@ -7,7 +7,7 @@ import type { SecureStoragePort } from '../ports/secure-storage';
 import { localCipher, newLocalStorageKey } from '@/lib/local-cipher';
 const KEY = 'outlink.local-storage.key.v1';
 const sensitive = new Set(['mobile.workspace', 'mobile.nickname', 'mobile.nickname.custom-digits']);
-type Row = { sequence: number; room: string; id: string; value: string };
+type Row = { sequence: number; room: string; id: string; value: string; sender_label?: string | null };
 /** One database/key owner for history and private preferences, including resumable upgrades. */
 export function createEncryptedStorage(
   open: () => Promise<SQLiteDatabase>,
@@ -28,6 +28,12 @@ export function createEncryptedStorage(
     const peer = message.recipient && (message.outgoing ? message.recipient : message.peer);
     return { thread: cipher.index(`mesh-thread:${peer || 'public'}`), unread: peer && !message.outgoing && message.delivery === 'delivered' ? 1 : 0 };
   }
+  function openMessage(row: Pick<Row, 'room' | 'id' | 'value' | 'sender_label'>, cipher: ReturnType<typeof localCipher>) {
+    const context = `message:${row.room}:${row.id}`;
+    const value = cipher.open(row.value, context);
+    if (!row.sender_label) return value;
+    return JSON.stringify({ ...JSON.parse(value), senderLabel: cipher.open(row.sender_label, `${context}:sender-label`) });
+  }
   let initialized: Promise<{ db: SQLiteDatabase; cipher: ReturnType<typeof localCipher> }> | undefined;
   async function initialize() {
     const db = await open();
@@ -47,6 +53,7 @@ export function createEncryptedStorage(
         CREATE INDEX IF NOT EXISTS protected_scope_sequence ON protected_records(scope, sequence);`);
       const columns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(encrypted_messages)');
       if (!columns.some(column => column.name === 'deleted')) await db.execAsync('ALTER TABLE encrypted_messages ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0');
+      if (!columns.some(column => column.name === 'sender_label')) await db.execAsync('ALTER TABLE encrypted_messages ADD COLUMN sender_label TEXT');
       await db.execAsync('CREATE INDEX IF NOT EXISTS encrypted_visible_sequence ON encrypted_messages(room, deleted, sequence)');
       const marker = await db.getFirstAsync<{ value: string }>('SELECT value FROM local_meta WHERE name = ?', 'key-check-v1');
       let key = await secrets.getItem(KEY);
@@ -144,15 +151,15 @@ export function createEncryptedStorage(
   const history: HistoryPort = {
     async get(input, messageId) {
       const { db, cipher } = await get(), room = cipher.index(`room:${input}`), id = cipher.index(`id:${input}:${messageId}`);
-      const row = await db.getFirstAsync<{ value: string }>('SELECT value FROM encrypted_messages WHERE room = ? AND id = ? AND expires_at > ?', room, id, now());
-      return row ? cipher.open(row.value, `message:${room}:${id}`) : null;
+      const row = await db.getFirstAsync<Row>('SELECT room, id, value, sender_label FROM encrypted_messages WHERE room = ? AND id = ? AND expires_at > ?', room, id, now());
+      return row ? openMessage(row, cipher) : null;
     },
     async load(input, before = Number.MAX_SAFE_INTEGER) {
       const { db, cipher } = await get(), room = cipher.index(`room:${input}`);
-      const rows = await db.getAllAsync<Row>('SELECT sequence, room, id, value FROM encrypted_messages WHERE room = ? AND deleted = 0 AND sequence < ? AND expires_at > ? ORDER BY sequence DESC LIMIT 200', room, before, now());
+      const rows = await db.getAllAsync<Row>('SELECT sequence, room, id, value, sender_label FROM encrypted_messages WHERE room = ? AND deleted = 0 AND sequence < ? AND expires_at > ? ORDER BY sequence DESC LIMIT 200', room, before, now());
       const messages: { sequence: number; value: string }[] = [];
       for (const [index, row] of rows.reverse().entries()) {
-        messages.push({ sequence: row.sequence, value: cipher.open(row.value, `message:${room}:${row.id}`) });
+        messages.push({ sequence: row.sequence, value: openMessage(row, cipher) });
         if (index % 20 === 19) await new Promise(resolve => setTimeout(resolve, 0));
       }
       return messages;
@@ -165,10 +172,16 @@ export function createEncryptedStorage(
       const { thread, unread } = meshIndex(input, value, cipher);
       await db.runAsync('INSERT INTO encrypted_messages(room, id, value, expires_at, mesh_thread, mesh_unread) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(room, id) DO UPDATE SET value = excluded.value, expires_at = MIN(encrypted_messages.expires_at, excluded.expires_at), mesh_thread = excluded.mesh_thread, mesh_unread = excluded.mesh_unread WHERE encrypted_messages.deleted = 0 AND encrypted_messages.expires_at > ?', room, id, cipher.seal(value, `message:${room}:${id}`), deadline, thread, unread, now());
     },
+    async retainSenderLabel(input, messageId, label) {
+      const { db, cipher } = await get();
+      const room = cipher.index(`room:${input}`), id = cipher.index(`id:${input}:${messageId}`);
+      const value = cipher.seal(label, `message:${room}:${id}:sender-label`);
+      await db.runAsync('UPDATE encrypted_messages SET sender_label = ? WHERE room = ? AND id = ? AND deleted = 0 AND expires_at > ? AND sender_label IS NULL', value, room, id, now());
+    },
     async loadMeshThread(peer, before = Number.MAX_SAFE_INTEGER) {
       const { db, cipher } = await get(), thread = cipher.index(`mesh-thread:${peer}`);
-      const rows = await db.getAllAsync<Row>('SELECT sequence, room, id, value FROM encrypted_messages WHERE mesh_thread = ? AND deleted = 0 AND sequence < ? AND expires_at > ? ORDER BY sequence DESC LIMIT 200', thread, before, now());
-      return rows.reverse().map(row => ({ sequence: row.sequence, value: cipher.open(row.value, `message:${row.room}:${row.id}`) }));
+      const rows = await db.getAllAsync<Row>('SELECT sequence, room, id, value, sender_label FROM encrypted_messages WHERE mesh_thread = ? AND deleted = 0 AND sequence < ? AND expires_at > ? ORDER BY sequence DESC LIMIT 200', thread, before, now());
+      return rows.reverse().map(row => ({ sequence: row.sequence, value: openMessage(row, cipher) }));
     },
     async meshUnread() {
       const { db, cipher } = await get();
@@ -213,7 +226,7 @@ export function createEncryptedStorage(
             try { message = JSON.parse(plaintext); } catch { continue; }
             if (message?.recipient && (message.outgoing ? message.recipient : message.peer) === peer) {
               const marker = JSON.stringify({ deleted: true, delivery: message.delivery === 'read' ? 'read' : 'delivered' });
-              await tx.runAsync('UPDATE encrypted_messages SET value = ?, deleted = 1 WHERE sequence = ?', cipher.seal(marker, `message:${room}:${row.id}`), row.sequence);
+              await tx.runAsync('UPDATE encrypted_messages SET value = ?, deleted = 1, sender_label = NULL WHERE sequence = ?', cipher.seal(marker, `message:${room}:${row.id}`), row.sequence);
             }
             if (index % 20 === 19) await new Promise(resolve => setTimeout(resolve, 0));
           }
@@ -221,7 +234,7 @@ export function createEncryptedStorage(
         }
         for (const messageId of pendingIds) {
           const id = cipher.index(`id:${input}:${messageId}`), value = cipher.seal(JSON.stringify({ deleted: true, delivery: 'delivered' }), `message:${room}:${id}`);
-          await tx.runAsync('INSERT INTO encrypted_messages(room, id, value, deleted, expires_at) VALUES (?, ?, ?, 1, ?) ON CONFLICT(room, id) DO UPDATE SET value = excluded.value, deleted = 1', room, id, value, messageDeadline({}, now()));
+          await tx.runAsync('INSERT INTO encrypted_messages(room, id, value, deleted, expires_at) VALUES (?, ?, ?, 1, ?) ON CONFLICT(room, id) DO UPDATE SET value = excluded.value, deleted = 1, sender_label = NULL', room, id, value, messageDeadline({}, now()));
         }
       });
       await db.execAsync('PRAGMA wal_checkpoint(TRUNCATE)');

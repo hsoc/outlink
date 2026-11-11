@@ -1,3 +1,5 @@
+import { RenameNotices } from '@/components/RenameNotices';
+import { useMessageSenderLabel } from '@/hooks/use-message-sender-label';
 import { ConversationTabs } from '@/components/common/ConversationTabs';
 import { dmShortcuts, locationDmNames } from '@/lib/dm-shortcuts';
 import { meshAttachments, meshAttachmentStore } from '@/services/bitchat/mesh-attachments';
@@ -10,7 +12,7 @@ import { configurePrivateInternet } from '@/services/preferences/internet-privat
 import { MessageActions, type MessageAction } from '@/components/common/MessageActions';
 import { actionDisplay, messageUserKey, socialMessage, privateMessageTarget } from '@/lib/message-actions';
 import { blockedUsers, blockedUsersStore } from '@/services/moderation/blocked-users';
-import { displayNickname, duplicateNicknames, nicknameKey, nicknameMentionLabels, nicknameBase } from '@/lib/nicknames';
+import { displayNickname, nicknameCollisions, nicknameKey, nicknameMentionLabels, nicknameBase } from '@/lib/nicknames';
 import { unreadPrivateMessages, unreadLocationMessages } from '@/lib/unread-messages';
 import { platform } from '@/platform';
 import { groupCommand } from '@/services/bitchat/compatibility/group-commands';
@@ -44,6 +46,12 @@ import { QuickEraseButton } from '@/components/bitchat/QuickEraseButton';
 import { normalizeGeohash } from '@/services/geohash/geohash';
 import { ensureNickname, nicknameStore } from '@/services/preferences/nickname';
 import { radius, spacing, uiDensity, useThemeColors } from '@/theme';
+
+function chatSender(message: BitchatMessage | GeoMessage) {
+  return 'pubkey' in message
+    ? { id: message.id, identity: message.pubkey }
+    : { id: message.id + message.peer, identity: message.bridge?.pubkey ?? message.peer };
+}
 
 export default function Chats() {
   const { t } = useTranslation(), c = useThemeColors(), top = useScreenHeaderClearance();
@@ -82,8 +90,8 @@ export default function Chats() {
   const draft = workspace.drafts[draftKey] ?? '';
   const setDraft = (value: string) => workspaceStore.setState(state => ({ drafts: { ...state.drafts, [draftKey]: value } }));
   const name = useStore(nicknameStore, state => state.name);
-  const nearbyDuplicates = useMemo(() => duplicateNicknames(mesh.active ? [{ name, identity: mesh.id }, ...mesh.peers.filter(p => p.lastSeen > 0).map(p => ({ name: p.name, identity: p.id }))] : []), [mesh.active, mesh.id, mesh.peers, name]);
-  const geoDuplicates = useMemo(() => duplicateNicknames(geo.connected ? [{ name, identity: geo.publicIdentity }, ...geo.participants] : []), [name, geo.connected, geo.publicIdentity, geo.participants]);
+  const nearbyDuplicates = useMemo(() => nicknameCollisions(mesh.active ? [{ name, identity: mesh.id }, ...mesh.peers.filter(p => p.lastSeen > 0).map(p => ({ name: p.name, identity: p.id }))] : []), [mesh.active, mesh.id, mesh.peers, name]);
+  const geoDuplicates = useMemo(() => nicknameCollisions(geo.connected ? [{ name, identity: geo.publicIdentity }, ...geo.participants] : []), [name, geo.connected, geo.publicIdentity, geo.participants]);
   const duplicates = mode === 'mesh' ? nearbyDuplicates : geoDuplicates;
   const meshPeers = mesh.peers, meshMessages = mesh.messages, meshThreadMessages = mesh.threadMessages;
   const meshDmNames = useMemo(() => {
@@ -301,6 +309,8 @@ export default function Chats() {
   const transportHint = mode === 'mesh'
     ? `Bluetooth · ${recipient ? t(selectedOnline ? 'mobile.mesh_online' : 'mobile.mesh_offline') : mesh.active ? (hasMeshPeers ? t('mobile.mesh_connected', { count: onlinePeerCount }) : t('mobile.mesh_searching')) : t('mobile.disconnected')}`
     : `Internet · ${geo.connected > 0 ? t('mobile.relays_connected', { count: geo.connected }) : t('mobile.relays_disconnected')}`;
+  const historyRoom = mode === 'mesh' ? 'mesh' : `${geoRecipient ? 'geo-private' : 'geo'}:${geo.hash}`;
+  const { labelFor, onViewableItemsChanged, viewabilityConfig, keyExtractor } = useMessageSenderLabel(historyRoom, messages, chatSender, duplicates, showingConversation, mode === 'mesh' ? recipient : undefined);
   if (!ready) return <AppScreen><AppText>Outlink</AppText></AppScreen>;
   const composerInput = <AppInput ref={composerRef} label={t('bitchat.message')} value={draft} onChangeText={setDraft} multiline compactMultiline scrollEnabled maxLength={mode === 'mesh' ? 255 : geoRecipient ? 4096 : MAX_GEO_CONTENT_BYTES} />;
   const composerSend = <AppButton labelNumberOfLines={mode === 'mesh' ? 2 : undefined} label={t(mode === 'mesh' && !recipient && !canSendPublicMesh ? 'mobile.nobody_around' : 'bitchat.send')} loading={working} disabled={(mode === 'mesh' && !!recipient && (!contactsService.get(recipient) || !!savedContact?.blocked)) || (!active && !(mode === 'mesh' && recipient && contactsService.get(recipient))) || (mode === 'mesh' && !recipient && !canSendPublicMesh) || busy || !draft.trim() || bytes(draft).length > (mode === 'mesh' ? 255 : geoRecipient ? 4096 : MAX_GEO_CONTENT_BYTES) || (mode === 'geo' && (geoRecipient ? !geo.privateActive || geoThread?.blocked : !geo.connected && !bitchatService.hasGateway()))}
@@ -388,7 +398,8 @@ export default function Chats() {
         </AppText>}
         {mode === 'mesh' && recipient && savedContact?.verified && <AppText variant="caption" tone="muted">{t('mobile.verified')}</AppText>}
         {mode === 'mesh' && recipient && fingerprint ? <AppText variant="caption" selectable tone="muted">{t('bitchat.fingerprint', { value: fingerprint })}</AppText> : null}
-        <FlatList<BitchatMessage | GeoMessage> ref={setConversationList} key={mode === 'mesh' ? draftKey : `geo:${geo.hash}:${geoRecipient ?? 'public'}`} data={messages} keyExtractor={m => m.id + ('peer' in m ? m.peer : m.pubkey)} keyboardShouldPersistTaps="handled"
+        {!(mode === 'mesh' ? recipient : geoRecipient) && <RenameNotices scope={visibleConversation} blocked={blockedKeys} prefix={mode === 'mesh' ? 'mesh:' : 'nostr:'} />}
+        <FlatList<BitchatMessage | GeoMessage> ref={setConversationList} key={mode === 'mesh' ? draftKey : `geo:${geo.hash}:${geoRecipient ?? 'public'}`} data={messages} onViewableItemsChanged={onViewableItemsChanged} viewabilityConfig={viewabilityConfig} keyExtractor={keyExtractor} keyboardShouldPersistTaps="handled"
           style={{ flex: 1, minHeight: 0 }}
           scrollEventThrottle={100}
           onScrollBeginDrag={() => { userScrolling.current = true; layout.current.lastTarget = -1; }}
@@ -410,7 +421,7 @@ export default function Chats() {
           renderItem={({ item }) => {
             const publicChat = mode === 'mesh' ? !recipient : !geoRecipient;
             const canMention = !item.outgoing;
-            const displayName = displayNickname(item.name, 'pubkey' in item ? item.pubkey : item.bridge?.pubkey ?? item.peer, duplicates.has(nicknameKey(item.name)));
+            const displayName = labelFor(item);
             const mentionName = displayName;
             const time = messageTime(item.timestamp);
             const isMentioned = publicChat && canMention && mentioned(item.content);

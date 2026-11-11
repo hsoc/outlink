@@ -1,0 +1,2 @@
+- Keep four-character nickname discriminators on messages that already showed them, even after someone renames or leaves.
+- Show dismissible notices for verified nickname changes in Public Mesh, Location channels and joined Bluetooth groups.

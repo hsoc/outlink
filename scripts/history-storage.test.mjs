@@ -365,3 +365,27 @@ test('Nearby private pages and unread counts survive public traffic, a restart a
     assert.equal((await adapter.history.meshUnread()).length, 0);
   } finally { adapter.close(); f.cleanup(); }
 });
+
+test('sender labels survive status updates and reopening, stay scoped, and are erased with private history', async () => {
+  const f = fixture(); let adapter = f.open();
+  try {
+    const message = { name: 'Alex', peer: 'alice', recipient: 'self', timestamp: f.now(), delivery: 'delivered' };
+    await adapter.history.save('mesh', 'id', JSON.stringify(message));
+    await adapter.history.save('geo:u4pruy', 'id', JSON.stringify(message));
+    await adapter.history.retainSenderLabel('mesh', 'id', 'Alex#7a2f');
+    await adapter.history.retainSenderLabel('mesh', 'id', 'Alex#9999');
+    await adapter.history.retainSenderLabel('mesh', 'missing', 'Alex#7a2f');
+    await adapter.history.save('mesh', 'id', JSON.stringify({ ...message, delivery: 'read' }));
+    adapter.close(); adapter = f.open();
+    const rows = await adapter.history.loadMeshThread('alice');
+    assert.deepEqual(JSON.parse(rows[0].value), { ...message, delivery: 'read', senderLabel: 'Alex#7a2f' });
+    assert.equal(JSON.parse((await adapter.history.load('mesh'))[0].value).senderLabel, 'Alex#7a2f');
+    assert.equal(JSON.parse(await adapter.history.get('geo:u4pruy', 'id')).senderLabel, undefined);
+    assert.equal(await adapter.history.get('mesh', 'missing'), null);
+    assert.ok(!f.raw(db => db.prepare('SELECT sender_label FROM encrypted_messages WHERE sender_label IS NOT NULL').get().sender_label).includes('Alex#7a2f'));
+    await adapter.history.deleteConversation('mesh', 'alice');
+    await adapter.history.retainSenderLabel('mesh', 'id', 'Alex#7a2f');
+    assert.deepEqual(JSON.parse(await adapter.history.get('mesh', 'id')), { deleted: true, delivery: 'read' });
+    assert.equal(f.raw(db => db.prepare('SELECT COUNT(*) AS count FROM encrypted_messages WHERE sender_label IS NOT NULL').get().count), 0);
+  } finally { adapter.close(); f.cleanup(); }
+});

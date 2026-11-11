@@ -2,7 +2,7 @@ import { getEventHash, verifyEvent, getPublicKey, type Event } from 'nostr-tools
 import { createGeohashEvent, normalizeGeoRelays, validateGeohashEvent } from './geohash-protocol';
 import { normalizeGeohash } from './geohash';
 
-export type GeoMessage = { id: string; pubkey: string; name: string; content: string; timestamp: number;
+export type GeoMessage = { id: string; senderLabel?: string; pubkey: string; name: string; content: string; timestamp: number;
   outgoing: boolean; delivery: 'queued' | 'sending' | 'sent' | 'failed' };
 export interface GeoSocket {
   readyState: number;
@@ -11,9 +11,9 @@ export interface GeoSocket {
   send(data: string): void; close(): void;
 }
 export type RelayMode = { subscription: string; filters(): Record<string, unknown>[]; event(value: unknown): void };
-type Callbacks = { message(message: GeoMessage): void; delivery(id: string, status: 'queued' | 'sent' | 'failed'): void;
+type Callbacks = { rename?(pubkey: string, before: string, after: string): void; message(message: GeoMessage): void; delivery(id: string, status: 'queued' | 'sent' | 'failed'): void;
   connection(count: number): void; presence(count: number): void; participants?(participants: { name: string; identity: string }[]): void; error(): void };
-type Link = { socket?: GeoSocket; timeout?: ReturnType<typeof setTimeout>; retry?: ReturnType<typeof setTimeout>; opened: boolean; attempts: number;
+type Link = { socket?: GeoSocket; timeout?: ReturnType<typeof setTimeout>; retry?: ReturnType<typeof setTimeout>; opened: boolean; caughtUp?: boolean; attempts: number;
   rateAt: number; rate: number };
 type Pending = { resolve(): void; reject(error: Error): void; timer: ReturnType<typeof setTimeout>; rejected: Set<GeoSocket>; total: number };
 
@@ -27,7 +27,7 @@ export class GeohashSession {
   private heartbeat?: ReturnType<typeof setInterval>;
   private readonly seen = new Set<string>();
   private readonly present = new Map<string, number>();
-  private readonly names = new Map<string, { name: string; at: number }>();
+  private readonly names = new Map<string, { name: string; at: number; named: boolean }>();
   private readonly pending = new Map<string, Pending>();
   constructor(hash: string, private key: Uint8Array, private name: string,
     private readonly relays: string[], private readonly callbacks: Callbacks,
@@ -116,7 +116,7 @@ export class GeohashSession {
       if (!current()) return;
       if (link.timeout) clearTimeout(link.timeout);
       if (link.retry) { clearTimeout(link.retry); link.retry = undefined; }
-      link.opened = true; link.attempts = 0; this.connections();
+      link.opened = true; link.caughtUp = false; link.attempts = 0; this.connections();
       try {
         const filters = this.mode?.filters() ?? [{ kinds: [20000, 20001], '#g': [this.hash], since: Math.floor(Date.now() / 1000) - 900, limit: 200 }];
         if (filters.length) socket.send(JSON.stringify(['REQ', this.mode?.subscription ?? 'geohash', ...filters]));
@@ -140,12 +140,13 @@ export class GeohashSession {
         else { pending.rejected.add(socket); if (pending.rejected.size >= pending.total) pending.reject(new Error('Relays rejected the message')); }
         return;
       }
+      if (!this.mode && frame[0] === 'EOSE' && frame[1] === 'geohash') link.caughtUp = true;
       if (frame[0] !== 'EVENT' || frame[1] !== (this.mode?.subscription ?? 'geohash')) return;
       if (this.mode) { try { this.mode.event(frame[2]); } catch { this.callbacks.error(); } return; }
-      this.acceptEvent(frame[2]);
+      this.acceptEvent(frame[2], link.caughtUp === true);
     };
   }
-  acceptEvent(value: unknown): void {
+  acceptEvent(value: unknown, live = false): void {
     if (this.stopped || this.mode) return;
     const event = validateGeohashEvent(value, this.hash); if (!event || this.seen.has(event.id)) return;
     this.seen.add(event.id); if (this.seen.size > 2048) this.seen.delete(this.seen.values().next().value!);
@@ -154,9 +155,18 @@ export class GeohashSession {
       if (!this.present.has(event.pubkey) && this.present.size >= 256) this.present.delete(this.present.keys().next().value!);
       this.present.set(event.pubkey, Math.max(this.present.get(event.pubkey) ?? 0, activity));
     }
-    if (event.kind === 20000 && this.present.has(event.pubkey) && activity >= (this.names.get(event.pubkey)?.at ?? 0)) this.names.set(event.pubkey, { name: this.message(event, false).name, at: activity });
+    const message = event.kind === 20000 ? this.message(event, this.ownPublicKeys.has(event.pubkey)) : undefined;
+    if (message && !message.outgoing && this.present.has(event.pubkey) && activity >= now - 180_000) {
+      const previous = this.names.get(event.pubkey);
+      if (!previous || message.timestamp > previous.at) {
+        const named = event.tags.some(tag => tag[0] === 'n' && tag[1]?.trim());
+        if (live && previous?.named && named && previous.at >= now - 180_000 && previous.name !== message.name)
+          this.callbacks.rename?.(event.pubkey, previous.name, message.name);
+        this.names.set(event.pubkey, { name: message.name, at: message.timestamp, named });
+      }
+    }
     this.reportPresence();
-    if (event.kind === 20000) { const message = this.message(event, this.ownPublicKeys.has(event.pubkey)); message.delivery = 'sent'; this.callbacks.message(message); }
+    if (message) { message.delivery = 'sent'; this.callbacks.message(message); }
   }
   private message(event: Event, outgoing: boolean): GeoMessage {
     return { id: event.id, pubkey: event.pubkey, name: event.tags.find(t => t[0] === 'n')?.[1]?.slice(0, 64) || event.pubkey.slice(0, 8),

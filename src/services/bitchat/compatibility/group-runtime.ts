@@ -7,12 +7,13 @@ import type { ProtocolStorage } from './prekey-runtime';
 import { decodeGroupState, encodeGroupState, groupEnvelope, openGroupMessage, sealGroupMessage, validateGroup, type GroupState, type GroupMember } from './group-protocol';
 export type GroupInfo = Omit<GroupState, 'key'> & { status: 'joined' | 'invited' | 'left' };
 type Entry = { localId?: string; state: GroupState; status: GroupInfo['status']; revoked?: string[] };
-export type GroupMessage = { id: string; group: string; sender: string; name: string; content: string; timestamp: number; outgoing: boolean };
+export type GroupMessage = { id: string; senderLabel?: string; group: string; sender: string; name: string; content: string; timestamp: number; outgoing: boolean };
 const creatorGroupId = (state: GroupState) => `${state.creator}:${state.id}`;
 const localGroupId = (entry: Entry) => entry.localId ?? creatorGroupId(entry.state);
 type IO = {
   state(peer: string, data: Uint8Array, invite: boolean): Promise<void>;
   broadcast(data: Uint8Array): Promise<void>;
+  rename?(group: string, before: GroupMember, after: GroupMember, members: GroupMember[]): void;
   changed(groups: GroupInfo[]): void;
   message(message: GroupMessage): Promise<void>;
 };
@@ -131,6 +132,14 @@ export class GroupRuntime {
       // Leaving or declining never silently rejoins through a cached state replay.
       if (old?.status === 'left' && (!invite || state.epoch <= old.state.epoch)) return false;
       await this.put({ state, status: old?.status === 'left' ? 'invited' : old?.status ?? 'invited' });
+      if (!this.stopped && this.io.rename && old?.status === 'joined' && state.epoch > old.state.epoch) {
+        const previous = new Map(old.state.members.map(member => [member.fingerprint, member]));
+        for (const member of state.members) {
+          const before = previous.get(member.fingerprint);
+          if (before && member.fingerprint !== this.self.fingerprint && before.signingKey === member.signingKey && before.nickname !== member.nickname)
+            this.io.rename(localGroupId(old), before, member, old.state.members);
+        }
+      }
       return true;
     });
   }

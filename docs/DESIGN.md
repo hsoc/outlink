@@ -73,7 +73,8 @@ Settings. Pushed screens reserve an identity row under the title row to avoid
 navigation overlap. Root chrome keeps the quick-erase icon; pushed-page icons are
 decorative and never acquire that destructive gesture. Setup bodies do not repeat
 the nickname. New profiles use base `Outlink`; other users' labels add a four-hex
-identity discriminator only for duplicate active nicknames. Keep full fingerprints for trust and never add stable
+identity discriminator when active nicknames collide. A message bubble keeps its
+discriminated sender label once shown. Keep full fingerprints for trust and never add stable
 cross-channel identity metadata. Editing does not reconnect or replace keys,
 contacts or history. Long header labels truncate within the available width.
 
@@ -199,3 +200,7 @@ Conversation operation errors have an explicit Dismiss control. Show background
 transport errors only in their corresponding Nearby or Location view. Dismissing
 a notice acknowledges it without deleting data or changing the connection;
 subsequent failures can appear again. Keep storage failure warnings separate.
+
+Verified nickname changes can appear as dismissible in-app notices within their
+conversation. Preserve earlier bubble labels and keep first sightings and
+discriminator-only changes silent.

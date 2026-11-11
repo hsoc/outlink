@@ -30,3 +30,17 @@ export function nicknameMentionLabels(name: string, identity: string): string[] 
   const short = displayNickname(name, identity, true), raw = identity.replace(/^bridge:/, '').toLowerCase();
   return nicknameDiscriminator(identity) ? [short, `${nicknameBase(name)}#${raw.slice(0, 8)}`] : [short];
 }
+
+/** Only the active identities sharing each nickname may qualify new bubble labels. */
+export function nicknameCollisions(participants: { name: string; identity: string }[]) {
+  const collisions = new Map<string, Set<string>>();
+  for (const { name, identity } of participants) {
+    if (!identity) continue;
+    const key = nicknameKey(name);
+    const identities = collisions.get(key) ?? new Set<string>();
+    identities.add(identity);
+    collisions.set(key, identities);
+  }
+  for (const [key, identities] of collisions) if (identities.size < 2) collisions.delete(key);
+  return collisions;
+}

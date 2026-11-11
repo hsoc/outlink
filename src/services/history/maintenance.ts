@@ -4,7 +4,7 @@ import { platform } from '@/platform';
 import { messageIsFresh } from '@/lib/message-retention';
 import { bitchatService, bitchatSessionStore, meshGroupsStore } from '@/services/bitchat/bitchat.service';
 import { geohashStore } from '@/services/geohash/geohash.service';
-import { historyOperation } from './history';
+import { historyOperation, pruneSenderLabels } from './history';
 import { sessionIntent } from './lifecycle';
 export const historyClock = createStore(() => ({ now: Date.now() }));
 /** One coalesced maintenance pass; protected records and pending sends are untouched. */
@@ -19,6 +19,7 @@ export function pruneChatHistory(): Promise<void> {
     geohashStore.setState(state => ({ messages: trim(state.messages), privateMessages: trim(state.privateMessages) }));
     meshGroupsStore.setState(state => ({ messages: trim(state.messages) }));
     conversationActivity.prune(now);
+    pruneSenderLabels(now);
     historyClock.setState({ now });
     await historyOperation(async () => { if (epoch === sessionIntent()) await platform.history.prune(); });
     if (epoch === sessionIntent()) await bitchatService.refreshMeshUnread();

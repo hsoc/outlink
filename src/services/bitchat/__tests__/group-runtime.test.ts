@@ -12,7 +12,7 @@ function peer(id: BitchatIdentity): BitchatPeer {
   return { id: fingerprint.slice(0, 16), fingerprint, name: 'Peer', secure: true, lastSeen: Date.now(), capabilities: 8, authenticatedCapabilities: true, signingPublicKey: bytesToHex(ed25519.getPublicKey(id.signingSeed)) };
 }
 function node(n: number) {
-  const id = identity(n), store = memoryStorage(), io = { state: jest.fn(async (_peer: string, _data: Uint8Array, _invite: boolean) => {}), broadcast: jest.fn(async (_data: Uint8Array) => {}), changed: jest.fn((_groups: GroupInfo[]) => {}), message: jest.fn(async (_message: GroupMessage) => {}) };
+  const id = identity(n), store = memoryStorage(), io = { rename: jest.fn(), state: jest.fn(async (_peer: string, _data: Uint8Array, _invite: boolean) => {}), broadcast: jest.fn(async (_data: Uint8Array) => {}), changed: jest.fn((_groups: GroupInfo[]) => {}), message: jest.fn(async (_message: GroupMessage) => {}) };
   const runtime = new GroupRuntime(id, store, io);
   return { id, store, io, runtime, peer: peer(id) };
 }
@@ -87,4 +87,19 @@ it('expands social actions before signing and encrypting group messages', async 
   expect(a.io.message.mock.calls.at(-1)![0]).toMatchObject({ content: '* 🫂 Alice hugs Bob *' });
   await b.runtime.receiveMessage(a.io.broadcast.mock.calls.at(-1)![0]);
   expect(b.io.message.mock.calls.at(-1)![0]).toMatchObject({ content: '* 🫂 Alice hugs Bob *', outgoing: false });
+});
+
+it('reports a member rename from a newer authenticated creator roster only once', async () => {
+  const a = node(1), b = node(2);
+  const id = await a.runtime.create('Crew', 'Alex'); await a.runtime.invite(id, b.peer); await a.runtime.sync(b.peer);
+  const original = a.io.state.mock.calls.at(-1)![1], state = decodeGroupState(original);
+  await b.runtime.receiveState(a.peer, original, true); await b.runtime.accept(id);
+  const newer = { ...state, epoch: state.epoch + 1, members: state.members.map(member =>
+    member.fingerprint === a.peer.fingerprint ? { ...member, nickname: 'Sam' } : member) };
+  const signed = encodeGroupState(newer, a.id.signingSeed);
+  await b.runtime.receiveState(a.peer, signed, true);
+  await b.runtime.receiveState(a.peer, signed, true);
+  await expect(b.runtime.receiveState(a.peer, original, true)).rejects.toThrow('rollback');
+  expect(b.io.rename.mock.calls).toEqual([[id, expect.objectContaining({ nickname: 'Alex' }),
+    expect.objectContaining({ nickname: 'Sam' }), state.members]]);
 });

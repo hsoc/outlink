@@ -17,12 +17,12 @@ export type ExtensionContext = { link: string; boundPeer?: string; authenticated
 export type MeshPingResult = { rttMs: number; hops?: number };
 export type BitchatIdentity = { noiseSeed: Uint8Array; noisePublicKey: Uint8Array; signingSeed: Uint8Array };
 export type BitchatPeer = { id: string; name: string; fingerprint: string; lastSeen: number; secure: boolean; authenticatedCapabilities?: boolean; signedRekey?: boolean; capabilities?: number; direct?: boolean; authenticatedLink?: boolean; noisePublicKey?: string; signingPublicKey?: string };
-export type BitchatMessage = { id: string; peer: string; recipient?: string; name: string; content: string;
+export type BitchatMessage = { id: string; senderLabel?: string; peer: string; recipient?: string; name: string; content: string;
   timestamp: number; courierWireId?: string; channelThread?: string; bridge?: { pubkey: string; radioHint?: string }; outgoing: boolean; delivery: 'queued' | 'carried' | 'sending' | 'sent' | 'delivered' | 'read' | 'failed' };
-type KnownPeer = BitchatPeer & { ingress: string; noiseKey: Uint8Array; signingKey: Uint8Array };
+type KnownPeer = BitchatPeer & { nicknameAt: number; ingress: string; noiseKey: Uint8Array; signingKey: Uint8Array };
 type Negotiation = { handshake: BitchatHandshake; at: number; ingress?: string; candidate?: { cipher: BitchatCipher; link?: string }; promise: Promise<void>;
   resolve: () => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> };
-type Callbacks = { voice?(peer: BitchatPeer, packet: VoiceBurst, privateMessage: boolean): void; media?(peer: BitchatPeer, attachment: MeshMedia, privateMessage: boolean): void; groupState?(peer: BitchatPeer, payload: Uint8Array, invite: boolean): Promise<void>; extension?(packet: BitchatPacket, context: ExtensionContext): Promise<boolean>; peer: (peer: BitchatPeer) => void; message: (message: BitchatMessage) => void | false | Promise<void | false>;
+type Callbacks = { rename?(peer: BitchatPeer, name: string): void; voice?(peer: BitchatPeer, packet: VoiceBurst, privateMessage: boolean): void; media?(peer: BitchatPeer, attachment: MeshMedia, privateMessage: boolean): void; groupState?(peer: BitchatPeer, payload: Uint8Array, invite: boolean): Promise<void>; extension?(packet: BitchatPacket, context: ExtensionContext): Promise<boolean>; peer: (peer: BitchatPeer) => void; message: (message: BitchatMessage) => void | false | Promise<void | false>;
   receipt: (id: string, sender: string, status: 'sent' | 'delivered' | 'read' | 'failed') => void; error: (error: Error) => void };
 
 /** MIT implementation of the Bitchat bearer/session rules, with bounded ephemeral state. */
@@ -481,7 +481,10 @@ export class BitchatSession {
         for (const [link, id] of this.authenticatedLinks) if (id === stale.id) this.authenticatedLinks.delete(link);
       }
       if (!solicited && packet.ttl === BITCHAT_TTL) this.admitLink(ingress);
-      const peer: KnownPeer = { id: packet.sender, name, noiseKey, signingKey, ingress, signedRekey: previous?.signedRekey,
+      const newer = !previous || !solicited && packet.timestamp > previous.nicknameAt;
+      if (previous && newer && previous.lastSeen && previous.name !== name) this.callbacks.rename?.(previous, name);
+      const peer: KnownPeer = { id: packet.sender, name: newer ? name : previous.name,
+        nicknameAt: newer ? packet.timestamp : previous.nicknameAt, noiseKey, signingKey, ingress, signedRekey: previous?.signedRekey,
         authenticatedCapabilities: previous?.authenticatedCapabilities && this.ciphers.has(packet.sender),
         capabilities: previous?.authenticatedCapabilities && this.ciphers.has(packet.sender) ? previous.capabilities : (capability?.[0] ?? 0) | (capability?.[1] ?? 0) << 8, direct: packet.ttl === BITCHAT_TTL && !solicited, authenticatedLink: this.authenticatedDirect(packet.sender), noisePublicKey: bytesToHex(noiseKey), signingPublicKey: bytesToHex(signingKey), fingerprint: bytesToHex(sha256(noiseKey)), lastSeen: solicited ? previous?.lastSeen ?? 0 : Date.now(), secure: this.ciphers.has(packet.sender) };
       this.peers.set(packet.sender, peer); this.callbacks.peer(peer); this.gossip.add(packet);

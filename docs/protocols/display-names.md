@@ -52,8 +52,8 @@ Noise sessions, contacts, history and relay sockets remain. Other peers learn a
 rename through discovery. Startup reapplies the latest reactive name after
 asynchronous connection setup so an in-progress Join cannot restore a stale label.
 New messages and QR sharing read the saved preference. Existing messages and
-queued payloads retain their captured base labels; presentation adds their identity
-suffix. Private location envelopes do not gain a new nickname wire field.
+queued payloads retain their captured base labels. Chat bubbles retain the first
+discriminated label shown for each message in encrypted local history. Private location envelopes do not gain a new nickname wire field.
 
 Group incoming labels use the creator-signed roster base plus member fingerprint
 suffix. That roster snapshot can lag a participant's current nickname until a
@@ -61,7 +61,7 @@ new signed roster arrives; see [private groups](private-groups.md).
 
 ## Mentions and verification
 
-Tapping received message text (or a public sender label) inserts the visible name, qualified only for active duplicates, such as
+Tapping received message text (or a public sender label) inserts the visible name, including any retained discriminator, such as
 `@Alice#7a2f` or `@{Alice Smith#7a2f}`. Qualified matching requires the local
 transport's exact suffix; a different suffix does not match the bare nickname.
 Legacy bare `@Alice` still works and can notify multiple identically named users.
@@ -83,8 +83,29 @@ collisions. The local active identity participates in duplicate detection; its
 header still always shows the base. Mesh names follow live peer announcements.
 Group names use active members of the selected roster. Location names come from
 validated recent chat and expire with the existing three-minute presence window;
-silent presence events do not advertise nicknames. Suffixes disappear again when
-the duplicate leaves or expires. Full fingerprints remain available in contacts.
+silent presence events do not advertise nicknames. When an active collision is
+shown, messages by the colliding identities visible in the conversation
+gain their four-character suffix. Those bubbles keep the label through renames,
+departures, and history reloads. Once the collision ends, new messages and live
+participant controls use the normal unsuffixed labels. Retained labels are scoped
+to the original message and conversation and expire or are erased with that
+message. Full fingerprints remain available in contacts.
 New qualified mentions use four hexadecimal characters; existing eight-character
 mentions remain recognized for the current identity. A four-character prefix can
 collide, so ambiguous group commands still require a full identity.
+
+## Rename notices
+
+Public Mesh, public Location channels and joined Bluetooth groups can show a
+dismissible in-app notice such as “Alex#7a2f is now Sam.” A first sighting or a
+change in discriminator visibility alone produces no notice. Existing bubbles
+keep their captured labels. Notices are session memory and do not send system
+notifications or change protocol payloads.
+
+Nearby requires a newer live signed announcement with the same accepted Noise
+and signing keys. Location requires newer, live signed chat with an explicit
+nickname from the same public key in the same area, after the relay has finished
+sending stored history. Private rotation proofs do not link public nicknames.
+Groups use a newer authenticated creator-signed roster for the same member
+fingerprint and signing key. Saving a nickname does not itself publish a group
+roster, so a group notice depends on receiving an updated roster.

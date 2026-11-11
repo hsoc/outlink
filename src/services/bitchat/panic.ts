@@ -1,3 +1,4 @@
+import { clearRenameNotices } from '@/services/history/rename-notices';
 import { liveVoice } from './live-voice';
 import { meshAttachments } from './mesh-attachments';
 import { nearbyAlerts } from '@/services/mentions/nearby-alerts';
@@ -10,7 +11,7 @@ import { mentionService } from '@/services/mentions/mentions';
 import { invalidateSessionIntent } from '@/services/history/lifecycle';
 import { bitchatService, bitchatSessionStore } from './bitchat.service';
 import { platform } from '@/platform';
-import { historyOperation } from '@/services/history/history';
+import { historyOperation, resetSenderLabels } from '@/services/history/history';
 import { workspaceStore } from '@/services/history/workspace';
 import { geohashService, geohashStore } from '@/services/geohash/geohash.service';
 import { contactsStore } from './compatibility/contacts';
@@ -22,7 +23,7 @@ export async function resumePendingWipe(): Promise<void> {
 }
 export function panicWipe(): Promise<void> {
   return wiping ??= (async () => {
-    invalidateSessionIntent(); conversationActivity.reset(); resetNickname(); cashuTransfers.reset();
+    invalidateSessionIntent(); clearRenameNotices(); resetSenderLabels(); conversationActivity.reset(); resetNickname(); cashuTransfers.reset();
     await platform.secureStorage.setItem(WIPE_MARKER, '1');
     meshAttachments.clear();
     await liveVoice.clear();
