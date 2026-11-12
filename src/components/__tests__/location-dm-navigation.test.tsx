@@ -68,6 +68,11 @@ beforeEach(async () => {
 });
 afterEach(async () => { await act(async () => { screen.unmount(); }); });
 it('opens, sends and returns from a Location DM without leaving or rejoining its public area', async () => {
+  const status = screen.root.findAllByType('AppText' as never);
+  const activity = status.find(node => node.props.children === 'mobile.geo_active_count');
+  const relays = status.find(node => node.props.children === 'Internet · mobile.relays_connected');
+  expect(relays?.parent).toBe(activity?.parent);
+  expect(relays?.props.align).toBe('end');
   await openDM();
   expect(button('bitchat.leave')).toBeUndefined(); expect(button('mobile.join')).toBeUndefined();
   await act(async () => { workspaceStore.setState({ drafts: { ...workspaceStore.getState().drafts, ['geo:u4pruy:private:' + peer]: 'private draft' } }); });
@@ -123,7 +128,13 @@ it.each(['mesh', 'geo'] as const)('places new %s DM alerts beside the public but
   expect(tab.props.label).toBe('DM · Bob');
   expect(tab.props.iconRight.props.children).toBe(mode === 'mesh' ? 2 : 1);
   expect(tab.props.accessibilityLabel).toBe(mode === 'mesh' ? 'DM · Bob · 2 unread' : 'DM · Bob · 1 unread');
-  if (mode === 'mesh') expect(button('mobile.contacts').props.unread).toBe(true);
+  if (mode === 'mesh') {
+    expect(button('mobile.contacts').props.unread).toBe(true);
+    const row = button('bitchat.public').parent;
+    expect(button('groups.title').parent).toBe(row);
+    expect(button('mobile.contacts').parent).toBe(row);
+    expect(row?.props.style.flexDirection).toBe('row');
+  }
   await act(async () => { tab.props.onPress(); });
   if (mode === 'mesh') expect(workspaceStore.getState().recipient).toBe(id);
   expect(geohashService.stop).not.toHaveBeenCalled(); expect(bitchatService.stop).not.toHaveBeenCalled();

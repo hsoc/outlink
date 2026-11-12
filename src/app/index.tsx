@@ -315,6 +315,25 @@ export default function Chats() {
   const composerInput = <AppInput ref={composerRef} label={t('bitchat.message')} value={draft} onChangeText={setDraft} multiline compactMultiline scrollEnabled maxLength={mode === 'mesh' ? 255 : geoRecipient ? 4096 : MAX_GEO_CONTENT_BYTES} />;
   const composerSend = <AppButton labelNumberOfLines={mode === 'mesh' ? 2 : undefined} label={t(mode === 'mesh' && !recipient && !canSendPublicMesh ? 'mobile.nobody_around' : 'bitchat.send')} loading={working} disabled={(mode === 'mesh' && !!recipient && (!contactsService.get(recipient) || !!savedContact?.blocked)) || (!active && !(mode === 'mesh' && recipient && contactsService.get(recipient))) || (mode === 'mesh' && !recipient && !canSendPublicMesh) || busy || !draft.trim() || bytes(draft).length > (mode === 'mesh' ? 255 : geoRecipient ? 4096 : MAX_GEO_CONTENT_BYTES) || (mode === 'geo' && (geoRecipient ? !geo.privateActive || geoThread?.blocked : !geo.connected && !bitchatService.hasGateway()))}
           onPress={() => void operate(send, 'send')} />;
+  const connectionAction = (mode === 'mesh' ? !!recipient : !!geoRecipient) ? <AppButton label={t('common.back')} variant="text" fullWidth={false} size="sm" disabled={busy} onPress={() => { if (mode === 'mesh') setRecipient(undefined); else setPrivateTarget(undefined); }} /> : active ? <AppButton label={t('bitchat.leave')} variant="text" fullWidth={false} size="sm" disabled={busy} onPress={() => void operate(async () => {
+    if (mode === 'mesh') { await bitchatService.stop(); meshAttachments.clear(); } else geohashService.stop();
+    setRecipient(undefined);
+  })} /> : <AppButton label={t('mobile.join')} variant="secondary" fullWidth={false} size="sm" loading={busy} disabled={!name.trim() || busy} onPress={() => void operate(join, 'join')} />;
+  const conversationTabs = !(mode === 'geo' && editingArea) && (isComposing || (mode === 'mesh' ? unread.size : geoUnread.size) > 0) ? <ConversationTabs
+    threads={mode === 'mesh' ? meshTabs : geoTabs} selected={mode === 'mesh' ? recipient : geoRecipient}
+    header={mode === 'mesh'
+      ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+        <AppButton unread={!!activity[conversationScope('mesh')]} label={t('bitchat.public')} variant="secondary" fullWidth={false} selected={!recipient} onPress={() => setRecipient(undefined)} />
+        {isComposing && <>
+          <AppButton unread={Object.keys(activity).some(key => JSON.parse(key)[1] === 'group')} label={t('groups.title')} variant="text" fullWidth={false} onPress={() => router.push('/groups')} />
+          <AppButton unread={unread.size > 0} accessibilityHint={unread.size ? t('mobile.unread_activity') : undefined} label={t('mobile.contacts')} variant="text" fullWidth={false} onPress={() => router.push('/contacts')} />
+        </>}
+      </View>
+      : <AppButton unread={!!activity[conversationScope('geo', geo.hash)]} label={`#${geo.hash}`} accessibilityLabel={`${t('mobile.public_channel')} · #${geo.hash}`} labelNumberOfLines={1} accessibilityHint={t(geoRecipient ? 'common.back' : 'mobile.change_area')} variant="secondary" fullWidth={false} selected={!geoRecipient} disabled={busy} onPress={() => { setPrivateTarget(undefined); setEditingArea(!geoRecipient); }} />}
+    onSelect={id => {
+      if (mode === 'mesh') setRecipient(id);
+      else { workspaceStore.setState(state => ({ hash: geo.hash, precision: state.hash === geo.hash ? state.precision : 0 })); setPrivateTarget({ hash: geo.hash, pubkey: id }); }
+    }} /> : null;
   return <AppScreen edges={['bottom']}>
     {locationInfo && !wiping && <LocationInfo onClose={() => setLocationInfo(false)} />}
     {messageMenu && messageMenu.scope === draftKey && !wiping && <MessageActions name={messageMenu.name} own={messageMenu.message.outgoing}
@@ -331,15 +350,10 @@ export default function Chats() {
           {value === 'geo' && mode === 'geo' && <AppButton label={t('mobile.info')} accessibilityLabel={t('mobile.location_info')} variant="text" fullWidth={false} size="sm" onPress={() => { Keyboard.dismiss(); setLocationInfo(true); }} />}
         </View>)}
       </View>
-      {!(mode === 'geo' && editingArea) && (isComposing || (mode === 'mesh' ? unread.size : geoUnread.size) > 0) && <ConversationTabs
-        threads={mode === 'mesh' ? meshTabs : geoTabs} selected={mode === 'mesh' ? recipient : geoRecipient}
-        publicButton={mode === 'mesh'
-          ? <AppButton unread={!!activity[conversationScope('mesh')]} label={t('bitchat.public')} variant="secondary" fullWidth={false} selected={!recipient} onPress={() => setRecipient(undefined)} />
-          : <AppButton unread={!!activity[conversationScope('geo', geo.hash)]} label={`#${geo.hash}`} accessibilityLabel={`${t('mobile.public_channel')} · #${geo.hash}`} labelNumberOfLines={1} accessibilityHint={t(geoRecipient ? 'common.back' : 'mobile.change_area')} variant="secondary" fullWidth={false} selected={!geoRecipient} disabled={busy} onPress={() => { setPrivateTarget(undefined); setEditingArea(!geoRecipient); }} />}
-        onSelect={id => {
-          if (mode === 'mesh') setRecipient(id);
-          else { workspaceStore.setState(state => ({ hash: geo.hash, precision: state.hash === geo.hash ? state.precision : 0 })); setPrivateTarget({ hash: geo.hash, pubkey: id }); }
-        }} />}
+      {mode === 'geo' && showingConversation ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+        <View style={{ flex: 1 }}>{conversationTabs}</View>
+        {connectionAction}
+      </View> : conversationTabs}
       {(mode === 'geo' && editingArea) || (!active && !isComposing) ? <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: spacing.lg, paddingBottom: spacing.lg }}>
         <Radar size={uiDensity.iconButtonSize} color={c.textMuted} />
         <AppText variant="title">{t(mode === 'mesh' ? 'bitchat.title' : 'mobile.geo')}</AppText>
@@ -361,23 +375,17 @@ export default function Chats() {
         {mode === 'geo' && editingArea && isComposing && <AppButton label={t('common.cancel')} variant="text" disabled={busy} onPress={() => { workspaceStore.setState(state => ({ hash: geo.hash, precision: state.hash === geo.hash ? state.precision : 0 })); setEditingArea(false); }} />}
       </ScrollView> : null}
       {isComposing && !(mode === 'geo' && editingArea) && <>
-        {mode === 'mesh' && <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-          <AppButton unread={Object.keys(activity).some(key => JSON.parse(key)[1] === 'group')} label={t('groups.title')} variant="text" fullWidth={false} onPress={() => router.push('/groups')} />
-          <AppButton unread={unread.size > 0} accessibilityHint={unread.size ? t('mobile.unread_activity') : undefined} label={t('mobile.contacts')} variant="text" fullWidth={false} onPress={() => router.push('/contacts')} />
-        </View>}
-        {mode === 'geo' && <View style={{ gap: spacing.xs }}>
-          <AppText variant="caption" weight="semibold" tone={geo.connected > 0 ? 'accent' : 'muted'}>
+        {mode === 'geo' && <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
+          <AppText variant="caption" weight="semibold" style={{ flexShrink: 1 }} tone={geo.connected > 0 ? 'accent' : 'muted'}>
             {t(geo.connected > 0 ? 'mobile.geo_active_count' : 'mobile.geo_active_unavailable', { count: geo.present })}
           </AppText>
+          <AppText variant="caption" tone="muted" align="end" style={{ flexShrink: 1 }}>{transportHint}</AppText>
         </View>}
         {mode === 'mesh' && recipient && (!selectedOnline || !savedContact) && <AppText variant="caption" tone="muted">{t(savedContact?.blocked ? 'mobile.contact_blocked' : savedContact ? 'mobile.mesh_offline_hint' : 'mobile.contact_reconnect_hint')}</AppText>}
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
+        {mode === 'mesh' && <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
           <AppText variant="caption" tone="muted">{transportHint}</AppText>
-          {(mode === 'mesh' ? !!recipient : !!geoRecipient) ? <AppButton label={t('common.back')} variant="text" fullWidth={false} size="sm" disabled={busy} onPress={() => { if (mode === 'mesh') setRecipient(undefined); else setPrivateTarget(undefined); }} /> : active ? <AppButton label={t('bitchat.leave')} variant="text" fullWidth={false} size="sm" disabled={busy} onPress={() => void operate(async () => {
-            if (mode === 'mesh') { await bitchatService.stop(); meshAttachments.clear(); } else geohashService.stop();
-            setRecipient(undefined);
-          })} /> : <AppButton label={t('mobile.join')} variant="secondary" fullWidth={false} size="sm" loading={busy} disabled={!name.trim() || busy} onPress={() => void operate(join, 'join')} />}
-        </View>
+          {connectionAction}
+        </View>}
         {mode === 'geo' && !geo.privateActive && geoRecipient && <View style={{ gap: spacing.sm }}>
           <AppText variant="caption" tone="muted">{t('mobile.geo_private_disabled')}</AppText>
           <AppText variant="caption" tone="muted">{t('mobile.internet_private_hint')}</AppText>

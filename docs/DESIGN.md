@@ -104,7 +104,8 @@ bridge choices. Choosing an area or relay policy never enables bridging.
 
 Joined location channels show an explicit Active recently count and explain its
 three-minute window, inclusion of self, and identity-based estimate in the Info
-panel beside Location channels. Keep the count and a short public/private label
+panel beside Location channels. Align relay status at the end of the activity row
+and keep connection actions beside the area selector. Keep the count and a short public/private label
 visible; move public relay/privacy and daily-identity explanations into that panel.
 Retain the initial join privacy notice and actionable private identity warnings. Disconnected
 relays show unavailable rather than implying zero users or live presence.
@@ -125,7 +126,8 @@ acceptance, creator management, and full member fingerprints. Keep roster member
 separate from live reachability. Distinguish encrypted group broadcasts from public
 mesh and 1:1 receipt semantics; explain local leave and creator departure.
 
-Received Nearby and Location-channel DMs use the same horizontal public/DM selector.
+Nearby keeps Public Mesh, Private groups, and Contacts together in one horizontal
+row. Received Nearby and Location-channel DMs use the same horizontal public/DM selector.
 Show the selected DM and unread sender buttons beside Public Mesh or `#area`, with
 red dots and unread counts, independent of OS permission. Bound and truncate long
 selector labels so one nickname cannot dominate the horizontal row. Keep the selected button
