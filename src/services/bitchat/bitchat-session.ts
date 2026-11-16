@@ -157,7 +157,12 @@ export class BitchatSession {
   }
   private tick(): void {
     if (!this.running) return;
-    void this.broadcast(this.announcement()).catch((error) => this.report(error));
+    // A long file transfer can hold the send queue across multiple maintenance ticks.
+    const idleLinks = [...this.links].filter(endpoint => !this.sends.has(endpoint));
+    void this.broadcast(this.announcement(), undefined, undefined, 'maintenance').catch(error => this.report(error));
+    for (const endpoint of idleLinks) void this.requestHistory(endpoint).catch(error => {
+      if (this.running && this.links.has(endpoint)) this.report(error);
+    });
     const now = Date.now();
     for (const [key, entry] of this.retired) if (now >= entry.until) { entry.cipher.destroy(); this.retired.delete(key); }
     for (const [key, value] of this.seen) if (now - value > 300_000) this.seen.delete(key);
@@ -174,7 +179,6 @@ export class BitchatSession {
       entry.cipher.destroy(); this.ciphers.delete(key);
       const peer = this.peers.get(key); if (peer) { peer.secure = false; this.callbacks.peer(peer); }
     }
-    for (const endpoint of this.links) void this.requestHistory(endpoint).catch(error => this.report(error));
     this.timer = setTimeout(() => this.tick(), this.links.size ? 15_000 : 4000);
   }
   private capabilityBytes(): Uint8Array { return this.capabilities > 255 ? Uint8Array.of(this.capabilities & 255, this.capabilities >>> 8) : Uint8Array.of(this.capabilities); }
@@ -242,7 +246,7 @@ export class BitchatSession {
     this.syncRequests.set(endpoint, Date.now() + 30_000);
     await this.broadcast(packet, undefined, endpoint);
   }
-  private async broadcast(packet: BitchatPacket, exclude?: string, only?: string, live?: 'control' | 'data'): Promise<void> {
+  private async broadcast(packet: BitchatPacket, exclude?: string, only?: string, live?: 'control' | 'data' | 'maintenance'): Promise<void> {
     if (!this.running) throw new Error('Bitchat is stopped');
     if (!only && packet.sender === this.id && !isBroadcast(packet) && packet.ttl > 1 && !packet.rsr && packet.type !== BitchatType.sync && !this.directLink(packet.recipient!) && this.routing.canRoute(packet.recipient!)) {
       const route = this.routing.route(this.id, packet.recipient!);
@@ -280,6 +284,7 @@ export class BitchatSession {
       this.sends.set(endpoint, send);
       try { await send; } finally { if (this.sends.get(endpoint) === send) this.sends.delete(endpoint); }
     }));
+    if (live === 'maintenance' && (!this.running || targets.every(endpoint => !this.links.has(endpoint)))) return;
     if (outcomes.length && outcomes.every((result) => result.status === 'rejected'))
       throw (outcomes[0] as PromiseRejectedResult).reason;
   }

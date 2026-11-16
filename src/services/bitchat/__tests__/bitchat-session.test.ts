@@ -494,3 +494,15 @@ it('forwards authenticated live voice over public and private BLE paths without 
   expect(b.voices[1]).toEqual({ packet: start, privateMessage: true });
   expect(b.messages).toHaveLength(0);
 });
+
+it('cleans up a failed Bluetooth scan start and allows a fresh Join', async () => {
+  const a = node('Alice', 1), b = node('Bob', 2);
+  const startScan = jest.spyOn(a.r.port, 'startScanAsync').mockRejectedValueOnce(new Error('BLE scan failed'));
+  const stop = jest.spyOn(a.r.port, 'stopSessionAsync');
+  await expect(a.session.start()).rejects.toThrow('BLE scan failed');
+  expect(stop).toHaveBeenCalledTimes(1);
+  await Promise.all([a.session.start(), b.session.start()]);
+  connect(a.r, b.r);
+  await until(() => a.peers.has(b.session.id));
+  expect(startScan).toHaveBeenCalledTimes(2);
+});

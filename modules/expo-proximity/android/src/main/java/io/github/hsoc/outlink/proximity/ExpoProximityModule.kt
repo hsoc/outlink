@@ -69,8 +69,13 @@ class ExpoProximityModule : Module() {
   private var activeServerCallback: BluetoothGattServerCallback? = null
   private val activeConnectionEndpoints = mutableSetOf<String>()
   private var scanStopRunnable: Runnable? = null
+  private var scanCallback: ScanCallback? = null
+  private var scanStartPromise: Promise? = null
+  private var scanStartConfirmation: Runnable? = null
   private val isScanning get() = discoveryConnections.isScanning
   private var advertiseCallback: AdvertiseCallback? = null
+  private var advertiseStartPromise: Promise? = null
+  private var advertiseStartTimeout: Runnable? = null
   private val discoveryConnections = DiscoveryConnectionQueue(
     schedule = { task, delayMs -> handler.postDelayed(task, delayMs) },
     cancel = { task -> handler.removeCallbacks(task) },
@@ -168,8 +173,7 @@ class ExpoProximityModule : Module() {
     AsyncFunction("startAdvertisingAsync") { promise: Promise ->
       handler.post {
         try {
-          openServerAndAdvertise()
-          promise.resolve()
+          openServerAndAdvertise(promise)
         } catch (error: Exception) {
           promise.reject("ERR_PROXIMITY_START", error.message, error)
         }
@@ -179,9 +183,7 @@ class ExpoProximityModule : Module() {
     AsyncFunction("startScanAsync") { scanDurationMs: Int, promise: Promise ->
       handler.post {
         try {
-          openServerAndAdvertise()
-          startScan(scanDurationMs)
-          promise.resolve()
+          startScan(scanDurationMs, promise)
         } catch (error: Exception) {
           promise.reject("ERR_PROXIMITY_SCAN", error.message, error)
         }
@@ -203,6 +205,7 @@ class ExpoProximityModule : Module() {
         rejectAllWrites("ERR_PROXIMITY_STOPPED", "The nearby session stopped.")
         val callback = advertiseCallback
         advertiseCallback = null
+        finishAdvertiseStart("Nearby advertising was stopped.")
         if (callback != null) adapter?.bluetoothLeAdvertiser?.stopAdvertising(callback)
         gatts.values.forEach { it.close() }
         gatts.clear()
@@ -296,7 +299,7 @@ class ExpoProximityModule : Module() {
     }
   }
 
-  private fun openServerAndAdvertise() {
+  private fun openServerAndAdvertise(promise: Promise) {
     val bluetoothManager = manager ?: error("Bluetooth is unavailable")
     val bluetoothAdapter = adapter ?: error("Bluetooth is unavailable")
     sendEvent("onBluetoothState", mapOf("state" to if (bluetoothAdapter.isEnabled) "poweredOn" else "poweredOff"))
@@ -327,8 +330,11 @@ class ExpoProximityModule : Module() {
       activeServerCallback = callback
     }
     // The callback owns both the pending start and the active advertisement.
-    // Scanning can start before onStartSuccess arrives; it must not restart it.
-    if (advertiseCallback != null) return
+    check(advertiseStartPromise == null) { "Nearby advertising is starting" }
+    if (advertiseCallback != null) {
+      promise.resolve()
+      return
+    }
 
     val settings = AdvertiseSettings.Builder()
       .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED)
@@ -339,23 +345,33 @@ class ExpoProximityModule : Module() {
     val advertiser = bluetoothAdapter.bluetoothLeAdvertiser ?: error("BLE advertising is unavailable")
     val callback = createAdvertiseCallback()
     advertiseCallback = callback
+    advertiseStartPromise = promise
     try {
       advertiser.startAdvertising(settings, data, callback)
+      val timeout = Runnable {
+        if (advertiseCallback !== callback || advertiseStartPromise == null) return@Runnable
+        advertiseCallback = null
+        finishAdvertiseStart("Android did not confirm nearby advertising.")
+        advertiser.stopAdvertising(callback)
+      }
+      advertiseStartTimeout = timeout
+      handler.postDelayed(timeout, 5_000L)
     } catch (error: Exception) {
       advertiseCallback = null
+      advertiseStartPromise = null
       throw error
     }
   }
 
-  private fun startScan(durationMs: Int) {
+  private fun startScan(durationMs: Int, promise: Promise) {
     val bluetoothAdapter = adapter ?: error("Bluetooth is unavailable")
-    if (!bluetoothAdapter.isEnabled) return
-    if (durationMs <= 0 && isScanning && scanStopRunnable == null) return
+    check(bluetoothAdapter.isEnabled) { "Bluetooth is powered off" }
+    if (durationMs <= 0 && isScanning && scanStopRunnable == null && scanStartPromise == null) {
+      promise.resolve()
+      return
+    }
     val scanner = bluetoothAdapter.bluetoothLeScanner ?: error("BLE scanning is unavailable")
-    scanStopRunnable?.let(handler::removeCallbacks)
-    scanStopRunnable = null
-    scanner.stopScan(scanCallback)
-    discoveryConnections.stopScan()
+    stopScan()
     val filter = ScanFilter.Builder().setServiceUuid(ParcelUuid(SERVICE_UUID)).build()
     val settings = ScanSettings.Builder()
       .setScanMode(
@@ -364,41 +380,78 @@ class ExpoProximityModule : Module() {
       )
       .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
       .build()
-    scanner.startScan(listOf(filter), settings, scanCallback)
+    val callback = createScanCallback()
+    scanner.startScan(listOf(filter), settings, callback)
+    scanCallback = callback
+    scanStartPromise = promise
     discoveryConnections.startScan()
+    // Android reports registration failure asynchronously and has no scan-start success callback.
+    val confirmation = Runnable { finishScanStart() }
+    scanStartConfirmation = confirmation
+    handler.postDelayed(confirmation, 1_000L)
     if (durationMs > 0) {
       val stop = Runnable {
-        scanner.stopScan(scanCallback)
-        discoveryConnections.stopScan()
-        scanStopRunnable = null
+        stopScan()
       }
       scanStopRunnable = stop
       handler.postDelayed(stop, max(1_000, durationMs).toLong())
     }
   }
 
+  private fun finishScanStart(error: String? = null) {
+    scanStartConfirmation?.let(handler::removeCallbacks)
+    scanStartConfirmation = null
+    val promise = scanStartPromise
+    scanStartPromise = null
+    if (error == null) promise?.resolve() else promise?.reject("ERR_PROXIMITY_SCAN", error, null)
+  }
+
   private fun stopScan() {
-    if (!isScanning) return
     scanStopRunnable?.let(handler::removeCallbacks)
     scanStopRunnable = null
-    adapter?.bluetoothLeScanner?.stopScan(scanCallback)
+    val callback = scanCallback
+    scanCallback = null
+    finishScanStart("Nearby scanning was stopped.")
     discoveryConnections.stopScan()
+    if (callback != null) adapter?.bluetoothLeScanner?.stopScan(callback)
+  }
+
+  private fun finishAdvertiseStart(error: String? = null) {
+    advertiseStartTimeout?.let(handler::removeCallbacks)
+    advertiseStartTimeout = null
+    val promise = advertiseStartPromise
+    advertiseStartPromise = null
+    if (error == null) promise?.resolve() else promise?.reject("ERR_PROXIMITY_START", error, null)
   }
 
   private fun createAdvertiseCallback() = object : AdvertiseCallback() {
+    override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
+      handler.post { if (advertiseCallback === this) finishAdvertiseStart() }
+    }
+
     override fun onStartFailure(errorCode: Int) {
       handler.post {
         if (advertiseCallback !== this) return@post
         advertiseCallback = null
-        Log.w("OutlinkNearby", "BLE advertising failed ($errorCode)")
+        finishAdvertiseStart("BLE advertising failed ($errorCode).")
       }
     }
   }
 
-  private val scanCallback = object : ScanCallback() {
+  private fun createScanCallback() = object : ScanCallback() {
+    override fun onScanFailed(errorCode: Int) {
+      handler.post {
+        if (scanCallback !== this) return@post
+        finishScanStart("BLE scan failed ($errorCode).")
+        Log.w("OutlinkNearby", "BLE scan failed ($errorCode)")
+        stopScan()
+      }
+    }
+
     override fun onScanResult(callbackType: Int, result: ScanResult) {
       handler.post {
-        if (!isScanning) return@post
+        if (scanCallback !== this || !isScanning) return@post
+        finishScanStart()
         val endpoint = result.device.address
         recordSignal(endpoint, result.rssi)
         if (gatts[endpoint] != null) return@post

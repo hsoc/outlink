@@ -1,0 +1,2 @@
+- Show a Bluetooth startup error when Android cannot start Nearby advertising or reports a scan startup failure, and allow Join to be retried.
+- Keep routine Nearby updates from piling up behind Bluetooth attachment transfers.
