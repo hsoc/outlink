@@ -188,7 +188,7 @@ export function MeshAttachments({ peer, canSend, joined, onOpenPeer, input, send
       <View style={{ flex: 1, minWidth: 0 }}>{send}</View>
       {showActions && (recording
         ? <ComposerAction icon={X} label={t('mobile.cancel')} disabled={busy} onPress={() => void finish(false)} />
-        : <ComposerAction icon={picked ? Send : ImagePlus} selected={!!picked}
+        : <ComposerAction icon={picked ? Send : ImagePlus} variant={picked ? 'danger' : 'secondary'}
             label={t(picked ? 'mesh_media.send_image' : 'mesh_media.choose_image')} disabled={!canSend || busy} onPress={() => {
               if (!picked) { void chooseImage(); return; }
               void operate(async valid => { try { await sendImage(picked, valid); } finally { clearSelection(); } });

@@ -1,0 +1,1 @@
+- Turn the Nearby photo send arrow red once a photo is selected, matching the voice-note send arrow.
